@@ -7,7 +7,9 @@ import {
   Settings as SettingsIcon, 
   ShieldAlert,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 import Overview from './components/Overview';
@@ -75,6 +77,20 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isAuditing, setIsAuditing] = useState(false);
   const [useMockMode, setUseMockMode] = useState(true);
+
+  // Theme states
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('omniqa_theme') || 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('omniqa_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
 
   // Campaign data states
   const [subjectLine, setSubjectLine] = useState(DEFAULT_SUBJECT);
@@ -336,6 +352,15 @@ export default function App() {
               </span>
             )}
             
+            <button 
+              className="btn btn-secondary" 
+              style={{ padding: '0.5rem 0.75rem' }} 
+              onClick={toggleTheme}
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+            >
+              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+
             <button 
               className="btn btn-secondary" 
               style={{ padding: '0.5rem 0.75rem' }} 
