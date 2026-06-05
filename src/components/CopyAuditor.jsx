@@ -1,4 +1,5 @@
 import { Info, Sparkles, CheckCircle } from 'lucide-react';
+import Editor from '@monaco-editor/react';
 
 export default function CopyAuditor({ 
   figmaTexts, 
@@ -55,15 +56,27 @@ export default function CopyAuditor({
             />
           </div>
 
-          <div className="form-group" style={{ margin: 0, flex: 2, display: 'flex', flexDirection: 'column' }}>
-            <label className="form-label">Braze Campaign HTML</label>
-            <textarea 
-              className="form-textarea" 
-              value={brazeHtml}
-              onChange={(e) => setBrazeHtml(e.target.value)}
-              placeholder="Paste campaign HTML here..."
-              style={{ flex: 1, minHeight: '220px', fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}
-            />
+          <div className="form-group" style={{ margin: 0, flex: 2, display: 'flex', flexDirection: 'column', minHeight: '380px' }}>
+            <label className="form-label" style={{ marginBottom: '0.5rem' }}>Braze Campaign HTML (Monaco Editor)</label>
+            <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-md)', overflow: 'hidden', flex: 1 }}>
+              <Editor
+                height="350px"
+                defaultLanguage="html"
+                theme="vs-dark"
+                value={brazeHtml}
+                onChange={(val) => setBrazeHtml(val || '')}
+                options={{
+                  minimap: { enabled: false },
+                  wordWrap: 'on',
+                  fontSize: 12,
+                  fontFamily: 'var(--font-mono)',
+                  lineHeight: 18,
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  padding: { top: 10, bottom: 10 }
+                }}
+              />
+            </div>
           </div>
 
           <button 

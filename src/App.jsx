@@ -94,6 +94,8 @@ export default function App() {
   const [subjectLine, setSubjectLine] = useState(DEFAULT_SUBJECT);
   const [figmaTexts, setFigmaTexts] = useState(DEFAULT_FIGMA_TEXTS);
   const [brazeHtml, setBrazeHtml] = useState(DEFAULT_HTML);
+  const [pushBody, setPushBody] = useState('Get a FREE Small Blizzard! 🍦 Valid for 14 days. Claim your exclusive app reward today.');
+  const [smsBody, setSmsBody] = useState('Dairy Queen: Welcome {{ user.first_name | default: \'Valued Customer\' }}! We loaded a FREE Blizzard reward into your account. Redeem here: http://example.com/redeem');
 
   // API response logs
   const [copyAuditResults, setCopyAuditResults] = useState(null);
@@ -443,6 +445,10 @@ export default function App() {
             brazeHtml={brazeHtml}
             subjectLine={subjectLine}
             theme={theme}
+            pushBody={pushBody}
+            setPushBody={setPushBody}
+            smsBody={smsBody}
+            setSmsBody={setSmsBody}
           />
         )}
 
