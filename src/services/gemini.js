@@ -266,6 +266,79 @@ function getMockCopyAudit(figmaTexts, brazeHtml, subjectLine) {
     }
   });
 
+  // Dynamic Subject Line Auditing
+  if (subjectLine) {
+    const subjectLower = subjectLine.toLowerCase();
+
+    // 1. Character count limit
+    if (subjectLine.length > 60) {
+      mismatches.push({
+        severity: 'medium',
+        figmaText: 'Subject Line Character Limit (< 60 chars)',
+        brazeText: `${subjectLine.length} chars: "${subjectLine}"`,
+        message: 'Subject line is too long. Standard mobile email clients (like iOS Mail or Gmail app) will truncate subjects over 60 characters, hiding your offer content.'
+      });
+    }
+
+    // 2. Excess exclamations / marks
+    if ((subjectLine.match(/!/g) || []).length > 1) {
+      mismatches.push({
+        severity: 'low',
+        figmaText: 'Subject Punctuation Check',
+        brazeText: `"${subjectLine}"`,
+        message: 'Subject line contains multiple exclamation marks. This can flag spam filters and looks unprofessional.'
+      });
+    }
+
+    // 3. Subject Line vs Figma Text layout mismatches
+    let bestSubjectMatch = null;
+    let maxSubjectOverlap = 0;
+    const subjectWords = subjectLower.split(/\s+/).filter(w => w.length >= 3);
+    
+    cleanFigmaLines.forEach(figmaLine => {
+      const figmaLineLower = figmaLine.toLowerCase();
+      const figmaWords = figmaLineLower.split(/\s+/).filter(w => w.length >= 3);
+      
+      let overlap = 0;
+      figmaWords.forEach(w => {
+        if (subjectLower.includes(w)) overlap++;
+      });
+      
+      if (overlap > maxSubjectOverlap) {
+        maxSubjectOverlap = overlap;
+        bestSubjectMatch = figmaLine;
+      }
+    });
+
+    if (bestSubjectMatch && subjectLower !== bestSubjectMatch.toLowerCase()) {
+      mismatches.push({
+        severity: 'medium',
+        figmaText: bestSubjectMatch,
+        brazeText: subjectLine,
+        message: `Subject Line text mismatch: Figma layer spec text is "${bestSubjectMatch}" but coded Braze subject line is "${subjectLine}".`
+      });
+    }
+  }
+
+  // Dynamic duplicate spacing and punctuation marks check in HTML body (marks check)
+  if (/\s\s+/.test(brazeHtml)) {
+    mismatches.push({
+      severity: 'low',
+      figmaText: 'Typography Spacing Spec',
+      brazeText: 'Duplicated whitespace spacing detected',
+      message: 'Consecutive whitespaces found in campaign HTML template. Recommend cleaning spacing to avoid formatting inconsistencies.'
+    });
+  }
+
+  if (/([.,!?])\1+/.test(brazeHtml)) {
+    mismatches.push({
+      severity: 'low',
+      figmaText: 'Creative Punctuation standard',
+      brazeText: 'Duplicated punctuation marks detected',
+      message: 'Consecutive punctuation marks found (e.g. "!!" or ",,"). Recommend cleaning up punctuation spacing.'
+    });
+  }
+
   if (subjectLine && (subjectLine.includes('🍦') || subjectLine.includes('🍨'))) {
     suggestions.push({
       context: "Subject Line emoji",

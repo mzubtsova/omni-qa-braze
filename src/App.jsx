@@ -125,6 +125,17 @@ export default function App() {
     runAudit(savedMock);
   }, []);
 
+  // Automatically re-run the audit when campaign inputs change (only in mock sandbox mode for instant responsiveness)
+  useEffect(() => {
+    if (!useMockMode) return;
+    
+    const delayDebounceFn = setTimeout(() => {
+      runAudit(true);
+    }, 150);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [brazeHtml, subjectLine, figmaTexts, useMockMode]);
+
   const handleSettingsSave = (settings) => {
     setUseMockMode(settings.useMockData);
     runAudit(settings.useMockData);
