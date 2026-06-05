@@ -389,6 +389,7 @@ export default function App() {
             setActiveTab={setActiveTab}
             onRunAudit={() => runAudit()}
             isAuditing={isAuditing}
+            subjectLine={subjectLine}
           />
         )}
 
