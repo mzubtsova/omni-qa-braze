@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle2, AlertTriangle, AlertCircle, FileText, Smartphone, Code, ShieldCheck, ArrowRight, Mail, X, RefreshCw } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, AlertCircle, FileText, Smartphone, Code, ShieldCheck, ArrowRight, Mail, X, RefreshCw, Sparkles } from 'lucide-react';
 
 export default function Overview({ 
   overallScore, 

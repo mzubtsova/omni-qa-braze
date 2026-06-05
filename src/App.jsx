@@ -512,7 +512,7 @@ export default function App() {
               {copyAuditResults.mismatches.map((m, idx) => (
                 <tr key={idx}>
                   <td>
-                    <span className={`print-badge print-badge-${m.severity.toLowerCase()}`}>{m.severity}</span>
+                    <span className={`print-badge print-badge-${(m.severity || 'low').toLowerCase()}`}>{m.severity}</span>
                   </td>
                   <td style={{ fontStyle: 'italic' }}>"{m.figmaText}"</td>
                   <td style={{ fontStyle: 'italic' }}>"{m.brazeText}"</td>
@@ -588,7 +588,7 @@ export default function App() {
               {spamAuditResults.spamTriggers.map((t, idx) => (
                 <tr key={idx}>
                   <td>
-                    <span className={`print-badge print-badge-${t.severity.toLowerCase()}`}>{t.severity}</span>
+                    <span className={`print-badge print-badge-${(t.severity || 'low').toLowerCase()}`}>{t.severity}</span>
                   </td>
                   <td><strong>"{t.phrase}"</strong></td>
                   <td>{t.message}</td>
