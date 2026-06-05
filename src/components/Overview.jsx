@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CheckCircle2, AlertTriangle, AlertCircle, FileText, Smartphone, Code, ShieldCheck, ArrowRight, Mail, X, RefreshCw, Sparkles } from 'lucide-react';
+import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast } from '../utils/validators';
 
 export default function Overview({ 
   overallScore, 
@@ -11,7 +12,10 @@ export default function Overview({
   setActiveTab,
   onRunAudit,
   isAuditing,
-  subjectLine
+  subjectLine,
+  copyAuditResults,
+  spamAuditResults,
+  brazeHtml
 }) {
   // SVG Config for Circular Progress Ring
   const radius = 80;
@@ -38,7 +42,55 @@ export default function Overview({
     setIsSending(true);
 
     const statusLabel = overallScore >= 90 ? '🟢 READY TO DEPLOY' : overallScore >= 70 ? '🟡 WARNINGS DETECTED' : '🔴 ACTION REQUIRED';
-    const totalDiscrepancies = issuesCount.high + issuesCount.medium;
+    
+    // Calculate dynamic list of real issues
+    const htmlToAudit = brazeHtml || '';
+    const liquidErrors = validateLiquidSyntax(htmlToAudit);
+    const linkIssues = auditHtmlLinks(htmlToAudit);
+    const contrastIssues = checkWcagContrast(htmlToAudit);
+    const copyMismatches = copyAuditResults?.mismatches || [];
+    const spamTriggers = spamAuditResults?.spamTriggers || [];
+
+    const issueBullets = [];
+    
+    if (liquidErrors.length > 0) {
+      issueBullets.push('🚨 CRITICAL LIQUID ERRORS:');
+      liquidErrors.forEach(err => {
+        issueBullets.push(`  - [${err.severity.toUpperCase()}] ${err.item}: ${err.message}`);
+      });
+    }
+
+    if (copyMismatches.length > 0) {
+      issueBullets.push('\n✍️ COPY & DESIGN MISMATCHES:');
+      copyMismatches.forEach(m => {
+        issueBullets.push(`  - [${m.severity.toUpperCase()}] Figma: "${m.figmaText}" vs Braze: "${m.brazeText}"\n    Details: ${m.message}`);
+      });
+    }
+
+    if (linkIssues.length > 0) {
+      issueBullets.push('\n🔗 LINK HEALTH ISSUES:');
+      linkIssues.forEach(l => {
+        issueBullets.push(`  - [${l.severity.toUpperCase()}] ${l.item}: ${l.message}`);
+      });
+    }
+
+    if (contrastIssues.length > 0) {
+      issueBullets.push('\n🎨 ACCESSIBILITY & CONTRAST ISSUES:');
+      contrastIssues.forEach(c => {
+        issueBullets.push(`  - [${c.severity.toUpperCase()}] ${c.item}: ${c.message}`);
+      });
+    }
+
+    if (spamTriggers.length > 0) {
+      issueBullets.push('\n🛡️ SPAM & DELIVERABILITY TRIGGERS:');
+      spamTriggers.forEach(s => {
+        issueBullets.push(`  - [${s.severity.toUpperCase()}] Flagged "${s.phrase}": ${s.message}`);
+      });
+    }
+
+    const issuesSection = issueBullets.length > 0 
+      ? issueBullets.join('\n') 
+      : '🎉 No issues detected! The campaign code, links, and copy are 100% compliant.';
 
     const subject = `OmniQA Campaign Audit Report: ${overallScore}/100 Health Index`;
     const body = `📬 OMNIQA CAMPAIGN DIAGNOSTICS REPORT
@@ -60,18 +112,15 @@ Status: ${statusLabel}
 • Spam Filter Safety:     ${spamScore}%
 
 --------------------------------------------------
-🚨 DETECTED ISSUES BREAKDOWN:
+🚨 DETECTED CAMPAIGN ISSUES (REAL-TIME AUDIT):
 --------------------------------------------------
-• Critical (High) Severity:  ${issuesCount.high}
-• Moderate (Medium) Severity: ${issuesCount.medium}
-• Minor (Low) Severity:      ${issuesCount.low}
+${issuesSection}
 
+--------------------------------------------------
 👉 NEXT STEPS / ACTIONS TO TAKE:
 1. Review Figma vs Code copy differences in the 'Copy Audit' panel.
 2. Click the 'Auto-Fix HTML' button in 'Technical Audits' to resolve contrast and UTM tags.
 3. Attach the exported PDF report to this email before sending.
-
-*** NOTE: Please drag & drop or attach the downloaded 'OmniQA_QA_Report.pdf' here before sending. ***
 
 Best regards,
 OmniQA Quality Assurance Engine`;

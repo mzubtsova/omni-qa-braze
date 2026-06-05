@@ -147,6 +147,26 @@ export default function App() {
         brazeHtml: currentHtml,
         subjectLine: currentSubject
       }, apiKey);
+
+      // Compute client-side tech validations
+      const liquidErrors = validateLiquidSyntax(currentHtml);
+      const linkIssues = auditHtmlLinks(currentHtml);
+      const contrastIssues = checkWcagContrast(currentHtml);
+
+      // Merge color/contrast issues into Copy Auditor mismatches list
+      const contrastMismatches = contrastIssues.map(issue => ({
+        severity: issue.severity,
+        figmaText: issue.item === 'Dark Mode Risk' ? 'Dark Mode Contrast Risk' : 'Figma Color / Design Compliance',
+        brazeText: issue.item,
+        message: issue.message
+      }));
+
+      if (copyRes) {
+        copyRes.mismatches = [
+          ...(copyRes.mismatches || []),
+          ...contrastMismatches
+        ];
+      }
       setCopyAuditResults(copyRes);
 
       // Extract body text to feed spam check
@@ -156,11 +176,6 @@ export default function App() {
         bodyText
       }, apiKey);
       setSpamAuditResults(spamRes);
-
-      // Compute client-side tech validations
-      const liquidErrors = validateLiquidSyntax(currentHtml);
-      const linkIssues = auditHtmlLinks(currentHtml);
-      const contrastIssues = checkWcagContrast(currentHtml);
 
       // Score computations
       let copyScoreVal = 100;
@@ -394,6 +409,9 @@ export default function App() {
             onRunAudit={runAudit}
             isAuditing={isAuditing}
             subjectLine={subjectLine}
+            copyAuditResults={copyAuditResults}
+            spamAuditResults={spamAuditResults}
+            brazeHtml={brazeHtml}
           />
         )}
 
