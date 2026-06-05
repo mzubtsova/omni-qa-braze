@@ -1,4 +1,4 @@
-import { AlertTriangle, Info, Sparkles, Check, CheckCircle } from 'lucide-react';
+import { Info, Sparkles, CheckCircle } from 'lucide-react';
 
 export default function CopyAuditor({ 
   figmaTexts, 
@@ -118,11 +118,11 @@ export default function CopyAuditor({
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.85rem', marginBottom: '0.5rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.5rem', borderRadius: '4px' }}>
                       <div>
                         <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>FIGMA DESIGN MOCK:</span>
-                        <span style={{ fontStyle: 'italic' }}>"{item.figmaText}"</span>
+                        <span style={{ fontStyle: 'italic' }}>&ldquo;{item.figmaText}&rdquo;</span>
                       </div>
                       <div style={{ borderLeft: '1px solid var(--border-color)', paddingLeft: '1rem' }}>
                         <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>BRAZE HTML / SUBJECT:</span>
-                        <span style={{ fontStyle: 'italic', color: 'var(--text-primary)' }}>"{item.brazeText}"</span>
+                        <span style={{ fontStyle: 'italic', color: 'var(--text-primary)' }}>&ldquo;{item.brazeText}&rdquo;</span>
                       </div>
                     </div>
 

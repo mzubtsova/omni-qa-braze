@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Smartphone, RefreshCw, Eye, Sparkles, Layers, Sliders, Tablet, Laptop, Maximize2, X, Sun, Moon } from 'lucide-react';
+import { Smartphone, Layers, Sliders, Tablet, Laptop, Maximize2, X, Sun, Moon } from 'lucide-react';
 
 export default function VisualStressTester({ brazeHtml, subjectLine, theme }) {
   const [segment, setSegment] = useState('default');
@@ -24,7 +24,6 @@ export default function VisualStressTester({ brazeHtml, subjectLine, theme }) {
     if (!brazeHtml) return;
 
     let firstName = 'Valued Customer';
-    let tier = 'Bronze';
     let showVipDetails = false;
 
     if (segment === 'long_name') {
@@ -33,7 +32,6 @@ export default function VisualStressTester({ brazeHtml, subjectLine, theme }) {
       firstName = '';
     } else if (segment === 'gold_tier') {
       firstName = 'Marina';
-      tier = 'Gold';
       showVipDetails = true;
     }
 

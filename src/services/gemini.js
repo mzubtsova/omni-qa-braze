@@ -293,7 +293,6 @@ function getMockCopyAudit(figmaTexts, brazeHtml, subjectLine) {
     // 3. Subject Line vs Figma Text layout mismatches
     let bestSubjectMatch = null;
     let maxSubjectOverlap = 0;
-    const subjectWords = subjectLower.split(/\s+/).filter(w => w.length >= 3);
     
     cleanFigmaLines.forEach(figmaLine => {
       const figmaLineLower = figmaLine.toLowerCase();

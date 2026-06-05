@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle, Info, Link, Shield, Code, CheckSquare, Sparkles, X } from 'lucide-react';
+import { CheckCircle, Shield, Code, CheckSquare, Sparkles, X } from 'lucide-react';
 import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast } from '../utils/validators';
 
 export default function TechnicalAuditor({ 
   brazeHtml, 
   setBrazeHtml,
-  subjectLine, 
   spamAuditResults,
-  isAuditing,
   onRunAudit 
 }) {
   const [filterSeverity, setFilterSeverity] = useState('all');
@@ -74,7 +72,6 @@ export default function TechnicalAuditor({
 
     // 1. Fix low contrast (Claim Blizzard Offer)
     // Replace color: #f87171 with color: #ffffff inside elements with bg #f43f5e
-    const origHtml = fixedHtml;
     fixedHtml = fixedHtml.replace(/(background-color\s*:\s*#f43f5e\b[^'"]*color\s*:\s*)#f87171/gi, (match, p1) => {
       fixCounts.contrast++;
       return `${p1}#ffffff`;

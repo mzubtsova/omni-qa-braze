@@ -67,7 +67,7 @@ export default function Settings({ onSave }) {
           OmniQA Configuration Panel
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
-          Manage your Figma design tokens, Braze endpoints, and Gemini AI credentials. Keys are saved securely in your browser's local storage and never sent to external servers.
+          Manage your Figma design tokens, Braze endpoints, and Gemini AI credentials. Keys are saved securely in your browser&apos;s local storage and never sent to external servers.
         </p>
 
         {savedStatus && (

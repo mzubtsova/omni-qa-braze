@@ -5,8 +5,6 @@ import {
   Smartphone, 
   Code, 
   Settings as SettingsIcon, 
-  ShieldAlert,
-  Sparkles,
   RefreshCw,
   Sun,
   Moon
@@ -123,7 +121,7 @@ export default function App() {
     
     // Automatically trigger an initial mock audit for visual feedback
     runAudit(savedMock);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Automatically re-run the audit when campaign inputs change (only in mock sandbox mode for instant responsiveness)
   useEffect(() => {
@@ -134,7 +132,7 @@ export default function App() {
     }, 150);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [brazeHtml, subjectLine, figmaTexts, useMockMode]);
+  }, [brazeHtml, subjectLine, figmaTexts, useMockMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSettingsSave = (settings) => {
     setUseMockMode(settings.useMockData);
@@ -549,8 +547,8 @@ export default function App() {
                   <td>
                     <span className={`print-badge print-badge-${(m.severity || 'low').toLowerCase()}`}>{m.severity}</span>
                   </td>
-                  <td style={{ fontStyle: 'italic' }}>"{m.figmaText}"</td>
-                  <td style={{ fontStyle: 'italic' }}>"{m.brazeText}"</td>
+                  <td style={{ fontStyle: 'italic' }}>&ldquo;{m.figmaText}&rdquo;</td>
+                  <td style={{ fontStyle: 'italic' }}>&ldquo;{m.brazeText}&rdquo;</td>
                   <td>{m.message}</td>
                 </tr>
               ))}
@@ -625,7 +623,7 @@ export default function App() {
                   <td>
                     <span className={`print-badge print-badge-${(t.severity || 'low').toLowerCase()}`}>{t.severity}</span>
                   </td>
-                  <td><strong>"{t.phrase}"</strong></td>
+                  <td><strong>&ldquo;{t.phrase}&rdquo;</strong></td>
                   <td>{t.message}</td>
                 </tr>
               ))}

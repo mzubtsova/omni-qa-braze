@@ -36,7 +36,6 @@ export function validateLiquidSyntax(html) {
 
   // Check 3: Nested depth check for {% if %} and {% endif %}
   let depth = 0;
-  let pos = 0;
   
   // Find all conditional tags sequentially
   const regex = /\{%\s*(if|endif)\b.*?%\}/g;
@@ -140,8 +139,8 @@ export function checkWcagContrast(html) {
     if (!textContent || textContent.length > 50) continue; // Only check labels/buttons
 
     // Try to extract background-color (or background) and color
-    const bgMatch = styleAttr.match(/background-color\s*:\s*(#[a-f0-9]{3,6}|rgb\([^\)]+\))/i);
-    const colorMatch = styleAttr.match(/color\s*:\s*(#[a-f0-9]{3,6}|rgb\([^\)]+\))/i);
+    const bgMatch = styleAttr.match(/background-color\s*:\s*(#[a-f0-9]{3,6}|rgb\([^)]+\))/i);
+    const colorMatch = styleAttr.match(/color\s*:\s*(#[a-f0-9]{3,6}|rgb\([^)]+\))/i);
 
     if (bgMatch && colorMatch) {
       const bgColor = bgMatch[1];
