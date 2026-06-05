@@ -35,25 +35,23 @@ graph TD
 
 ## 🚀 Key Features
 
-### 1. Copy & Contrast Sync Auditor
-*   **Figma Layer Cross-Checking**: Compares text nodes extracted from Figma design layout directly with Braze HTML code and Subject Line.
-*   **Fuzzy Text-Diff Matcher**: Dynamically crawls plain text in the HTML body to match lines of Figma copy on the fly.
-*   **Typographical Punctuation (Marks) QA**: Scans for spacing inconsistencies (like double spaces `  `), capitalization casing differences, and duplicate punctuation marks (consecutive `,,` or `!!`).
-*   **Unified Access Dials**: Integrates HTML color contrast and Dark Mode risk warnings directly into the Copy Auditor discrepancies log.
-*   **Debounced Auto-Auditor**: Triggers the validator automatically after a 150ms pause as you type (only in Sandbox Demo mode), updating scorecards instantly.
+### 1. Unified Master Diagnostics & Copy sync
+*   **Figma Layer Cross-Checking**: Compares text nodes extracted from Figma designs directly with Braze HTML templates and subject lines.
+*   **Fuzzy Text-Diff Matcher**: Dynamically tokenizes and scans plain text inside HTML tags to match lines of Figma design copy on the fly.
+*   **Monaco HTML Code Editor**: Embeds a rich, syntax-highlighted editor with line numbers, code folding, word wrap, and automatic layout resizing that compiles state changes in real time.
+*   **Master Diagnostics Hub**: Consolidates all Figma copy discrepancies, WCAG contrast alerts, UTM link crawler checks, Liquid logic errors, and spam triggers under a unified tabbed filter bar with live numeric counter badges.
 
-### 2. Multi-Device Layout Visual Stress-Tester
-*   **Preset Device Layouts**: Instantly preview rendering layout on **iPhone (iOS)**, **Android**, **Tablet**, and **Laptop** device frame presets.
-*   **Email Dark Mode Simulator**: Toggle client inversion simulation (☀️ Light / 🌙 Dark) next to the device frame. In Dark Mode, a simulator stylesheet is injected dynamically to override card backings, table structures, and headings, verifying text readability.
-*   **Theme-Adaptive Figma Spec Blueprint**: The Figma specifications blueprint SVG (and its fullscreen modal zoom) dynamically adjusts to the app's global color theme (Light/Dark).
-*   **Profile Personalization Simulation**: Renders template blocks against dynamic subscriber profiles (e.g. Standard fallbacks, extreme name lengths, VIP tiers, and null fallbacks).
+### 2. Multi-Device & Multi-Channel Visual Stress-Tester
+*   **Personalized Custom Name Typing**: Features an interactive text input allowing developers to type custom subscriber names, instantly resolving personalization tags (`{{ user.first_name }}`) across all channel previews.
+*   **Simulated Push Notifications**: Toggles between **iOS Lock Screen (Full)** (displays lockscreen wallpaper, clock/calendar overlay, and rich push notification cards containing the Blizzard campaign banner image) and **Android App Banner (Not Full)** (overlays a floating push banner over an active app grid home screen). Laptop preview is automatically hidden in push mode.
+*   **SMS Preview & Billing Segment Auditor**: Renders message bubbles in a text chat interface, scans for non-GSM-7 unicode inputs (emojis or smart quotes), calculates text lengths, and warns developers when copy exceeds character limits and triggers multi-segment billing costs.
+*   **Email Client Dark Mode Inversion**: Injects dynamic overrides into the email iframe context to invert styles, guaranteeing text legibility in simulated dark mobile environments.
 
-### 3. Technical Health Auditor
-*   **Liquid Validator**: Scans logic tags `{% if %}` and variables `{{ ... }}` for nesting depth errors and unclosed delimiters.
-*   **Link Parameter Crawler**: Parses all anchor links to check for broken URLs, placeholders (e.g. `href="#"`), and missing UTM parameters.
-*   **WCAG Color Contrast Audit**: Computes luminance contrast ratios for inline styled buttons (requires Min 4.5:1).
-*   **Dark Mode Risk Detector**: Flags elements using hardcoded dark text colors without a corresponding background-color style, warning developers of potential invisible content under inverted clients.
-*   **Spam Deliverability Advisor**: Predicts spam firewall scoring and flags image-to-text balance.
+### 3. Technical Health & Reporting Engine
+*   **Liquid Logic Delimiter Checker**: Scans logic control flows (`{% if %}` and `{{ ... }}`) for nesting depth errors, missing delimiters, or orphaned statements.
+*   **UTM Link Crawler**: Crawls all anchor links to detect dead hrefs, placeholder domains, and missing marketing UTM analytics keys.
+*   **HTML Contrast Auto-Fixer**: Features a one-click repair engine that automatically adjusts violating button contrasts, resolves empty placeholder links, and appends missing UTM trackers.
+*   **Staging PDF & Email Dispatcher**: Dispatches live email report drafts with detailed bulleted campaign issues lists and exports print-ready visual QA scorecards.
 
 ---
 
