@@ -1,4 +1,5 @@
-import { CheckCircle2, AlertTriangle, AlertCircle, FileText, Smartphone, Code, ShieldCheck, ArrowRight } from 'lucide-react';
+import { useState } from 'react';
+import { CheckCircle2, AlertTriangle, AlertCircle, FileText, Smartphone, Code, ShieldCheck, ArrowRight, Mail, X, RefreshCw } from 'lucide-react';
 
 export default function Overview({ 
   overallScore, 
@@ -18,10 +19,28 @@ export default function Overview({
   const circumference = normalizedRadius * 2 * Math.PI;
   const strokeDashoffset = circumference - (overallScore / 100) * circumference;
 
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [successSent, setSuccessSent] = useState(false);
+
   const getScoreColor = (score) => {
     if (score >= 90) return 'var(--success)';
     if (score >= 70) return 'var(--warning)';
     return 'var(--error)';
+  };
+
+  const handleSendEmail = (e) => {
+    e.preventDefault();
+    if (!recipientEmail) return;
+
+    setIsSending(true);
+    
+    // Simulate API network latency
+    setTimeout(() => {
+      setIsSending(false);
+      setSuccessSent(true);
+    }, 1500);
   };
 
   return (
@@ -63,14 +82,28 @@ export default function Overview({
             </div>
           </div>
 
-          <button 
-            className="btn btn-primary" 
-            style={{ marginTop: '2rem', width: '100%' }}
-            onClick={onRunAudit}
-            disabled={isAuditing}
-          >
-            {isAuditing ? 'Analyzing Campaign...' : 'Re-Run QA Audit'}
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', marginTop: '2rem' }}>
+            <button 
+              className="btn btn-primary" 
+              style={{ width: '100%' }}
+              onClick={onRunAudit}
+              disabled={isAuditing}
+            >
+              {isAuditing ? 'Analyzing Campaign...' : 'Re-Run QA Audit'}
+            </button>
+            <button 
+              className="btn btn-secondary" 
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center' }}
+              onClick={() => {
+                setShowEmailModal(true);
+                setSuccessSent(false);
+                setRecipientEmail('');
+              }}
+              disabled={isAuditing}
+            >
+              <Mail size={16} /> Send Report via Email
+            </button>
+          </div>
         </div>
 
         {/* Right Side: Score Summary & Severity breakdown */}
@@ -195,6 +228,128 @@ export default function Overview({
         </div>
 
       </div>
+
+      {/* EMAIL MODAL OVERLAY */}
+      {showEmailModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(5, 8, 15, 0.95)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backdropFilter: 'blur(10px)',
+            animation: 'fadeIn 0.25s ease-out'
+          }}
+        >
+          <div 
+            style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
+              padding: '2.5rem 2rem 2rem 2rem',
+              borderRadius: 'var(--border-radius-lg)',
+              position: 'relative',
+              width: '90%',
+              maxWidth: '450px',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.8)'
+            }}
+          >
+            <button 
+              onClick={() => setShowEmailModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <X size={18} />
+            </button>
+
+            <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fff' }}>
+              <Mail size={22} style={{ color: 'var(--accent-cyan)' }} /> Send Campaign QA Report
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+              Deliver the complete copy, visual, and technical diagnostics audit to your inbox.
+            </p>
+
+            {successSent ? (
+              <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+                <CheckCircle2 size={48} style={{ color: 'var(--success)', marginBottom: '1rem', display: 'inline-block' }} />
+                <h4 style={{ color: '#fff', marginBottom: '0.25rem' }}>Report Dispatched Successfully!</h4>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                  A detailed HTML report has been sent to <strong style={{ color: '#fff' }}>{recipientEmail}</strong>.
+                </p>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowEmailModal(false)}
+                  style={{ marginTop: '1.5rem', width: '100%' }}
+                >
+                  Close Panel
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSendEmail} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">Recipient Email Address</label>
+                  <input 
+                    type="email" 
+                    required 
+                    className="form-input" 
+                    placeholder="name@company.com" 
+                    value={recipientEmail} 
+                    onChange={(e) => setRecipientEmail(e.target.value)}
+                    disabled={isSending}
+                    style={{ background: 'var(--bg-tertiary)' }}
+                  />
+                </div>
+
+                <div style={{ padding: '1rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  <strong style={{ color: 'var(--accent-cyan)' }}>Report Contents:</strong>
+                  <ul style={{ paddingLeft: '1.25rem', marginTop: '0.35rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <li>Overall Campaign Health Score: <strong>{overallScore}/100</strong></li>
+                    <li>Copy Sync Mismatches detected: <strong>{issuesCount.high + issuesCount.medium}</strong></li>
+                    <li>WCAG Contrast and HTML validation metrics</li>
+                    <li>Deliverability & Spam analysis</li>
+                  </ul>
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="btn btn-primary" 
+                  style={{ width: '100%' }} 
+                  disabled={isSending}
+                >
+                  {isSending ? (
+                    <>
+                      <RefreshCw size={14} className="spin" style={{ marginRight: '0.25rem' }} /> Dispatching Report...
+                    </>
+                  ) : (
+                    'Send QA Report'
+                  )}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

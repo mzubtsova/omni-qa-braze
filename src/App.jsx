@@ -61,7 +61,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
       {% endif %}
 
       <p style="text-align: center; margin: 30px 0;">
-        <a href="http://example.com/redeem" style="background-color: #f43f5e; color: #f87171;" class="btn">Claim Blizzard Offer</a>
+        <a href="http://example.com/redeem" style="background-color: #f43f5e; color: #ffffff;" class="btn">Claim Blizzard Offer</a>
       </p>
 
       <p>This offer is valid for 7 days at participating locations.</p>
@@ -411,6 +411,7 @@ export default function App() {
         {activeTab === 'technical' && (
           <TechnicalAuditor 
             brazeHtml={brazeHtml}
+            setBrazeHtml={setBrazeHtml}
             subjectLine={subjectLine}
             spamAuditResults={spamAuditResults}
             isAuditing={isAuditing}

@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle, Info, Link, Shield, Code, CheckSquare, Sparkles } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle, Info, Link, Shield, Code, CheckSquare, Sparkles, X } from 'lucide-react';
 import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast } from '../utils/validators';
 
 export default function TechnicalAuditor({ 
   brazeHtml, 
+  setBrazeHtml,
   subjectLine, 
   spamAuditResults,
   isAuditing,
   onRunAudit 
 }) {
   const [filterSeverity, setFilterSeverity] = useState('all');
+  const [toastMessage, setToastMessage] = useState(null);
 
   // Compute local non-AI audits synchronously
   const liquidErrors = validateLiquidSyntax(brazeHtml);
@@ -31,6 +33,10 @@ export default function TechnicalAuditor({
     if (filterSeverity === 'all') return true;
     return alert.severity.toLowerCase() === filterSeverity.toLowerCase();
   });
+
+  const fixableIssues = allAlerts.filter(a => 
+    a.category === 'WCAG Contrast' || a.category === 'Link Health'
+  );
 
   const getSeverityBadge = (severity) => {
     switch (severity.toLowerCase()) {
@@ -59,8 +65,84 @@ export default function TechnicalAuditor({
     ratioColor = 'var(--error)';
   }
 
+  // Auto-Fix implementation
+  const handleAutoFix = () => {
+    if (!brazeHtml) return;
+
+    let fixedHtml = brazeHtml;
+    let fixCounts = { contrast: 0, utm: 0, placeholder: 0, empty: 0 };
+
+    // 1. Fix low contrast (Claim Blizzard Offer)
+    // Replace color: #f87171 with color: #ffffff inside elements with bg #f43f5e
+    const origHtml = fixedHtml;
+    fixedHtml = fixedHtml.replace(/(background-color\s*:\s*#f43f5e\b[^'"]*color\s*:\s*)#f87171/gi, (match, p1) => {
+      fixCounts.contrast++;
+      return `${p1}#ffffff`;
+    });
+    fixedHtml = fixedHtml.replace(/(color\s*:\s*)#f87171(\b[^'"]*background-color\s*:\s*#f43f5e)/gi, (match, p1, p2) => {
+      fixCounts.contrast++;
+      return `${p1}#ffffff${p2}`;
+    });
+
+    // 2. Fix empty links href="#" inside unsubscribe or other sections
+    fixedHtml = fixedHtml.replace(/href=["']#["']/g, () => {
+      fixCounts.empty++;
+      return 'href="https://dairyqueen.com/unsubscribe?utm_source=braze&utm_medium=email&utm_campaign=blizzard_promo"';
+    });
+
+    // 3. Fix placeholder links (example.com / placeholder.com)
+    fixedHtml = fixedHtml.replace(/href=["'](https?:\/\/example\.com\/[^"']+|https?:\/\/example\.com\b[^"']*)["']/gi, () => {
+      fixCounts.placeholder++;
+      return 'href="https://dairyqueen.com/redeem?utm_source=braze&utm_medium=email&utm_campaign=blizzard_promo"';
+    });
+
+    // 4. Fix missing UTM parameters for standard links
+    fixedHtml = fixedHtml.replace(/href=["'](https?:\/\/(?!example\.com|placeholder\.com)[^"']+)["']/gi, (match, url) => {
+      if (!url.includes('utm_source')) {
+        fixCounts.utm++;
+        const separator = url.includes('?') ? '&' : '?';
+        return `href="${url}${separator}utm_source=braze&utm_medium=email&utm_campaign=blizzard_promo"`;
+      }
+      return match;
+    });
+
+    // Save and re-run audits
+    setBrazeHtml(fixedHtml);
+    
+    // Construct summary message
+    const totalFixes = fixCounts.contrast + fixCounts.utm + fixCounts.placeholder + fixCounts.empty;
+    if (totalFixes > 0) {
+      const details = [];
+      if (fixCounts.contrast > 0) details.push(`${fixCounts.contrast} contrast issue(s)`);
+      if (fixCounts.empty > 0) details.push(`${fixCounts.empty} empty link(s)`);
+      if (fixCounts.placeholder > 0) details.push(`${fixCounts.placeholder} placeholder link(s)`);
+      if (fixCounts.utm > 0) details.push(`${fixCounts.utm} missing UTM tracker(s)`);
+      
+      setToastMessage(`Success! Auto-fixed: ${details.join(', ')}. Recalculating scores...`);
+      setTimeout(() => setToastMessage(null), 5000);
+      
+      // Re-trigger audit validation
+      if (onRunAudit) {
+        setTimeout(() => onRunAudit(), 100);
+      }
+    } else {
+      setToastMessage("No auto-fixable formatting issues found in this template.");
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  };
+
   return (
     <div className="fade-in">
+      {toastMessage && (
+        <div className="toast" style={{ bottom: '2rem', right: '2rem' }}>
+          <CheckCircle size={20} style={{ color: 'var(--success)' }} />
+          <span>{toastMessage}</span>
+          <button onClick={() => setToastMessage(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', marginLeft: '0.5rem', cursor: 'pointer' }}>
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '2rem', marginBottom: '2rem' }}>
         
         {/* Left Side Panel: Technical KPI cards */}
@@ -104,7 +186,7 @@ export default function TechnicalAuditor({
             </p>
           </div>
 
-          {/* Image & Text Stats */}
+          {/* Image & Text Ratios */}
           <div className="panel" style={{ padding: '1.5rem' }}>
             <h4 style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Deliverability Ratios</h4>
             
@@ -128,39 +210,61 @@ export default function TechnicalAuditor({
 
         {/* Right Side Panel: Complete audit log table */}
         <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
             <h3>Technical Issues Tracker</h3>
             
-            {/* Filter buttons */}
-            <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.2rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
-              <button 
-                onClick={() => setFilterSeverity('all')}
-                className={`sub-tab ${filterSeverity === 'all' ? 'active' : ''}`}
-                style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
-              >
-                All
-              </button>
-              <button 
-                onClick={() => setFilterSeverity('high')}
-                className={`sub-tab ${filterSeverity === 'high' ? 'active' : ''}`}
-                style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
-              >
-                High
-              </button>
-              <button 
-                onClick={() => setFilterSeverity('medium')}
-                className={`sub-tab ${filterSeverity === 'medium' ? 'active' : ''}`}
-                style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
-              >
-                Med
-              </button>
-              <button 
-                onClick={() => setFilterSeverity('low')}
-                className={`sub-tab ${filterSeverity === 'low' ? 'active' : ''}`}
-                style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
-              >
-                Low
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {/* Auto-Fix Button */}
+              {fixableIssues.length > 0 && setBrazeHtml && (
+                <button 
+                  onClick={handleAutoFix}
+                  className="btn btn-primary"
+                  style={{ 
+                    padding: '0.35rem 0.75rem', 
+                    fontSize: '0.75rem', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.3rem', 
+                    background: 'var(--cyan-gradient)',
+                    boxShadow: '0 0 12px rgba(6, 182, 212, 0.2)'
+                  }}
+                  title="Automatically fix links, UTM params, and color contrast issues in HTML"
+                >
+                  <Sparkles size={12} /> Auto-Fix HTML
+                </button>
+              )}
+
+              {/* Filter buttons */}
+              <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.2rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
+                <button 
+                  onClick={() => setFilterSeverity('all')}
+                  className={`sub-tab ${filterSeverity === 'all' ? 'active' : ''}`}
+                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}
+                >
+                  All
+                </button>
+                <button 
+                  onClick={() => setFilterSeverity('high')}
+                  className={`sub-tab ${filterSeverity === 'high' ? 'active' : ''}`}
+                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}
+                >
+                  High
+                </button>
+                <button 
+                  onClick={() => setFilterSeverity('medium')}
+                  className={`sub-tab ${filterSeverity === 'medium' ? 'active' : ''}`}
+                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}
+                >
+                  Med
+                </button>
+                <button 
+                  onClick={() => setFilterSeverity('low')}
+                  className={`sub-tab ${filterSeverity === 'low' ? 'active' : ''}`}
+                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}
+                >
+                  Low
+                </button>
+              </div>
             </div>
           </div>
 

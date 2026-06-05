@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Smartphone, RefreshCw, Eye, Sparkles, Layers, Sliders } from 'lucide-react';
+import { Smartphone, RefreshCw, Eye, Sparkles, Layers, Sliders, Tablet, Laptop, Maximize2, X } from 'lucide-react';
 
 export default function VisualStressTester({ brazeHtml, subjectLine }) {
   const [segment, setSegment] = useState('default');
   const [renderedHtml, setRenderedHtml] = useState('');
   const [renderedSubject, setRenderedSubject] = useState('');
+  const [device, setDevice] = useState('iphone'); // 'iphone', 'android', 'tablet', 'laptop'
+  const [showFigmaFullscreen, setShowFigmaFullscreen] = useState(false);
+  const [showIframeFullscreen, setShowIframeFullscreen] = useState(false);
 
   // Expand Liquid tags client-side for sandbox simulation
   useEffect(() => {
@@ -57,6 +60,69 @@ export default function VisualStressTester({ brazeHtml, subjectLine }) {
     setRenderedSubject(processedSubject);
   }, [brazeHtml, subjectLine, segment]);
 
+  const getDeviceStyle = () => {
+    switch (device) {
+      case 'android':
+        return {
+          width: '320px',
+          height: '520px',
+          borderRadius: '30px',
+          border: '8px solid #1f2937',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: '#000',
+          transition: 'all 0.3s ease-in-out'
+        };
+      case 'tablet':
+        return {
+          width: '480px',
+          height: '620px',
+          borderRadius: '24px',
+          border: '14px solid #1f2937',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: '#000',
+          transition: 'all 0.3s ease-in-out'
+        };
+      case 'laptop':
+        return {
+          width: '100%',
+          maxWidth: '640px',
+          height: '380px',
+          borderRadius: '12px',
+          border: '12px solid #1f2937',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: '#000',
+          transition: 'all 0.3s ease-in-out'
+        };
+      case 'iphone':
+      default:
+        return {
+          width: '320px',
+          height: '520px',
+          borderRadius: '36px',
+          border: '10px solid #1f2937',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: '#000',
+          transition: 'all 0.3s ease-in-out'
+        };
+    }
+  };
+
   return (
     <div className="fade-in">
       <div className="split-view" style={{ marginBottom: '2rem' }}>
@@ -64,7 +130,7 @@ export default function VisualStressTester({ brazeHtml, subjectLine }) {
         {/* Left Side: Controller and Phone Render */}
         <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3>Mobile Rendering Simulator</h3>
+            <h3>Multi-Device Rendering Simulator</h3>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <span className="api-badge connected" style={{ fontSize: '0.75rem' }}>
                 <span className="indicator" /> Active Sandbox
@@ -109,33 +175,107 @@ export default function VisualStressTester({ brazeHtml, subjectLine }) {
             </div>
           </div>
 
-          {/* Device Mockup */}
-          <div className="phone-wrapper" style={{ padding: '1rem 0' }}>
-            <div className="phone-mockup">
-              <div className="phone-notch"></div>
-              <div className="phone-screen">
-                <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb', fontSize: '0.7rem', color: '#6b7280', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>From: <strong>Dairy Queen</strong></span>
-                    <span>12:00 PM</span>
-                  </div>
-                  <span style={{ marginTop: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    Subject: <strong style={{ color: '#111827' }}>{renderedSubject}</strong>
-                  </span>
-                </div>
-                {renderedHtml ? (
-                  <iframe 
-                    title="Braze Live Email Render" 
-                    srcDoc={renderedHtml}
-                    sandbox="allow-same-origin"
-                  />
-                ) : (
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justify: 'center', color: '#6b7280', fontSize: '0.85rem' }}>
-                    No HTML code loaded.
-                  </div>
-                )}
-              </div>
+          {/* Device Mockup with Preset Controllers */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
+            
+            {/* Device Selector Buttons */}
+            <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
+              <button 
+                onClick={() => setDevice('iphone')}
+                className={`sub-tab ${device === 'iphone' ? 'active' : ''}`}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+              >
+                <Smartphone size={12} /> iPhone
+              </button>
+              <button 
+                onClick={() => setDevice('android')}
+                className={`sub-tab ${device === 'android' ? 'active' : ''}`}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+              >
+                <Smartphone size={12} /> Android
+              </button>
+              <button 
+                onClick={() => setDevice('tablet')}
+                className={`sub-tab ${device === 'tablet' ? 'active' : ''}`}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+              >
+                <Tablet size={12} /> Tablet
+              </button>
+              <button 
+                onClick={() => setDevice('laptop')}
+                className={`sub-tab ${device === 'laptop' ? 'active' : ''}`}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+              >
+                <Laptop size={12} /> Laptop
+              </button>
             </div>
+
+            <div className="phone-wrapper" style={{ padding: '0.5rem 0', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={getDeviceStyle()}>
+                {device === 'iphone' && <div className="phone-notch"></div>}
+                {device === 'android' && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '6px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: '#1f2937',
+                    zIndex: 10
+                  }} />
+                )}
+                
+                <div className="phone-screen" style={{ paddingTop: device === 'laptop' ? '0' : '1.5rem' }}>
+                  {device !== 'laptop' && (
+                    <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb', fontSize: '0.7rem', color: '#6b7280', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>From: <strong>Dairy Queen</strong></span>
+                        <span>12:00 PM</span>
+                      </div>
+                      <span style={{ marginTop: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        Subject: <strong style={{ color: '#111827' }}>{renderedSubject}</strong>
+                      </span>
+                    </div>
+                  )}
+                  {renderedHtml ? (
+                    <iframe 
+                      title="Braze Live Email Render" 
+                      srcDoc={renderedHtml}
+                      sandbox="allow-same-origin"
+                      style={{ width: '100%', height: '100%', border: 'none' }}
+                    />
+                  ) : (
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontSize: '0.85rem' }}>
+                      No HTML code loaded.
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {device === 'laptop' && (
+                <div className="laptop-base" style={{ 
+                  height: '10px', 
+                  background: '#374151', 
+                  width: '90%', 
+                  maxWidth: '580px',
+                  borderRadius: '0 0 8px 8px',
+                  borderBottom: '4px solid #1f2937',
+                  boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
+                  zIndex: 5
+                }} />
+              )}
+
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setShowIframeFullscreen(true)}
+                style={{ marginTop: '1.25rem', padding: '0.4rem 0.8rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <Maximize2 size={12} /> Fullscreen Live Render
+              </button>
+            </div>
+
           </div>
         </div>
 
@@ -149,32 +289,36 @@ export default function VisualStressTester({ brazeHtml, subjectLine }) {
           </div>
 
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            This panel represents the pixel-perfect design reference as drawn in Figma. In Live mode, this displays the target layout frame directly.
+            This panel represents the pixel-perfect design reference as drawn in Figma. Click the mockup below to zoom full screen.
           </p>
 
-          <div style={{ 
-            flex: 1, 
-            border: '2px dashed var(--border-color)', 
-            borderRadius: 'var(--border-radius-md)', 
-            backgroundColor: 'rgba(255,255,255,0.01)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '2rem',
-            textAlign: 'center'
-          }}>
+          <div 
+            onClick={() => setShowFigmaFullscreen(true)}
+            style={{ 
+              flex: 1, 
+              border: '2px dashed var(--border-color)', 
+              borderRadius: 'var(--border-radius-md)', 
+              backgroundColor: 'rgba(255,255,255,0.01)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '2rem',
+              textAlign: 'center',
+              cursor: 'zoom-in',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-cyan)'; e.currentTarget.style.backgroundColor = 'rgba(6,182,212,0.02)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.01)'; }}
+          >
             {/* Beautiful SVG graphic mimicking Figma Vector Node UI */}
-            <svg width="180" height="240" viewBox="0 0 180 240" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '1.5rem', filter: 'drop-shadow(0 10px 20px rgba(6, 182, 212, 0.15))' }}>
+            <svg width="150" height="200" viewBox="0 0 180 240" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '1.5rem', filter: 'drop-shadow(0 10px 20px rgba(6, 182, 212, 0.15))' }}>
               <rect x="10" y="10" width="160" height="220" rx="16" fill="#111827" stroke="var(--accent-cyan)" strokeWidth="2" />
               <line x1="25" y1="35" x2="155" y2="35" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeDasharray="4 4" />
-              {/* Soft Serve Logo Mimic */}
               <path d="M90 60 C80 60, 75 75, 90 90 C105 75, 100 60, 90 60 Z" fill="var(--accent-blue)" />
               <path d="M80 90 H100 L95 110 H85 Z" fill="var(--accent-cyan)" />
-              {/* Card headers */}
               <rect x="35" y="125" width="110" height="12" rx="4" fill="rgba(255,255,255,0.15)" />
               <rect x="50" y="145" width="80" height="8" rx="4" fill="rgba(255,255,255,0.08)" />
-              {/* Coupon container dotted boundary */}
               <rect x="25" y="165" width="130" height="40" rx="6" fill="rgba(6, 182, 212, 0.05)" stroke="var(--accent-cyan)" strokeWidth="1" strokeDasharray="3 3" />
               <rect x="40" y="177" width="100" height="8" rx="4" fill="var(--accent-cyan)" fillOpacity="0.4" />
               <rect x="55" y="191" width="70" height="6" rx="3" fill="var(--accent-blue)" fillOpacity="0.6" />
@@ -199,6 +343,171 @@ export default function VisualStressTester({ brazeHtml, subjectLine }) {
         </div>
 
       </div>
+
+      {/* FIGMA FULLSCREEN OVERLAY MODAL */}
+      {showFigmaFullscreen && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(5, 8, 15, 0.95)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backdropFilter: 'blur(10px)',
+            animation: 'fadeIn 0.25s ease-out'
+          }}
+        >
+          <div 
+            style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
+              padding: '2.5rem',
+              borderRadius: 'var(--border-radius-lg)',
+              position: 'relative',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.8)'
+            }}
+          >
+            <button 
+              onClick={() => setShowFigmaFullscreen(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(244,63,94,0.1)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+            >
+              <X size={18} />
+            </button>
+
+            <h3 style={{ marginBottom: '1.5rem', color: 'var(--text-primary)' }}>Figma Blueprint Specification</h3>
+
+            <div style={{ background: '#111827', border: '1px solid var(--border-color)', padding: '2.5rem', borderRadius: 'var(--border-radius-md)', marginBottom: '1.5rem' }}>
+              <svg width="240" height="320" viewBox="0 0 180 240" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 15px 30px rgba(6, 182, 212, 0.25))' }}>
+                <rect x="10" y="10" width="160" height="220" rx="16" fill="#111827" stroke="var(--accent-cyan)" strokeWidth="2.5" />
+                <line x1="25" y1="35" x2="155" y2="35" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeDasharray="4 4" />
+                <path d="M90 60 C80 60, 75 75, 90 90 C105 75, 100 60, 90 60 Z" fill="var(--accent-blue)" />
+                <path d="M80 90 H100 L95 110 H85 Z" fill="var(--accent-cyan)" />
+                <rect x="35" y="125" width="110" height="12" rx="4" fill="rgba(255,255,255,0.15)" />
+                <rect x="50" y="145" width="80" height="8" rx="4" fill="rgba(255,255,255,0.08)" />
+                <rect x="25" y="165" width="130" height="40" rx="6" fill="rgba(6, 182, 212, 0.05)" stroke="var(--accent-cyan)" strokeWidth="1" strokeDasharray="3 3" />
+                <rect x="40" y="177" width="100" height="8" rx="4" fill="var(--accent-cyan)" fillOpacity="0.4" />
+                <rect x="55" y="191" width="70" height="6" rx="3" fill="var(--accent-blue)" fillOpacity="0.6" />
+              </svg>
+            </div>
+
+            <div style={{ textAlign: 'center', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              <strong>Dairy Queen Blizzard Promo mockup spec blueprint</strong><br />
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Render Node #4329:104 &bull; 375px &times; 812px &bull; SVG Outline Vector layer mapping</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LIVE RENDERING IFRAME FULLSCREEN OVERLAY MODAL */}
+      {showIframeFullscreen && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(5, 8, 15, 0.95)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backdropFilter: 'blur(10px)',
+            animation: 'fadeIn 0.25s ease-out'
+          }}
+        >
+          <div 
+            style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
+              padding: '2.5rem 1.5rem 1.5rem 1.5rem',
+              borderRadius: 'var(--border-radius-lg)',
+              position: 'relative',
+              width: '95vw',
+              height: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.8)'
+            }}
+          >
+            <button 
+              onClick={() => setShowIframeFullscreen(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(244,63,94,0.1)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}
+            >
+              <X size={18} />
+            </button>
+
+            <h3 style={{ marginBottom: '1.25rem', color: 'var(--text-primary)', textAlign: 'center' }}>
+              Full Resolution Email Render Frame
+            </h3>
+
+            <div style={{ flex: 1, width: '100%', background: '#fff', borderRadius: 'var(--border-radius-md)', overflow: 'hidden', border: '2px solid var(--border-color)' }}>
+              {renderedHtml ? (
+                <iframe 
+                  title="Braze Live Email Render Fullscreen" 
+                  srcDoc={renderedHtml}
+                  sandbox="allow-same-origin"
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                />
+              ) : (
+                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
+                  No HTML code loaded.
+                </div>
+              )}
+            </div>
+            
+            <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              Simulating segment: <strong style={{ color: 'var(--accent-cyan)' }}>{segment.toUpperCase().replace('_', ' ')}</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
