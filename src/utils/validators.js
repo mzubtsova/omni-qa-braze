@@ -158,6 +158,21 @@ export function checkWcagContrast(html) {
           message: `Label "${textContent}" has a low contrast ratio of ${ratio.toFixed(2)}:1 (Min required: 4.5:1). BG: ${bgColor}, Text: ${textColor}`
         });
       }
+    } else if (colorMatch && !bgMatch) {
+      const textColor = colorMatch[1];
+      const rgb = parseColorToRgb(textColor);
+      if (rgb) {
+        const lum = getLuminance(rgb);
+        // If the text color is dark (luminance < 0.35)
+        if (lum < 0.35) {
+          issues.push({
+            type: 'wcag',
+            severity: 'low',
+            item: `Dark Mode Risk`,
+            message: `Element <${tagName}> "${textContent.substring(0, 30)}" has a hardcoded dark color (${textColor}) without a background-color. It may become invisible when email clients invert the background in Dark Mode.`
+          });
+        }
+      }
     }
   }
 

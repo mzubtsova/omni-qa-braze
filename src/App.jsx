@@ -391,7 +391,7 @@ export default function App() {
             spamScore={scores.spam}
             issuesCount={issuesCount}
             setActiveTab={setActiveTab}
-            onRunAudit={() => runAudit()}
+            onRunAudit={runAudit}
             isAuditing={isAuditing}
             subjectLine={subjectLine}
           />
@@ -407,7 +407,7 @@ export default function App() {
             setBrazeHtml={setBrazeHtml}
             auditResults={copyAuditResults}
             isAuditing={isAuditing}
-            onRunAudit={() => runAudit()}
+            onRunAudit={runAudit}
           />
         )}
 
@@ -426,7 +426,7 @@ export default function App() {
             subjectLine={subjectLine}
             spamAuditResults={spamAuditResults}
             isAuditing={isAuditing}
-            onRunAudit={() => runAudit()}
+            onRunAudit={runAudit}
           />
         )}
 

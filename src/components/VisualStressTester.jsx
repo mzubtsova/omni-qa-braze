@@ -64,12 +64,18 @@ export default function VisualStressTester({ brazeHtml, subjectLine, theme }) {
         <style id="dark-mode-simulation">
           body, html { background-color: #121824 !important; color: #f1f5f9 !important; }
           .card, [class*="card"] { background-color: #1e293b !important; color: #f1f5f9 !important; border-color: #334155 !important; box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important; }
-          .header { background-color: #0f172a !important; color: #ffffff !important; }
+          .header, .header * { background-color: #0f172a !important; color: #ffffff !important; }
           .content { background-color: #1e293b !important; color: #e2e8f0 !important; }
-          .footer { background-color: #121824 !important; color: #94a3b8 !important; border-top-color: #334155 !important; }
-          h1, h2, h3, h4, h5, h6, strong { color: #ffffff !important; }
-          p, span, li, td { color: #cbd5e1 !important; }
+          .footer, .footer * { background-color: #121824 !important; color: #94a3b8 !important; border-top-color: #334155 !important; }
+          
+          /* Force heading and text colors with inline color styling to invert */
+          h1, h2, h3, h4, h5, h6, strong, b, [style*="color"] { color: #ffffff !important; }
+          table, td, tr, div, p { background-color: transparent !important; }
+          
+          /* Body and secondary copy */
+          p, span, li, td, [style*="color"]:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not(strong):not(b):not(.btn) { color: #cbd5e1 !important; }
           a:not(.btn) { color: #38bdf8 !important; }
+          a.btn, .btn, [class*="btn"] { background-color: #f43f5e !important; color: #ffffff !important; }
         </style>
       `;
       if (processedHtml.includes('</body>')) {

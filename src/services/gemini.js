@@ -171,59 +171,118 @@ Scan the copy and output the deliverability analysis in the JSON structure.`;
 
 function getMockCopyAudit(figmaTexts, brazeHtml, subjectLine) {
   const lowercaseHtml = brazeHtml.toLowerCase();
-  
-  if (lowercaseHtml.includes('dairy queen') || lowercaseHtml.includes('blizzard')) {
-    const mismatches = [];
+  const mismatches = [];
+  const suggestions = [];
 
-    // Mismatch 1: Tier restriction (only if html has Gold restriction block or text)
-    if (lowercaseHtml.includes('gold members') || lowercaseHtml.includes('tier') || lowercaseHtml.includes('vip')) {
+  // Extract clean lines of figma text
+  const cleanFigmaLines = figmaTexts
+    .map(t => t.trim())
+    .filter(t => t.length > 0);
+
+  // Extract plain text from HTML (ignoring script/style blocks and tags)
+  let plainHtmlText = brazeHtml
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  const plainHtmlTextLower = plainHtmlText.toLowerCase();
+
+  // Perform dynamic comparison
+  cleanFigmaLines.forEach(figmaLine => {
+    const figmaLineLower = figmaLine.toLowerCase();
+    
+    // Check if it's already exactly matched in the HTML or subject line
+    if (plainHtmlTextLower.includes(figmaLineLower) || (subjectLine && subjectLine.toLowerCase().includes(figmaLineLower))) {
+      return;
+    }
+
+    // Special case 1: Tier restriction discrepancy
+    if (figmaLineLower.includes('free small blizzard') && 
+        (lowercaseHtml.includes('gold members') || lowercaseHtml.includes('tier') || lowercaseHtml.includes('vip'))) {
       mismatches.push({
         severity: "high",
-        figmaText: "Get a FREE Small Blizzard",
+        figmaText: figmaLine,
         brazeText: "FREE SMALL BLIZZARD coupon valid for Gold members only",
         message: "Figma design shows a generic 'FREE Small Blizzard' without tier limits, but Braze HTML enforces VIP Gold restrictions. This could cause confusion for Bronze/Standard customers."
       });
+      return;
     }
 
-    // Mismatch 2: Expiration mismatch (if html says 7 days instead of 14 days)
-    if (lowercaseHtml.includes('7 days') && !lowercaseHtml.includes('14 days')) {
+    // Special case 2: Expiration mismatch
+    if (figmaLineLower.includes('14 days') && lowercaseHtml.includes('7 days') && !lowercaseHtml.includes('14 days')) {
       mismatches.push({
         severity: "medium",
-        figmaText: "Valid for 14 days",
+        figmaText: figmaLine,
         brazeText: "This offer is valid for 7 days at participating locations.",
         message: "Expiration date discrepancy: Figma design specifies 14 days, but Braze template code restricts the offer to 7 days."
       });
+      return;
     }
 
-    const suggestions = [];
-    if (subjectLine && (subjectLine.includes('🍦') || subjectLine.includes('🍨'))) {
-      suggestions.push({
-        context: "Subject Line emoji",
-        suggestion: "Variant A starts with 🍦 (soft serve) while Variant B starts with 🍨. To maintain consistent brand identity for Dairy Queen, recommend using the standard soft serve cup/cone icon."
+    // General dynamic comparison
+    // Tokenize the figma line into words of length >= 3
+    const words = figmaLineLower.split(/\s+/).filter(w => w.length >= 3);
+    if (words.length === 0) return;
+
+    // Split plain HTML text by punctuation to get clauses
+    const htmlClauses = plainHtmlText.split(/[.,;!|]|\s\s+/).map(c => c.trim()).filter(c => c.length > 0);
+    
+    let bestMatchClause = null;
+    let maxOverlap = 0;
+    
+    htmlClauses.forEach(clause => {
+      const clauseLower = clause.toLowerCase();
+      let overlap = 0;
+      words.forEach(word => {
+        if (clauseLower.includes(word)) {
+          overlap++;
+        }
+      });
+      
+      if (overlap > maxOverlap) {
+        maxOverlap = overlap;
+        bestMatchClause = clause;
+      }
+    });
+
+    // If we found a clause with significant overlap
+    if (maxOverlap > 0 && maxOverlap >= Math.min(2, words.length)) {
+      mismatches.push({
+        severity: figmaLineLower.includes('free') || figmaLineLower.includes('blizzard') || figmaLineLower.includes('offer') ? 'high' : 'medium',
+        figmaText: figmaLine,
+        brazeText: bestMatchClause,
+        message: `Text discrepancy detected. Figma layer text "${figmaLine}" does not match the HTML coded text "${bestMatchClause}".`
+      });
+    } else {
+      // Entirely missing
+      mismatches.push({
+        severity: 'low',
+        figmaText: figmaLine,
+        brazeText: 'Missing from HTML body',
+        message: `Creative layout text "${figmaLine}" was not found anywhere in the coded HTML template body.`
       });
     }
+  });
 
-    return {
-      mismatches,
-      suggestions
-    };
+  if (subjectLine && (subjectLine.includes('🍦') || subjectLine.includes('🍨'))) {
+    suggestions.push({
+      context: "Subject Line emoji",
+      suggestion: "Variant A starts with 🍦 (soft serve) while Variant B starts with 🍨. To maintain consistent brand identity for Dairy Queen, recommend using the standard soft serve cup/cone icon."
+    });
+  }
+
+  if (mismatches.length === 0) {
+    suggestions.push({
+      context: "Copy readability",
+      suggestion: "Consider breaking the main body block into two smaller paragraphs to optimize mobile scannability."
+    });
   }
 
   return {
-    mismatches: [
-      {
-        severity: "medium",
-        figmaText: "Welcome, user!",
-        brazeText: "Welcome, {{ user.first_name | default: 'Valued Customer' }}!",
-        message: "Figma shows generic greeting, but Braze HTML correctly implements Liquid variables. Verify that the font sizing accommodates longer name variables."
-      }
-    ],
-    suggestions: [
-      {
-        context: "Copy readability",
-        suggestion: "Consider breaking the main body block into two smaller paragraphs to optimize mobile scannability."
-      }
-    ]
+    mismatches,
+    suggestions
   };
 }
 
