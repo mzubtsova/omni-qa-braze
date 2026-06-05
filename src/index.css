@@ -135,7 +135,7 @@ h1, h2, h3, h4, h5, h6 {
 .sidebar-logo-text {
   font-size: 1.25rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #fff 40%, var(--accent-blue) 100%);
+  background: linear-gradient(135deg, var(--text-primary) 40%, var(--accent-blue) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -381,7 +381,7 @@ h1, h2, h3, h4, h5, h6 {
   position: absolute;
   font-size: 2.5rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -539,7 +539,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .sub-tab.active {
-  color: white;
+  color: var(--text-primary);
+  font-weight: 600;
   background-color: var(--bg-tertiary);
   border: 1px solid var(--border-color);
 }

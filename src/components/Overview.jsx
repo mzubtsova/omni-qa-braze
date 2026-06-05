@@ -283,7 +283,7 @@ export default function Overview({
               <X size={18} />
             </button>
 
-            <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fff' }}>
+            <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
               <Mail size={22} style={{ color: 'var(--accent-cyan)' }} /> Send Campaign QA Report
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
@@ -293,9 +293,9 @@ export default function Overview({
             {successSent ? (
               <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
                 <CheckCircle2 size={48} style={{ color: 'var(--success)', marginBottom: '1rem', display: 'inline-block' }} />
-                <h4 style={{ color: '#fff', marginBottom: '0.25rem' }}>Report Dispatched Successfully!</h4>
+                <h4 style={{ color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Report Dispatched Successfully!</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                  A detailed HTML report has been sent to <strong style={{ color: '#fff' }}>{recipientEmail}</strong>.
+                  A detailed HTML report has been sent to <strong style={{ color: 'var(--text-primary)' }}>{recipientEmail}</strong>.
                 </p>
                 <button 
                   className="btn btn-secondary" 

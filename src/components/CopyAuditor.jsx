@@ -122,7 +122,7 @@ export default function CopyAuditor({
                       </div>
                       <div style={{ borderLeft: '1px solid var(--border-color)', paddingLeft: '1rem' }}>
                         <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>BRAZE HTML / SUBJECT:</span>
-                        <span style={{ fontStyle: 'italic', color: '#fff' }}>"{item.brazeText}"</span>
+                        <span style={{ fontStyle: 'italic', color: 'var(--text-primary)' }}>"{item.brazeText}"</span>
                       </div>
                     </div>
 

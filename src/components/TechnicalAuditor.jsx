@@ -193,11 +193,11 @@ export default function TechnicalAuditor({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Image Tags (`&lt;img&gt;`):</span>
-                <strong style={{ color: '#fff' }}>{imageCount}</strong>
+                <strong style={{ color: 'var(--text-primary)' }}>{imageCount}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Raw Copy Length:</span>
-                <strong style={{ color: '#fff' }}>{rawTextLength} chars</strong>
+                <strong style={{ color: 'var(--text-primary)' }}>{rawTextLength} chars</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Text-to-Image Balance:</span>
@@ -290,7 +290,7 @@ export default function TechnicalAuditor({
                       <td style={{ fontWeight: '500', color: 'var(--accent-cyan)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                         {alert.category}
                       </td>
-                      <td style={{ fontWeight: '600', color: '#fff', fontSize: '0.85rem' }}>
+                      <td style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '0.85rem' }}>
                         {alert.item || alert.phrase || 'Trigger Phrase'}
                       </td>
                       <td>
