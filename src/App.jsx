@@ -435,6 +435,7 @@ export default function App() {
             brazeHtml={brazeHtml}
             setBrazeHtml={setBrazeHtml}
             auditResults={copyAuditResults}
+            spamAuditResults={spamAuditResults}
             isAuditing={isAuditing}
             onRunAudit={runAudit}
           />

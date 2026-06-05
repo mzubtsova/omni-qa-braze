@@ -27,6 +27,14 @@ export default function VisualStressTester({
   
   const [activeChannel, setActiveChannel] = useState('email'); // 'email', 'push', 'sms'
   const [pushOS, setPushOS] = useState('ios'); // 'ios' or 'android'
+  const [customName, setCustomName] = useState('');
+  const [pushFullScreen, setPushFullScreen] = useState(true); // true = Lockscreen, false = Banner
+
+  useEffect(() => {
+    if (activeChannel === 'push' && device === 'laptop') {
+      setDevice('iphone');
+    }
+  }, [activeChannel, device]);
 
   const isDarkTheme = theme === 'dark';
   const figmaBg = isDarkTheme ? '#111827' : '#ffffff';
@@ -41,15 +49,17 @@ export default function VisualStressTester({
   useEffect(() => {
     if (!brazeHtml) return;
 
-    let firstName = 'Valued Customer';
+    let firstName = customName ? customName : 'Valued Customer';
     let showVipDetails = false;
 
-    if (segment === 'long_name') {
+    if (segment === 'long_name' && !customName) {
       firstName = 'Hubert Wolfeschlegelsteinhausenbergerdorff';
-    } else if (segment === 'null_fallback') {
+    } else if (segment === 'null_fallback' && !customName) {
       firstName = '';
     } else if (segment === 'gold_tier') {
-      firstName = 'Marina';
+      if (!customName) {
+        firstName = 'Marina';
+      }
       showVipDetails = true;
     }
 
@@ -135,7 +145,7 @@ export default function VisualStressTester({
       return showVipDetails ? ifBlock : (elseBlock || '');
     });
     setRenderedSmsBody(processedSms);
-  }, [brazeHtml, subjectLine, segment, iframeTheme, pushBody, smsBody]);
+  }, [brazeHtml, subjectLine, segment, iframeTheme, pushBody, smsBody, customName]);
 
   const getDeviceStyle = () => {
     switch (device) {
@@ -347,6 +357,28 @@ export default function VisualStressTester({
                 Gold VIP Member
               </button>
             </div>
+
+            {/* Custom Name Override Input */}
+            <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Type Custom Subscriber Name (Overrides preset):</label>
+              <input
+                type="text"
+                className="form-input"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                placeholder="e.g. Marina"
+                style={{ 
+                  fontSize: '0.8rem', 
+                  padding: '0.45rem 0.65rem', 
+                  color: 'var(--text-primary)', 
+                  backgroundColor: 'var(--bg-primary)', 
+                  border: '1px solid var(--border-color)', 
+                  borderRadius: 'var(--border-radius-sm)', 
+                  width: '100%', 
+                  boxSizing: 'border-box' 
+                }}
+              />
+            </div>
           </div>
 
           {/* Device Mockup with Preset Controllers */}
@@ -376,13 +408,15 @@ export default function VisualStressTester({
                 >
                   <Tablet size={12} /> Tablet
                 </button>
-                <button 
-                  onClick={() => setDevice('laptop')}
-                  className={`sub-tab ${device === 'laptop' ? 'active' : ''}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
-                >
-                  <Laptop size={12} /> Laptop
-                </button>
+                {activeChannel !== 'push' && (
+                  <button 
+                    onClick={() => setDevice('laptop')}
+                    className={`sub-tab ${device === 'laptop' ? 'active' : ''}`}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                  >
+                    <Laptop size={12} /> Laptop
+                  </button>
+                )}
               </div>
 
               {/* Email Mode Theme Toggle */}
@@ -471,83 +505,224 @@ export default function VisualStressTester({
                   )}
 
                   {activeChannel === 'push' && (
-                    <div style={{ 
-                      flex: 1, 
-                      padding: '1.25rem', 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center',
-                      justifyContent: 'flex-start',
-                      gap: '2rem',
-                      height: '100%',
-                      boxSizing: 'border-box',
-                      color: '#ffffff',
-                      position: 'relative'
-                    }}>
-                      {/* iOS Lockscreen Top Time Display */}
-                      {pushOS === 'ios' && (
-                        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.15rem', marginTop: '1.5rem', opacity: 0.9 }}>
-                          <span style={{ fontSize: '0.7rem', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '1px' }}>Friday, June 5</span>
-                          <span style={{ fontSize: '2.25rem', fontWeight: '300', fontFamily: 'var(--font-sans)', letterSpacing: '-0.5px' }}>12:00</span>
+                    !pushFullScreen ? (
+                      /* Home Screen / Not Full Screen Banner */
+                      <div style={{
+                        flex: 1,
+                        padding: '1rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'flex-end',
+                        paddingBottom: '2.5rem',
+                        position: 'relative',
+                        height: '100%',
+                        boxSizing: 'border-box',
+                        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', // Home Screen Wallpaper
+                      }}>
+                        {/* Mock Floating Banner Notification at top */}
+                        <div style={{
+                          position: 'absolute',
+                          top: '1rem',
+                          left: '0.75rem',
+                          right: '0.75rem',
+                          zIndex: 10,
+                        }}>
+                          {pushOS === 'ios' ? (
+                            /* iOS Banner */
+                            <div style={{
+                              backgroundColor: 'rgba(255, 255, 255, 0.88)',
+                              backdropFilter: 'blur(20px)',
+                              WebkitBackdropFilter: 'blur(20px)',
+                              borderRadius: '16px',
+                              padding: '0.75rem 1rem',
+                              boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+                              border: '1px solid rgba(255, 255, 255, 0.4)',
+                              textAlign: 'left',
+                              color: '#111827'
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', opacity: 0.7, marginBottom: '0.25rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                  <span style={{ background: '#f43f5e', width: '12px', height: '12px', borderRadius: '3px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '8px', fontWeight: '800' }}>DQ</span>
+                                  <span style={{ fontWeight: '600', color: '#374151' }}>DAIRY QUEEN</span>
+                                </div>
+                                <span>now</span>
+                              </div>
+                              <div style={{ fontSize: '0.8rem', fontWeight: '700' }}>{renderedSubject}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#4b5563', lineHeight: '1.3' }}>{renderedPushBody}</div>
+                            </div>
+                          ) : (
+                            /* Android Banner */
+                            <div style={{
+                              backgroundColor: '#1f2937',
+                              borderRadius: '8px',
+                              padding: '0.75rem 1rem',
+                              boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
+                              border: '1px solid #374151',
+                              textAlign: 'left',
+                              color: '#f9fafb'
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: '#9ca3af', marginBottom: '0.25rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                  <span style={{ background: 'var(--accent-blue)', width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block' }} />
+                                  <span>Dairy Queen Rewards</span>
+                                </div>
+                                <span>now</span>
+                              </div>
+                              <div style={{ fontSize: '0.8rem', fontWeight: '700' }}>{renderedSubject}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#d1d5db', lineHeight: '1.3' }}>{renderedPushBody}</div>
+                            </div>
+                          )}
                         </div>
-                      )}
 
-                      {/* Mock Notification Card */}
-                      {pushOS === 'ios' ? (
-                        /* iOS Notification Card */
+                        {/* App Icons Grid */}
                         <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(4, 1fr)',
+                          gap: '1.2rem 0.5rem',
                           width: '100%',
-                          backgroundColor: 'rgba(255, 255, 255, 0.18)',
-                          backdropFilter: 'blur(20px)',
-                          WebkitBackdropFilter: 'blur(20px)',
-                          borderRadius: '16px',
-                          padding: '0.75rem 1rem',
-                          boxSizing: 'border-box',
-                          boxShadow: '0 4px 30px rgba(0, 0, 0, 0.2)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '0.25rem',
-                          textAlign: 'left'
+                          opacity: 0.85
                         }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', opacity: 0.7, marginBottom: '0.2rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <span style={{ background: 'var(--accent-cyan)', width: '12px', height: '12px', borderRadius: '3px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontSize: '8px', fontWeight: '800' }}>DQ</span>
-                              <span style={{ fontWeight: '600' }}>DAIRY QUEEN</span>
+                          {[
+                            { label: 'Mail', color: '#3b82f6' },
+                            { label: 'Safari', color: '#10b981' },
+                            { label: 'Photos', color: '#f59e0b' },
+                            { label: 'Maps', color: '#ef4444' },
+                            { label: 'Settings', color: '#6b7280' },
+                            { label: 'Weather', color: '#06b6d4' },
+                            { label: 'Notes', color: '#eab308' },
+                            { label: 'App Store', color: '#2563eb' }
+                          ].map((app, i) => (
+                            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                              <div style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '8px',
+                                backgroundColor: app.color,
+                                boxShadow: '0 4px 6px rgba(0,0,0,0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#ffffff',
+                                fontSize: '0.65rem',
+                                fontWeight: '700'
+                              }}>
+                                {app.label.substring(0, 1)}
+                              </div>
+                              <span style={{ fontSize: '0.55rem', color: '#ffffff', textShadow: '0 1px 2px rgba(0,0,0,0.8)', fontWeight: '500' }}>
+                                {app.label}
+                              </span>
                             </div>
-                            <span>now</span>
-                          </div>
-                          <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#ffffff' }}>{renderedSubject}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#e0e7ff', lineHeight: '1.3' }}>{renderedPushBody}</div>
+                          ))}
                         </div>
-                      ) : (
-                        /* Android Notification Card */
-                        <div style={{
-                          width: '100%',
-                          backgroundColor: '#1f2937',
-                          borderRadius: '8px',
-                          padding: '0.75rem 1rem',
-                          boxSizing: 'border-box',
-                          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
-                          border: '1px solid #374151',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '0.2rem',
-                          textAlign: 'left',
-                          marginTop: '2.5rem'
-                        }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: '#9ca3af', marginBottom: '0.2rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                              <span style={{ background: 'var(--accent-blue)', width: '10px', height: '10px', borderRadius: '50%', display: 'inline-block' }} />
-                              <span>Dairy Queen Rewards</span>
+                      </div>
+                    ) : (
+                      /* Full Screen Lockscreen View */
+                      <div style={{ 
+                        flex: 1, 
+                        padding: '1.25rem', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center',
+                        justifyContent: 'flex-start',
+                        gap: '1.5rem',
+                        height: '100%',
+                        boxSizing: 'border-box',
+                        color: '#ffffff',
+                        position: 'relative'
+                      }}>
+                        {/* iOS Lockscreen Top Time Display */}
+                        {pushOS === 'ios' && (
+                          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.15rem', marginTop: '1.5rem', opacity: 0.9 }}>
+                            <span style={{ fontSize: '0.7rem', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '1px' }}>Friday, June 5</span>
+                            <span style={{ fontSize: '2.25rem', fontWeight: '300', fontFamily: 'var(--font-sans)', letterSpacing: '-0.5px' }}>12:00</span>
+                          </div>
+                        )}
+
+                        {/* Mock Notification Card */}
+                        {pushOS === 'ios' ? (
+                          /* iOS Notification Card */
+                          <div style={{
+                            width: '100%',
+                            backgroundColor: 'rgba(255, 255, 255, 0.18)',
+                            backdropFilter: 'blur(20px)',
+                            WebkitBackdropFilter: 'blur(20px)',
+                            borderRadius: '16px',
+                            padding: '0.75rem 1rem',
+                            boxSizing: 'border-box',
+                            boxShadow: '0 4px 30px rgba(0, 0, 0, 0.2)',
+                            border: '1px solid rgba(255, 255, 255, 0.15)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.25rem',
+                            textAlign: 'left'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', opacity: 0.7, marginBottom: '0.2rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <span style={{ background: 'var(--accent-cyan)', width: '12px', height: '12px', borderRadius: '3px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontSize: '8px', fontWeight: '800' }}>DQ</span>
+                                <span style={{ fontWeight: '600' }}>DAIRY QUEEN</span>
+                              </div>
+                              <span>now</span>
                             </div>
-                            <span>12:00 PM</span>
+                            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#ffffff' }}>{renderedSubject}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#e0e7ff', lineHeight: '1.3' }}>{renderedPushBody}</div>
+                            
+                            {/* Rich Push Image */}
+                            <img 
+                              src="blizzard_push_banner.png" 
+                              alt="Push Campaign Banner" 
+                              style={{
+                                width: '100%',
+                                height: '80px',
+                                objectFit: 'cover',
+                                borderRadius: '8px',
+                                marginTop: '0.5rem',
+                                border: '1px solid rgba(255, 255, 255, 0.1)'
+                              }}
+                            />
                           </div>
-                          <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#f9fafb' }}>{renderedSubject}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#d1d5db', lineHeight: '1.3' }}>{renderedPushBody}</div>
-                        </div>
-                      )}
-                    </div>
+                        ) : (
+                          /* Android Notification Card */
+                          <div style={{
+                            width: '100%',
+                            backgroundColor: '#1f2937',
+                            borderRadius: '8px',
+                            padding: '0.75rem 1rem',
+                            boxSizing: 'border-box',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+                            border: '1px solid #374151',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.2rem',
+                            textAlign: 'left',
+                            marginTop: '2.5rem'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: '#9ca3af', marginBottom: '0.2rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <span style={{ background: 'var(--accent-blue)', width: '10px', height: '10px', borderRadius: '50%', display: 'inline-block' }} />
+                                <span>Dairy Queen Rewards</span>
+                              </div>
+                              <span>12:00 PM</span>
+                            </div>
+                            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#f9fafb' }}>{renderedSubject}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#d1d5db', lineHeight: '1.3' }}>{renderedPushBody}</div>
+                            
+                            {/* Rich Push Image */}
+                            <img 
+                              src="blizzard_push_banner.png" 
+                              alt="Push Campaign Banner" 
+                              style={{
+                                width: '100%',
+                                height: '80px',
+                                objectFit: 'cover',
+                                borderRadius: '8px',
+                                marginTop: '0.5rem',
+                                border: '1px solid rgba(255, 255, 255, 0.1)'
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )
                   )}
 
                   {activeChannel === 'sms' && (
@@ -679,6 +854,23 @@ export default function VisualStressTester({
                     style={{ flex: 1, padding: '0.35rem 0', fontSize: '0.75rem' }}
                   >
                     🤖 Android UI Frame
+                  </button>
+                </div>
+                {/* Push preview style toggle */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                  <button 
+                    onClick={() => setPushFullScreen(true)}
+                    className={`sub-tab ${pushFullScreen ? 'active' : ''}`}
+                    style={{ flex: 1, padding: '0.35rem 0', fontSize: '0.75rem' }}
+                  >
+                    📱 Lock Screen (Full)
+                  </button>
+                  <button 
+                    onClick={() => setPushFullScreen(false)}
+                    className={`sub-tab ${!pushFullScreen ? 'active' : ''}`}
+                    style={{ flex: 1, padding: '0.35rem 0', fontSize: '0.75rem' }}
+                  >
+                    🔔 App Banner (Not Full)
                   </button>
                 </div>
               </div>
@@ -971,6 +1163,21 @@ export default function VisualStressTester({
                   </div>
                   <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#ffffff' }}>{renderedSubject}</div>
                   <div style={{ fontSize: '0.85rem', color: pushOS === 'ios' ? '#e0e7ff' : '#d1d5db', lineHeight: '1.4' }}>{renderedPushBody}</div>
+                  
+                  {pushFullScreen && (
+                    <img 
+                      src="blizzard_push_banner.png" 
+                      alt="Push Campaign Banner" 
+                      style={{
+                        width: '100%',
+                        height: '140px',
+                        objectFit: 'cover',
+                        borderRadius: '8px',
+                        marginTop: '0.65rem',
+                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                      }}
+                    />
+                  )}
                 </div>
               )}
 
