@@ -2,6 +2,8 @@
 
 OmniQA is a unified, real-time diagnostic dashboard designed for CRM engineering, campaign managers, and marketing developers. It automates campaign quality assurance by validating coding structures, verifying design compliance, and predicting deliverability health before you hit "Send" in Braze.
 
+![OmniQA Dashboard Preview](omniqa_preview.png)
+
 ---
 
 ## 🛠️ System Architecture & Data Flow
@@ -26,25 +28,32 @@ graph TD
     I --> L
     J --> L
     K --> L
+    L --> M[Dynamic Campaign Reports]
 ```
 
 ---
 
 ## 🚀 Key Features
 
-### 1. Copy Sync Auditor
+### 1. Copy & Contrast Sync Auditor
 *   **Figma Layer Cross-Checking**: Compares text nodes extracted from Figma design layout directly with Braze HTML code and Subject Line.
-*   **AI Discrepancy Spotter**: Flags subtle price differences (e.g., "$10 off" vs. "10% off"), terms & conditions variances, and layout mismatches using `gemini-3.5-flash`.
+*   **Fuzzy Text-Diff Matcher**: Dynamically crawls plain text in the HTML body to match lines of Figma copy on the fly.
+*   **Typographical Punctuation (Marks) QA**: Scans for spacing inconsistencies (like double spaces `  `), capitalization casing differences, and duplicate punctuation marks (consecutive `,,` or `!!`).
+*   **Unified Access Dials**: Integrates HTML color contrast and Dark Mode risk warnings directly into the Copy Auditor discrepancies log.
+*   **Debounced Auto-Auditor**: Triggers the validator automatically after a 150ms pause as you type (only in Sandbox Demo mode), updating scorecards instantly.
 
-### 2. Visual Stress-Tester
-*   **Segment Simulation**: Renders templates in a real-time mobile preview frame under multiple subscriber profiles.
-*   **Name & Custom Attributes**: Test how the layout handles extreme name lengths (e.g., *Hubert Wolfeschlegelsteinhausenbergerdorff*), missing fallback defaults, or conditional logic branches.
+### 2. Multi-Device Layout Visual Stress-Tester
+*   **Preset Device Layouts**: Instantly preview rendering layout on **iPhone (iOS)**, **Android**, **Tablet**, and **Laptop** device frame presets.
+*   **Email Dark Mode Simulator**: Toggle client inversion simulation (☀️ Light / 🌙 Dark) next to the device frame. In Dark Mode, a simulator stylesheet is injected dynamically to override card backings, table structures, and headings, verifying text readability.
+*   **Theme-Adaptive Figma Spec Blueprint**: The Figma specifications blueprint SVG (and its fullscreen modal zoom) dynamically adjusts to the app's global color theme (Light/Dark).
+*   **Profile Personalization Simulation**: Renders template blocks against dynamic subscriber profiles (e.g. Standard fallbacks, extreme name lengths, VIP tiers, and null fallbacks).
 
 ### 3. Technical Health Auditor
-*   **Liquid Validator**: Scans curly braces `{{"..."}}` and logic blocks `{% if %}` for nesting depth errors, preventing execution errors.
-*   **UTM Parameter Crawler**: Automatically parses links in HTML to verify they are live, do not point to placeholders, and contain tracking tags.
-*   **WCAG Contrast Checker**: Calculates text-to-background contrast ratios for custom button templates to ensure accessibility compliance.
-*   **Spam Deliverability Advisor**: Uses generative heuristics to flag spam-trigger words and analyze image-to-text balance.
+*   **Liquid Validator**: Scans logic tags `{% if %}` and variables `{{ ... }}` for nesting depth errors and unclosed delimiters.
+*   **Link Parameter Crawler**: Parses all anchor links to check for broken URLs, placeholders (e.g. `href="#"`), and missing UTM parameters.
+*   **WCAG Color Contrast Audit**: Computes luminance contrast ratios for inline styled buttons (requires Min 4.5:1).
+*   **Dark Mode Risk Detector**: Flags elements using hardcoded dark text colors without a corresponding background-color style, warning developers of potential invisible content under inverted clients.
+*   **Spam Deliverability Advisor**: Predicts spam firewall scoring and flags image-to-text balance.
 
 ---
 
