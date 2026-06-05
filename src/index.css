@@ -572,3 +572,105 @@ h1, h2, h3, h4, h5, h6 {
   animation: fadeIn 0.2s ease-out;
   z-index: 1000;
 }
+
+/* Print styles */
+.print-report-only {
+  display: none;
+}
+
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  .app-container {
+    display: none !important;
+  }
+  .print-report-only {
+    display: block !important;
+    width: 100%;
+    color: #1e293b !important;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .print-header {
+    border-bottom: 2px solid #002d62;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .print-header h1 {
+    color: #002d62 !important;
+    margin: 0;
+    font-size: 1.8rem;
+  }
+  .print-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 25px;
+  }
+  .print-card {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 12px;
+    background-color: #f8fafc;
+  }
+  .print-card-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .print-card-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .print-section {
+    margin-bottom: 25px;
+    page-break-inside: avoid;
+  }
+  .print-section h3 {
+    color: #0f172a !important;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 6px;
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+  }
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+  .print-table th {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    border-bottom: 1px solid #cbd5e1;
+    text-transform: uppercase;
+  }
+  .print-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.8rem;
+    color: #334155;
+    vertical-align: top;
+  }
+  .print-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .print-badge-high { background-color: #ffe4e6 !important; color: #be123c !important; }
+  .print-badge-medium { background-color: #fef3c7 !important; color: #b45309 !important; }
+  .print-badge-low { background-color: #d1fae5 !important; color: #065f46 !important; }
+}
