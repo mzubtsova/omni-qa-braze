@@ -254,6 +254,10 @@ export default function App() {
     }
   };
 
+  const printLiquidErrors = validateLiquidSyntax(brazeHtml);
+  const printLinkIssues = auditHtmlLinks(brazeHtml);
+  const printContrastIssues = checkWcagContrast(brazeHtml);
+
   return (
     <>
       <div className="app-container">
@@ -533,77 +537,31 @@ export default function App() {
             </tr>
           </thead>
           <tbody>
-            {/* Liquid syntax errors */}
-            {(brazeHtml && (brazeHtml.match(/\{\{/g) || []).length !== (brazeHtml.match(/\}\}/g) || []).length) && (
-              <tr>
+            {printLiquidErrors.map((err, idx) => (
+              <tr key={`liq-${idx}`}>
                 <td><strong>Liquid Syntax</strong></td>
-                <td>Unbalanced Variables</td>
-                <td><span className="print-badge print-badge-high">High</span></td>
-                <td>Variables have mismatched double curly braces.</td>
+                <td>{err.item}</td>
+                <td><span className={`print-badge print-badge-${err.severity.toLowerCase()}`}>{err.severity}</span></td>
+                <td>{err.message}</td>
               </tr>
-            )}
-            {/* Link audits */}
-            {brazeHtml && [
-              ...brazeHtml.matchAll(/<a\s+[^>]*href=["']([^"']*)["']/gi)
-            ].map((match, idx) => {
-              const url = match[1].trim();
-              if (!url || url === '#' || url.toLowerCase().startsWith('javascript:')) {
-                return (
-                  <tr key={`link-${idx}`}>
-                    <td><strong>Link Health</strong></td>
-                    <td>Empty Link</td>
-                    <td><span className="print-badge print-badge-high">High</span></td>
-                    <td>Dummy link '#' or empty href inside template.</td>
-                  </tr>
-                );
-              }
-              if (url.includes('example.com')) {
-                return (
-                  <tr key={`link-${idx}`}>
-                    <td><strong>Link Health</strong></td>
-                    <td>Placeholder Link</td>
-                    <td><span className="print-badge print-badge-medium">Medium</span></td>
-                    <td>Link points to placeholder domain: "{url}".</td>
-                  </tr>
-                );
-              }
-              if (url.startsWith('http') && !url.includes('utm_source')) {
-                return (
-                  <tr key={`link-${idx}`}>
-                    <td><strong>Link Health</strong></td>
-                    <td>Missing UTM Tracking</td>
-                    <td><span className="print-badge print-badge-low">Low</span></td>
-                    <td>Link lacks Google Analytics parameters: "{url.substring(0, 30)}...".</td>
-                  </tr>
-                );
-              }
-              return null;
-            })}
-            
-            {/* WCAG Contrast check */}
-            {brazeHtml && [
-              ...brazeHtml.matchAll(/background-color\s*:\s*(#[a-f0-9]{3,6}|rgb\([^\)]+\))[^'"]*color\s*:\s*(#[a-f0-9]{3,6}|rgb\([^\)]+\))/gi)
-            ].map((match, idx) => {
-              const bg = match[1];
-              const fg = match[2];
-              if (bg === '#f43f5e' && fg === '#f87171') {
-                return (
-                  <tr key={`wcag-${idx}`}>
-                    <td><strong>WCAG Contrast</strong></td>
-                    <td>Claim Blizzard Button</td>
-                    <td><span className="print-badge print-badge-high">High</span></td>
-                    <td>Low color contrast: Text color #f87171 is hard to read on Rose #f43f5e background (min 4.5:1 ratio).</td>
-                  </tr>
-                );
-              }
-              return null;
-            })}
-            
-            {/* Fallback empty message */}
-            {(!brazeHtml || (
-              (brazeHtml.match(/\{\{/g) || []).length === (brazeHtml.match(/\}\}/g) || []).length &&
-              ![...brazeHtml.matchAll(/<a\s+[^>]*href=["']([^"']*)["']/gi)].some(m => !m[1] || m[1] === '#' || m[1].includes('example.com') || (m[1].startsWith('http') && !m[1].includes('utm_source')))
-            )) && (
+            ))}
+            {printLinkIssues.map((issue, idx) => (
+              <tr key={`link-${idx}`}>
+                <td><strong>Link Health</strong></td>
+                <td>{issue.item}</td>
+                <td><span className={`print-badge print-badge-${issue.severity.toLowerCase()}`}>{issue.severity}</span></td>
+                <td>{issue.message}</td>
+              </tr>
+            ))}
+            {printContrastIssues.map((issue, idx) => (
+              <tr key={`contrast-${idx}`}>
+                <td><strong>WCAG Contrast</strong></td>
+                <td>{issue.item}</td>
+                <td><span className={`print-badge print-badge-${issue.severity.toLowerCase()}`}>{issue.severity}</span></td>
+                <td>{issue.message}</td>
+              </tr>
+            ))}
+            {printLiquidErrors.length === 0 && printLinkIssues.length === 0 && printContrastIssues.length === 0 && (
               <tr>
                 <td colSpan="4" style={{ fontStyle: 'italic', color: '#64748b' }}>No technical or link warnings active in campaign code.</td>
               </tr>
