@@ -103,7 +103,7 @@ OmniQA Quality Assurance Engine`;
             <svg height={radius * 2} width={radius * 2}>
               {/* Background Track */}
               <circle
-                stroke="rgba(255,255,255,0.03)"
+                stroke="var(--border-color)"
                 fill="transparent"
                 strokeWidth={strokeWidth}
                 r={normalizedRadius}
@@ -325,7 +325,7 @@ OmniQA Quality Assurance Engine`;
                 position: 'absolute',
                 top: '1rem',
                 right: '1rem',
-                background: 'rgba(255,255,255,0.03)',
+                background: 'var(--bg-tertiary)',
                 border: '1px solid var(--border-color)',
                 borderRadius: '50%',
                 width: '36px',
@@ -384,15 +384,15 @@ OmniQA Quality Assurance Engine`;
                     <Sparkles size={14} /> Audit Dispatch Checklist
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '0.35rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.35rem' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Campaign Health Index:</span>
                       <strong style={{ color: overallScore >= 90 ? 'var(--success)' : overallScore >= 70 ? 'var(--warning)' : 'var(--error)' }}>{overallScore}/100</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '0.35rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.35rem' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Figma Copy Mismatches:</span>
                       <strong style={{ color: (issuesCount.high + issuesCount.medium) === 0 ? 'var(--success)' : 'var(--warning)' }}>{issuesCount.high + issuesCount.medium} flag(s)</strong>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '0.35rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.35rem' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Link & Contrast Warnings:</span>
                       <strong style={{ color: issuesCount.low === 0 ? 'var(--success)' : 'var(--text-primary)' }}>{issuesCount.low} flag(s)</strong>
                     </div>

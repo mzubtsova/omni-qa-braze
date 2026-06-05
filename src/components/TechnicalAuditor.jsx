@@ -121,9 +121,9 @@ export default function TechnicalAuditor({
       setToastMessage(`Success! Auto-fixed: ${details.join(', ')}. Recalculating scores...`);
       setTimeout(() => setToastMessage(null), 5000);
       
-      // Re-trigger audit validation
+      // Re-trigger audit validation immediately with fixed HTML
       if (onRunAudit) {
-        setTimeout(() => onRunAudit(), 100);
+        onRunAudit(undefined, { brazeHtml: fixedHtml });
       }
     } else {
       setToastMessage("No auto-fixable formatting issues found in this template.");

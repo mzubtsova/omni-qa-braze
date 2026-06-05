@@ -130,33 +130,37 @@ export default function App() {
     runAudit(settings.useMockData);
   };
 
-  const runAudit = async (mockOverride) => {
+  const runAudit = async (mockOverride, customData = {}) => {
     setIsAuditing(true);
     
     const isMock = mockOverride !== undefined ? mockOverride : useMockMode;
     const apiKey = isMock ? null : localStorage.getItem('gemini_api_key');
 
+    const currentHtml = customData.brazeHtml !== undefined ? customData.brazeHtml : brazeHtml;
+    const currentSubject = customData.subjectLine !== undefined ? customData.subjectLine : subjectLine;
+    const currentFigma = customData.figmaTexts !== undefined ? customData.figmaTexts : figmaTexts;
+
     try {
       // 1. Copy sync comparison (Gemini AI or mockup fallback)
       const copyRes = await auditFigmaAndBrazeCopy({
-        figmaTexts,
-        brazeHtml,
-        subjectLine
+        figmaTexts: currentFigma,
+        brazeHtml: currentHtml,
+        subjectLine: currentSubject
       }, apiKey);
       setCopyAuditResults(copyRes);
 
       // Extract body text to feed spam check
-      const bodyText = brazeHtml.replace(/<[^>]*>/g, ' ');
+      const bodyText = currentHtml.replace(/<[^>]*>/g, ' ');
       const spamRes = await auditSpamAndDeliverability({
-        subjectLine,
+        subjectLine: currentSubject,
         bodyText
       }, apiKey);
       setSpamAuditResults(spamRes);
 
       // Compute client-side tech validations
-      const liquidErrors = validateLiquidSyntax(brazeHtml);
-      const linkIssues = auditHtmlLinks(brazeHtml);
-      const contrastIssues = checkWcagContrast(brazeHtml);
+      const liquidErrors = validateLiquidSyntax(currentHtml);
+      const linkIssues = auditHtmlLinks(currentHtml);
+      const contrastIssues = checkWcagContrast(currentHtml);
 
       // Score computations
       let copyScoreVal = 100;
@@ -411,6 +415,7 @@ export default function App() {
           <VisualStressTester 
             brazeHtml={brazeHtml}
             subjectLine={subjectLine}
+            theme={theme}
           />
         )}
 

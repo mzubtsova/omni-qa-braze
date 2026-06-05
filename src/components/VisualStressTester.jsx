@@ -1,13 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Smartphone, RefreshCw, Eye, Sparkles, Layers, Sliders, Tablet, Laptop, Maximize2, X } from 'lucide-react';
+import { Smartphone, RefreshCw, Eye, Sparkles, Layers, Sliders, Tablet, Laptop, Maximize2, X, Sun, Moon } from 'lucide-react';
 
-export default function VisualStressTester({ brazeHtml, subjectLine }) {
+export default function VisualStressTester({ brazeHtml, subjectLine, theme }) {
   const [segment, setSegment] = useState('default');
   const [renderedHtml, setRenderedHtml] = useState('');
   const [renderedSubject, setRenderedSubject] = useState('');
   const [device, setDevice] = useState('iphone'); // 'iphone', 'android', 'tablet', 'laptop'
+  const [iframeTheme, setIframeTheme] = useState('light'); // 'light' or 'dark'
   const [showFigmaFullscreen, setShowFigmaFullscreen] = useState(false);
   const [showIframeFullscreen, setShowIframeFullscreen] = useState(false);
+
+  const isDarkTheme = theme === 'dark';
+  const figmaBg = isDarkTheme ? '#111827' : '#ffffff';
+  const figmaStroke = 'var(--accent-cyan)';
+  const figmaLineColor = isDarkTheme ? 'rgba(255,255,255,0.2)' : 'rgba(15, 23, 42, 0.15)';
+  const figmaRectColor1 = isDarkTheme ? 'rgba(255,255,255,0.15)' : 'rgba(15, 23, 42, 0.08)';
+  const figmaRectColor2 = isDarkTheme ? 'rgba(255,255,255,0.08)' : 'rgba(15, 23, 42, 0.04)';
+  const figmaDashBg = isDarkTheme ? 'rgba(255,255,255,0.01)' : 'rgba(15, 23, 42, 0.01)';
+  const figmaOverlayBg = isDarkTheme ? 'rgba(6, 182, 212, 0.05)' : 'rgba(6, 182, 212, 0.02)';
 
   // Expand Liquid tags client-side for sandbox simulation
   useEffect(() => {
@@ -48,6 +58,29 @@ export default function VisualStressTester({ brazeHtml, subjectLine }) {
       return elseBlock || '';
     });
 
+    // Inject simulated dark mode styles when in dark preview mode
+    if (iframeTheme === 'dark') {
+      const darkStyles = `
+        <style id="dark-mode-simulation">
+          body, html { background-color: #121824 !important; color: #f1f5f9 !important; }
+          .card, [class*="card"] { background-color: #1e293b !important; color: #f1f5f9 !important; border-color: #334155 !important; box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important; }
+          .header { background-color: #0f172a !important; color: #ffffff !important; }
+          .content { background-color: #1e293b !important; color: #e2e8f0 !important; }
+          .footer { background-color: #121824 !important; color: #94a3b8 !important; border-top-color: #334155 !important; }
+          h1, h2, h3, h4, h5, h6, strong { color: #ffffff !important; }
+          p, span, li, td { color: #cbd5e1 !important; }
+          a:not(.btn) { color: #38bdf8 !important; }
+        </style>
+      `;
+      if (processedHtml.includes('</body>')) {
+        processedHtml = processedHtml.replace('</body>', `${darkStyles}</body>`);
+      } else if (processedHtml.includes('</head>')) {
+        processedHtml = processedHtml.replace('</head>', `${darkStyles}</head>`);
+      } else {
+        processedHtml += darkStyles;
+      }
+    }
+
     setRenderedHtml(processedHtml);
 
     // Also parse Subject line
@@ -58,7 +91,7 @@ export default function VisualStressTester({ brazeHtml, subjectLine }) {
     processedSubject = processedSubject.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
 
     setRenderedSubject(processedSubject);
-  }, [brazeHtml, subjectLine, segment]);
+  }, [brazeHtml, subjectLine, segment, iframeTheme]);
 
   const getDeviceStyle = () => {
     switch (device) {
@@ -178,36 +211,58 @@ export default function VisualStressTester({ brazeHtml, subjectLine }) {
           {/* Device Mockup with Preset Controllers */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
             
-            {/* Device Selector Buttons */}
-            <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
-              <button 
-                onClick={() => setDevice('iphone')}
-                className={`sub-tab ${device === 'iphone' ? 'active' : ''}`}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
-              >
-                <Smartphone size={12} /> iPhone
-              </button>
-              <button 
-                onClick={() => setDevice('android')}
-                className={`sub-tab ${device === 'android' ? 'active' : ''}`}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
-              >
-                <Smartphone size={12} /> Android
-              </button>
-              <button 
-                onClick={() => setDevice('tablet')}
-                className={`sub-tab ${device === 'tablet' ? 'active' : ''}`}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
-              >
-                <Tablet size={12} /> Tablet
-              </button>
-              <button 
-                onClick={() => setDevice('laptop')}
-                className={`sub-tab ${device === 'laptop' ? 'active' : ''}`}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
-              >
-                <Laptop size={12} /> Laptop
-              </button>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
+              {/* Device Selector Buttons */}
+              <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
+                <button 
+                  onClick={() => setDevice('iphone')}
+                  className={`sub-tab ${device === 'iphone' ? 'active' : ''}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                >
+                  <Smartphone size={12} /> iPhone
+                </button>
+                <button 
+                  onClick={() => setDevice('android')}
+                  className={`sub-tab ${device === 'android' ? 'active' : ''}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                >
+                  <Smartphone size={12} /> Android
+                </button>
+                <button 
+                  onClick={() => setDevice('tablet')}
+                  className={`sub-tab ${device === 'tablet' ? 'active' : ''}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                >
+                  <Tablet size={12} /> Tablet
+                </button>
+                <button 
+                  onClick={() => setDevice('laptop')}
+                  className={`sub-tab ${device === 'laptop' ? 'active' : ''}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                >
+                  <Laptop size={12} /> Laptop
+                </button>
+              </div>
+
+              {/* Email Mode Theme Toggle */}
+              <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
+                <button 
+                  onClick={() => setIframeTheme('light')}
+                  className={`sub-tab ${iframeTheme === 'light' ? 'active' : ''}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                  title="Simulate email client light mode"
+                >
+                  <Sun size={12} /> Light
+                </button>
+                <button 
+                  onClick={() => setIframeTheme('dark')}
+                  className={`sub-tab ${iframeTheme === 'dark' ? 'active' : ''}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                  title="Simulate email client dark mode inversion"
+                >
+                  <Moon size={12} /> Dark
+                </button>
+              </div>
             </div>
 
             <div className="phone-wrapper" style={{ padding: '0.5rem 0', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -229,13 +284,21 @@ export default function VisualStressTester({ brazeHtml, subjectLine }) {
                 
                 <div className="phone-screen" style={{ paddingTop: device === 'laptop' ? '0' : '1.5rem' }}>
                   {device !== 'laptop' && (
-                    <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb', fontSize: '0.7rem', color: '#6b7280', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ 
+                      padding: '0.5rem 0.75rem', 
+                      borderBottom: iframeTheme === 'dark' ? '1px solid #374151' : '1px solid #e5e7eb', 
+                      backgroundColor: iframeTheme === 'dark' ? '#1f2937' : '#f9fafb', 
+                      fontSize: '0.7rem', 
+                      color: iframeTheme === 'dark' ? '#9ca3af' : '#6b7280', 
+                      display: 'flex', 
+                      flexDirection: 'column' 
+                    }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>From: <strong>Dairy Queen</strong></span>
+                        <span>From: <strong style={{ color: iframeTheme === 'dark' ? '#f3f4f6' : '#374151' }}>Dairy Queen</strong></span>
                         <span>12:00 PM</span>
                       </div>
                       <span style={{ marginTop: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        Subject: <strong style={{ color: '#111827' }}>{renderedSubject}</strong>
+                        Subject: <strong style={{ color: iframeTheme === 'dark' ? '#ffffff' : '#111827' }}>{renderedSubject}</strong>
                       </span>
                     </div>
                   )}
@@ -298,7 +361,7 @@ export default function VisualStressTester({ brazeHtml, subjectLine }) {
               flex: 1, 
               border: '2px dashed var(--border-color)', 
               borderRadius: 'var(--border-radius-md)', 
-              backgroundColor: 'rgba(255,255,255,0.01)',
+              backgroundColor: figmaDashBg,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -308,17 +371,17 @@ export default function VisualStressTester({ brazeHtml, subjectLine }) {
               cursor: 'zoom-in',
               transition: 'all 0.2s ease',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-cyan)'; e.currentTarget.style.backgroundColor = 'rgba(6,182,212,0.02)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.01)'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-cyan)'; e.currentTarget.style.backgroundColor = figmaOverlayBg; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.backgroundColor = figmaDashBg; }}
           >
             {/* Beautiful SVG graphic mimicking Figma Vector Node UI */}
             <svg width="150" height="200" viewBox="0 0 180 240" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '1.5rem', filter: 'drop-shadow(0 10px 20px rgba(6, 182, 212, 0.15))' }}>
-              <rect x="10" y="10" width="160" height="220" rx="16" fill="#111827" stroke="var(--accent-cyan)" strokeWidth="2" />
-              <line x1="25" y1="35" x2="155" y2="35" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeDasharray="4 4" />
+              <rect x="10" y="10" width="160" height="220" rx="16" fill={figmaBg} stroke={figmaStroke} strokeWidth="2" />
+              <line x1="25" y1="35" x2="155" y2="35" stroke={figmaLineColor} strokeWidth="2" strokeDasharray="4 4" />
               <path d="M90 60 C80 60, 75 75, 90 90 C105 75, 100 60, 90 60 Z" fill="var(--accent-blue)" />
               <path d="M80 90 H100 L95 110 H85 Z" fill="var(--accent-cyan)" />
-              <rect x="35" y="125" width="110" height="12" rx="4" fill="rgba(255,255,255,0.15)" />
-              <rect x="50" y="145" width="80" height="8" rx="4" fill="rgba(255,255,255,0.08)" />
+              <rect x="35" y="125" width="110" height="12" rx="4" fill={figmaRectColor1} />
+              <rect x="50" y="145" width="80" height="8" rx="4" fill={figmaRectColor2} />
               <rect x="25" y="165" width="130" height="40" rx="6" fill="rgba(6, 182, 212, 0.05)" stroke="var(--accent-cyan)" strokeWidth="1" strokeDasharray="3 3" />
               <rect x="40" y="177" width="100" height="8" rx="4" fill="var(--accent-cyan)" fillOpacity="0.4" />
               <rect x="55" y="191" width="70" height="6" rx="3" fill="var(--accent-blue)" fillOpacity="0.6" />
@@ -403,14 +466,14 @@ export default function VisualStressTester({ brazeHtml, subjectLine }) {
 
             <h3 style={{ marginBottom: '1.5rem', color: 'var(--text-primary)' }}>Figma Blueprint Specification</h3>
 
-            <div style={{ background: '#111827', border: '1px solid var(--border-color)', padding: '2.5rem', borderRadius: 'var(--border-radius-md)', marginBottom: '1.5rem' }}>
+            <div style={{ background: figmaBg, border: '1px solid var(--border-color)', padding: '2.5rem', borderRadius: 'var(--border-radius-md)', marginBottom: '1.5rem', transition: 'background-color 0.25s ease' }}>
               <svg width="240" height="320" viewBox="0 0 180 240" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 15px 30px rgba(6, 182, 212, 0.25))' }}>
-                <rect x="10" y="10" width="160" height="220" rx="16" fill="#111827" stroke="var(--accent-cyan)" strokeWidth="2.5" />
-                <line x1="25" y1="35" x2="155" y2="35" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeDasharray="4 4" />
+                <rect x="10" y="10" width="160" height="220" rx="16" fill={figmaBg} stroke={figmaStroke} strokeWidth="2.5" />
+                <line x1="25" y1="35" x2="155" y2="35" stroke={figmaLineColor} strokeWidth="2" strokeDasharray="4 4" />
                 <path d="M90 60 C80 60, 75 75, 90 90 C105 75, 100 60, 90 60 Z" fill="var(--accent-blue)" />
                 <path d="M80 90 H100 L95 110 H85 Z" fill="var(--accent-cyan)" />
-                <rect x="35" y="125" width="110" height="12" rx="4" fill="rgba(255,255,255,0.15)" />
-                <rect x="50" y="145" width="80" height="8" rx="4" fill="rgba(255,255,255,0.08)" />
+                <rect x="35" y="125" width="110" height="12" rx="4" fill={figmaRectColor1} />
+                <rect x="50" y="145" width="80" height="8" rx="4" fill={figmaRectColor2} />
                 <rect x="25" y="165" width="130" height="40" rx="6" fill="rgba(6, 182, 212, 0.05)" stroke="var(--accent-cyan)" strokeWidth="1" strokeDasharray="3 3" />
                 <rect x="40" y="177" width="100" height="8" rx="4" fill="var(--accent-cyan)" fillOpacity="0.4" />
                 <rect x="55" y="191" width="70" height="6" rx="3" fill="var(--accent-blue)" fillOpacity="0.6" />
@@ -486,7 +549,15 @@ export default function VisualStressTester({ brazeHtml, subjectLine }) {
               Full Resolution Email Render Frame
             </h3>
 
-            <div style={{ flex: 1, width: '100%', background: '#fff', borderRadius: 'var(--border-radius-md)', overflow: 'hidden', border: '2px solid var(--border-color)' }}>
+            <div style={{ 
+              flex: 1, 
+              width: '100%', 
+              background: iframeTheme === 'dark' ? '#121824' : '#ffffff', 
+              borderRadius: 'var(--border-radius-md)', 
+              overflow: 'hidden', 
+              border: '2px solid var(--border-color)',
+              transition: 'background-color 0.25s ease'
+            }}>
               {renderedHtml ? (
                 <iframe 
                   title="Braze Live Email Render Fullscreen" 

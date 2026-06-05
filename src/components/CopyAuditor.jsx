@@ -68,7 +68,7 @@ export default function CopyAuditor({
 
           <button 
             className="btn btn-primary" 
-            onClick={onRunAudit}
+            onClick={() => onRunAudit(undefined, { brazeHtml, subjectLine, figmaTexts })}
             disabled={isAuditing}
             style={{ width: '100%' }}
           >

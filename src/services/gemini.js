@@ -173,27 +173,39 @@ function getMockCopyAudit(figmaTexts, brazeHtml, subjectLine) {
   const lowercaseHtml = brazeHtml.toLowerCase();
   
   if (lowercaseHtml.includes('dairy queen') || lowercaseHtml.includes('blizzard')) {
+    const mismatches = [];
+
+    // Mismatch 1: Tier restriction (only if html has Gold restriction block or text)
+    if (lowercaseHtml.includes('gold members') || lowercaseHtml.includes('tier') || lowercaseHtml.includes('vip')) {
+      mismatches.push({
+        severity: "high",
+        figmaText: "Get a FREE Small Blizzard",
+        brazeText: "FREE SMALL BLIZZARD coupon valid for Gold members only",
+        message: "Figma design shows a generic 'FREE Small Blizzard' without tier limits, but Braze HTML enforces VIP Gold restrictions. This could cause confusion for Bronze/Standard customers."
+      });
+    }
+
+    // Mismatch 2: Expiration mismatch (if html says 7 days instead of 14 days)
+    if (lowercaseHtml.includes('7 days') && !lowercaseHtml.includes('14 days')) {
+      mismatches.push({
+        severity: "medium",
+        figmaText: "Valid for 14 days",
+        brazeText: "This offer is valid for 7 days at participating locations.",
+        message: "Expiration date discrepancy: Figma design specifies 14 days, but Braze template code restricts the offer to 7 days."
+      });
+    }
+
+    const suggestions = [];
+    if (subjectLine && (subjectLine.includes('🍦') || subjectLine.includes('🍨'))) {
+      suggestions.push({
+        context: "Subject Line emoji",
+        suggestion: "Variant A starts with 🍦 (soft serve) while Variant B starts with 🍨. To maintain consistent brand identity for Dairy Queen, recommend using the standard soft serve cup/cone icon."
+      });
+    }
+
     return {
-      mismatches: [
-        {
-          severity: "high",
-          figmaText: "Get a FREE Small Blizzard",
-          brazeText: "FREE SMALL BLIZZARD coupon valid for Gold members only",
-          message: "Figma design shows a generic 'FREE Small Blizzard' without tier limits, but Braze HTML enforces VIP Gold restrictions. This could cause confusion for Bronze/Standard customers."
-        },
-        {
-          severity: "medium",
-          figmaText: "Valid for 14 days",
-          brazeText: "This offer is valid for 7 days at participating locations.",
-          message: "Expiration date discrepancy: Figma design specifies 14 days, but Braze template code restricts the offer to 7 days."
-        }
-      ],
-      suggestions: [
-        {
-          context: "Subject Line emoji",
-          suggestion: "Variant A starts with 🍦 (soft serve) while Variant B starts with 🍨. To maintain consistent brand identity for Dairy Queen, recommend using the standard soft serve cup/cone icon."
-        }
-      ]
+      mismatches,
+      suggestions
     };
   }
 
