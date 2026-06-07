@@ -38,6 +38,12 @@ export default function CopyAuditor({
     editorRef.current = editorInstance;
   };
 
+  const handleFormatCode = () => {
+    if (editorRef.current) {
+      editorRef.current.getAction('editor.action.formatDocument').run();
+    }
+  };
+
   const highlightLine = (line) => {
     if (editorRef.current) {
       editorRef.current.revealLineInCenter(line);
@@ -466,7 +472,18 @@ export default function CopyAuditor({
 
           {editorChannel === 'email' && (
             <div className="form-group" style={{ margin: 0, flex: 2, display: 'flex', flexDirection: 'column', minHeight: '380px' }}>
-              <label className="form-label" style={{ marginBottom: '0.5rem' }}>Braze Campaign HTML (Monaco Editor)</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <label className="form-label" style={{ margin: 0 }}>Braze Campaign HTML (Monaco Editor)</label>
+                <button
+                  type="button"
+                  onClick={handleFormatCode}
+                  className="btn btn-secondary"
+                  style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.25rem', width: 'auto' }}
+                  title="Format campaign HTML and Liquid tags"
+                >
+                  <Sparkles size={10} /> Format Code
+                </button>
+              </div>
               <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-md)', overflow: 'hidden', flex: 1 }}>
                 <Editor
                   height="350px"

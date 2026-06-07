@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CheckCircle, Shield, Code, CheckSquare, Sparkles, X } from 'lucide-react';
-import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast } from '../utils/validators';
+import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast, auditImages } from '../utils/validators';
 
 export default function TechnicalAuditor({ 
   brazeHtml, 
@@ -59,6 +59,7 @@ export default function TechnicalAuditor({
   }
 
   const contrastIssues = checkWcagContrast(brazeHtml);
+  const imageIssues = auditImages(brazeHtml);
   
   // Combine all alerts into one structured list
   const spamTriggers = spamAuditResults?.spamTriggers || [];
@@ -68,6 +69,7 @@ export default function TechnicalAuditor({
     ...liquidErrors.map(e => ({ ...e, category: 'Liquid Syntax' })),
     ...linkIssues.map(e => ({ ...e, category: 'Link Health' })),
     ...contrastIssues.map(e => ({ ...e, category: 'WCAG Contrast' })),
+    ...imageIssues.map(e => ({ ...e, category: 'Image Health' })),
     ...spamTriggers.map(e => ({ ...e, category: 'Deliverability', type: 'spam' }))
   ];
 

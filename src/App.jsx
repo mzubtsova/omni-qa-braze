@@ -20,7 +20,7 @@ import Catalog from './components/Catalog';
 
 import { auditFigmaAndBrazeCopy, auditSpamAndDeliverability, predictCampaignEngagement } from './services/gemini';
 import { fetchFigmaTextLayers } from './services/figma';
-import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast } from './utils/validators';
+import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast, auditImages } from './utils/validators';
 
 const DEFAULT_SUBJECT = 'Get a FREE Blizzard Ice Cream! 🍦 Alert';
 const DEFAULT_FIGMA_TEXTS = [
@@ -61,8 +61,25 @@ const DEFAULT_HTML = `<!DOCTYPE html>
         </div>
       {% endif %}
 
+      <!-- Abandoned Cart Items Loop -->
+      {% if cart.items %}
+        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 6px; margin: 20px 0; border: 1px solid #e5e7eb;">
+          <h4 style="margin-top: 0; color: #002d62; display: flex; align-items: center; gap: 0.25rem;">Items Left in Your Cart:</h4>
+          <ul style="padding-left: 20px; margin: 0; font-size: 14px;">
+            {% for item in cart.items %}
+              <li style="margin-bottom: 5px;"><strong>{{ item.qty }}x</strong> {{ item.name }} - {{ item.price }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
       <p style="text-align: center; margin: 30px 0;">
         <a href="http://example.com/redeem" style="background-color: #f43f5e; color: #ffffff;" class="btn">Claim Blizzard Offer</a>
+      </p>
+
+      <p style="font-size: 14px; color: #475569; text-align: center; margin-top: 20px; border-top: 1px dashed #e5e7eb; padding-top: 15px;">
+        Use coupon code: <strong>{{ campaign.coupon_code | default: 'DQ-WELCOME-2026' }}</strong><br>
+        Offer Expires: <strong>{{ campaign.expiry_date | default: 'December 31, 2026' }}</strong>
       </p>
 
       <p>This offer is valid for 7 days at participating locations.</p>
@@ -287,6 +304,7 @@ export default function App() {
       }
 
       const contrastIssues = checkWcagContrast(currentHtml);
+      const imageIssues = auditImages(currentHtml);
 
       // Merge color/contrast issues into Copy Auditor mismatches list
       const contrastMismatches = contrastIssues.map(issue => ({
@@ -367,6 +385,21 @@ export default function App() {
           medCount++;
         }
       });
+
+      // Image health checks
+      imageIssues.forEach(i => {
+        if (i.severity === 'high') {
+          techScoreVal -= 10;
+          highCount++;
+        } else if (i.severity === 'medium') {
+          techScoreVal -= 5;
+          medCount++;
+        } else {
+          techScoreVal -= 2;
+          lowCount++;
+        }
+      });
+
       techScoreVal = Math.max(techScoreVal, 0);
 
       // Spam score
@@ -411,6 +444,7 @@ export default function App() {
   const printLiquidErrors = validateLiquidSyntax(brazeHtml);
   const printLinkIssues = auditHtmlLinks(brazeHtml);
   const printContrastIssues = checkWcagContrast(brazeHtml);
+  const printImageIssues = auditImages(brazeHtml);
 
   return (
     <>
@@ -783,7 +817,15 @@ export default function App() {
                 <td>{issue.message}</td>
               </tr>
             ))}
-            {printLiquidErrors.length === 0 && printLinkIssues.length === 0 && printContrastIssues.length === 0 && (
+            {printImageIssues.map((issue, idx) => (
+              <tr key={`image-${idx}`}>
+                <td><strong>Image Health</strong></td>
+                <td>{issue.item}</td>
+                <td><span className={`print-badge print-badge-${issue.severity.toLowerCase()}`}>{issue.severity}</span></td>
+                <td>{issue.message}</td>
+              </tr>
+            ))}
+            {printLiquidErrors.length === 0 && printLinkIssues.length === 0 && printContrastIssues.length === 0 && printImageIssues.length === 0 && (
               <tr>
                 <td colSpan="4" style={{ fontStyle: 'italic', color: '#64748b' }}>No technical or link warnings active in campaign code.</td>
               </tr>

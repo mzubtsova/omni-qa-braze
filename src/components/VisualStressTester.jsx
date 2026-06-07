@@ -64,6 +64,8 @@ export default function VisualStressTester({
 
     let firstName = customName ? customName : 'Valued Customer';
     let showVipDetails = false;
+    let cartItems = [];
+    let isSpanish = false;
 
     if (segment === 'long_name' && !customName) {
       firstName = 'Hubert Wolfeschlegelsteinhausenbergerdorff';
@@ -74,6 +76,16 @@ export default function VisualStressTester({
         firstName = 'Marina';
       }
       showVipDetails = true;
+    } else if (segment === 'cart_loop') {
+      firstName = customName ? customName : 'Alex';
+      cartItems = [
+        { name: 'Oreo Blizzard 🍦', price: '$4.99', qty: 1 },
+        { name: 'Choco Brownie Blizzard 🍫', price: '$5.49', qty: 2 },
+        { name: 'Strawberry Cheesecake Blizzard 🍓', price: '$5.99', qty: 1 }
+      ];
+    } else if (segment === 'localization_es') {
+      firstName = customName ? customName : 'Carlos';
+      isSpanish = true;
     }
 
     // Basic Liquid interpreter for rendering simulation
@@ -87,8 +99,39 @@ export default function VisualStressTester({
     // Resolve: {{ user.first_name }}
     processedHtml = processedHtml.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
 
+    // Resolve: {{ campaign.coupon_code | default: '...' }}
+    processedHtml = processedHtml.replace(/\{\{\s*campaign\.coupon_code\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, 'DQ-BLIZZARD-SUMMER26');
+    // Resolve: {{ campaign.coupon_code }}
+    processedHtml = processedHtml.replace(/\{\{\s*campaign\.coupon_code\s*\}\}/g, 'DQ-BLIZZARD-SUMMER26');
+
+    // Resolve: {{ campaign.expiry_date | default: '...' }}
+    const expiryDateStr = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(isSpanish ? 'es-ES' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    processedHtml = processedHtml.replace(/\{\{\s*campaign\.expiry_date\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, expiryDateStr);
+    // Resolve: {{ campaign.expiry_date }}
+    processedHtml = processedHtml.replace(/\{\{\s*campaign\.expiry_date\s*\}\}/g, expiryDateStr);
+
+    // Resolve: {% if cart.items %} ... {% endif %}
+    const cartConditionalRegex = /\{%\s*if\s+cart\.items\s*%\}([\s\S]*?)\{%\s*endif\s*%\}/g;
+    processedHtml = processedHtml.replace(cartConditionalRegex, (match, innerContent) => {
+      if (cartItems.length > 0) {
+        return innerContent;
+      }
+      return '';
+    });
+
+    // Resolve: {% for item in cart.items %} ... {% endfor %}
+    const forLoopRegex = /\{%\s*for\s+item\s+in\s+cart\.items\s*%\}([\s\S]*?)\{%\s*endfor\s*%\}/g;
+    processedHtml = processedHtml.replace(forLoopRegex, (match, innerTemplate) => {
+      return cartItems.map(item => {
+        let block = innerTemplate;
+        block = block.replace(/\{\{\s*item\.name\s*\}\}/g, item.name);
+        block = block.replace(/\{\{\s*item\.price\s*\}\}/g, item.price);
+        block = block.replace(/\{\{\s*item\.qty\s*\}\}/g, item.qty);
+        return block;
+      }).join('');
+    });
+
     // Resolve: {% if tier == 'Gold' %} ... {% else %} ... {% endif %}
-    // Renders the correct conditional block based on simulated segment.
     const conditionalRegex = /\{%\s*if\s+tier\s*==\s*['"]Gold['"]\s*%\}([\s\S]*?)(?:\{%\s*else\s*%\}([\s\S]*?))?\{%\s*endif\s*%\}/g;
     processedHtml = processedHtml.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
       if (showVipDetails) {
@@ -96,6 +139,23 @@ export default function VisualStressTester({
       }
       return elseBlock || '';
     });
+
+    // Translate if segment is Spanish Locale
+    if (isSpanish) {
+      processedHtml = processedHtml
+        .replace(/Welcome,/gi, '¡Bienvenido/a,')
+        .replace(/We loaded a special reward into your account to say thanks for being an app member\./gi, 'Hemos cargado una recompensa especial en tu cuenta para agradecerte que seas miembro de la aplicación.')
+        .replace(/Claim Blizzard Offer/gi, 'Reclamar Oferta de Blizzard')
+        .replace(/This offer is valid for 7 days at participating locations\./gi, 'Esta oferta es válida durante 7 días en los establecimientos participantes.')
+        .replace(/VIP GOLD MEMBERS-ONLY PERK:/gi, '🌟 BENEFICIO EXCLUSIVO PARA MIEMBROS DE ORO VIP:')
+        .replace(/FREE SMALL BLIZZARD coupon valid for Gold members only\. Enjoy your double points day!/gi, 'Cupón de BLIZZARD PEQUEÑO GRATIS válido únicamente para miembros Gold. ¡Disfruta de tu día de doble puntuación!')
+        .replace(/Items Left in Your Cart:/gi, 'Artículos que quedan en tu carrito:')
+        .replace(/Use coupon code:/gi, 'Utilice el código de cupón:')
+        .replace(/Offer Expires:/gi, 'La oferta vence el:')
+        .replace(/If you wish to unsubscribe, click/gi, 'Si desea darse de baja, haga clic')
+        .replace(/here/gi, 'aquí')
+        .replace(/Dairy Queen Rewards/gi, 'Recompensas de Dairy Queen');
+    }
 
     // Inject simulated dark mode styles when in dark preview mode
     if (iframeTheme === 'dark') {
@@ -128,68 +188,91 @@ export default function VisualStressTester({
 
     setRenderedHtml(processedHtml);
 
-    // Also parse Subject line
+    // Parse Subject line
     let processedSubject = subjectLine || '';
-    processedSubject = processedSubject.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
-      return firstName || fallback;
-    });
-    processedSubject = processedSubject.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
-
+    if (isSpanish) {
+      processedSubject = '¡Consigue un Blizzard GRATIS! 🍦 Alerta';
+    } else {
+      processedSubject = processedSubject.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
+        return firstName || fallback;
+      });
+      processedSubject = processedSubject.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
+    }
     setRenderedSubject(processedSubject);
 
     // Parse Push notification body
     let processedPush = pushBody || '';
-    processedPush = processedPush.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
-      return firstName || fallback;
-    });
-    processedPush = processedPush.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
-    processedPush = processedPush.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
-      return showVipDetails ? ifBlock : (elseBlock || '');
-    });
+    if (isSpanish) {
+      processedPush = '¡Consigue un Blizzard Pequeño GRATIS! 🍦 Válido durante 14 días. Reclama tu recompensa hoy.';
+    } else {
+      processedPush = processedPush.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
+        return firstName || fallback;
+      });
+      processedPush = processedPush.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
+      processedPush = processedPush.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
+        return showVipDetails ? ifBlock : (elseBlock || '');
+      });
+    }
     setRenderedPushBody(processedPush);
 
     // Parse SMS body
     let processedSms = smsBody || '';
-    processedSms = processedSms.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
-      return firstName || fallback;
-    });
-    processedSms = processedSms.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
-    processedSms = processedSms.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
-      return showVipDetails ? ifBlock : (elseBlock || '');
-    });
+    if (isSpanish) {
+      processedSms = `Dairy Queen: ¡Bienvenido/a Carlos! Cargamos una recompensa de Blizzard GRATIS en tu cuenta. Canjea aquí: http://example.com/redeem`;
+    } else {
+      processedSms = processedSms.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
+        return firstName || fallback;
+      });
+      processedSms = processedSms.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
+      processedSms = processedSms.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
+        return showVipDetails ? ifBlock : (elseBlock || '');
+      });
+    }
     setRenderedSmsBody(processedSms);
 
     // Parse IAM Header
     let processedIamHeader = iamHeader || '';
-    processedIamHeader = processedIamHeader.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
-      return firstName || fallback;
-    });
-    processedIamHeader = processedIamHeader.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
-    processedIamHeader = processedIamHeader.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
-      return showVipDetails ? ifBlock : (elseBlock || '');
-    });
+    if (isSpanish) {
+      processedIamHeader = 'Consigue un Blizzard Pequeño GRATIS';
+    } else {
+      processedIamHeader = processedIamHeader.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
+        return firstName || fallback;
+      });
+      processedIamHeader = processedIamHeader.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
+      processedIamHeader = processedIamHeader.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
+        return showVipDetails ? ifBlock : (elseBlock || '');
+      });
+    }
     setRenderedIamHeader(processedIamHeader);
 
     // Parse IAM Body
     let processedIamBody = iamBody || '';
-    processedIamBody = processedIamBody.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
-      return firstName || fallback;
-    });
-    processedIamBody = processedIamBody.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
-    processedIamBody = processedIamBody.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
-      return showVipDetails ? ifBlock : (elseBlock || '');
-    });
+    if (isSpanish) {
+      processedIamBody = 'Cargamos una recompensa de Blizzard GRATIS en tu cuenta.';
+    } else {
+      processedIamBody = processedIamBody.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
+        return firstName || fallback;
+      });
+      processedIamBody = processedIamBody.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
+      processedIamBody = processedIamBody.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
+        return showVipDetails ? ifBlock : (elseBlock || '');
+      });
+    }
     setRenderedIamBody(processedIamBody);
 
     // Parse IAM Button Text
     let processedIamButtonText = iamButtonText || '';
-    processedIamButtonText = processedIamButtonText.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
-      return firstName || fallback;
-    });
-    processedIamButtonText = processedIamButtonText.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
-    processedIamButtonText = processedIamButtonText.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
-      return showVipDetails ? ifBlock : (elseBlock || '');
-    });
+    if (isSpanish) {
+      processedIamButtonText = 'Reclamar Oferta';
+    } else {
+      processedIamButtonText = processedIamButtonText.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
+        return firstName || fallback;
+      });
+      processedIamButtonText = processedIamButtonText.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
+      processedIamButtonText = processedIamButtonText.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
+        return showVipDetails ? ifBlock : (elseBlock || '');
+      });
+    }
     setRenderedIamButtonText(processedIamButtonText);
   }, [brazeHtml, subjectLine, segment, iframeTheme, pushBody, smsBody, iamHeader, iamBody, iamButtonText, customName]);
 
@@ -408,6 +491,20 @@ export default function VisualStressTester({
                 style={{ width: '100%', padding: '0.5rem' }}
               >
                 Gold VIP Member
+              </button>
+              <button 
+                onClick={() => setSegment('cart_loop')}
+                className={`sub-tab ${segment === 'cart_loop' ? 'active' : ''}`}
+                style={{ width: '100%', padding: '0.5rem' }}
+              >
+                🛒 Abandoned Cart
+              </button>
+              <button 
+                onClick={() => setSegment('localization_es')}
+                className={`sub-tab ${segment === 'localization_es' ? 'active' : ''}`}
+                style={{ width: '100%', padding: '0.5rem' }}
+              >
+                🇪🇸 Spanish Locale
               </button>
             </div>
 

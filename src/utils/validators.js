@@ -235,3 +235,47 @@ function calculateContrastRatio(color1, color2) {
 
   return (brightest + 0.05) / (darkest + 0.05);
 }
+
+/**
+ * 4. Audits all images in the HTML for accessibility and transparent dark mode risks
+ */
+export function auditImages(html) {
+  const issues = [];
+  if (!html) return issues;
+
+  // Regex to extract <img> tags
+  const imgRegex = /<img\s+([^>]*?)>/gi;
+  let match;
+
+  while ((match = imgRegex.exec(html)) !== null) {
+    const imgAttrs = match[1];
+    const tagMatch = match[0];
+
+    // Check 1: Missing alt attribute
+    const hasAlt = /alt\s*=\s*["']/i.test(imgAttrs);
+    if (!hasAlt) {
+      issues.push({
+        type: 'image',
+        severity: 'medium',
+        item: `Missing Alt Tag`,
+        message: `Image tag lacks an 'alt' attribute for screen reader accessibility: ${tagMatch.substring(0, 50)}...`
+      });
+    }
+
+    // Check 2: Transparent PNG Dark Mode Inversion Risk
+    const srcMatch = imgAttrs.match(/src\s*=\s*["']([^"']*)["']/i);
+    if (srcMatch) {
+      const srcUrl = srcMatch[1].toLowerCase();
+      if (srcUrl.endsWith('.png') && !imgAttrs.includes('dark-protect') && !imgAttrs.includes('bg-') && !imgAttrs.includes('background')) {
+        issues.push({
+          type: 'image',
+          severity: 'low',
+          item: `Transparent Image Inversion`,
+          message: `Image "${srcUrl.split('/').pop()}" is a transparent PNG. It may become unreadable against inverted dark backgrounds in dark clients. Consider adding a white border or protective background.`
+        });
+      }
+    }
+  }
+
+  return issues;
+}
