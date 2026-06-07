@@ -17,6 +17,7 @@ export default function TechnicalAuditor({
 }) {
   const [filterSeverity, setFilterSeverity] = useState('all');
   const [toastMessage, setToastMessage] = useState(null);
+  const [isFixing, setIsFixing] = useState(false);
 
   // Compute local non-AI audits synchronously
   const liquidErrors = [
@@ -107,8 +108,10 @@ export default function TechnicalAuditor({
   }
 
   // Auto-Fix implementation
-  const handleAutoFix = () => {
+  const handleAutoFix = async () => {
     if (!brazeHtml) return;
+    setIsFixing(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     let fixedHtml = brazeHtml;
     let fixedIamLink = iamButtonLink;
@@ -188,6 +191,7 @@ export default function TechnicalAuditor({
       setToastMessage("No auto-fixable formatting issues found in this template.");
       setTimeout(() => setToastMessage(null), 3000);
     }
+    setIsFixing(false);
   };
 
   return (
@@ -277,6 +281,7 @@ export default function TechnicalAuditor({
               {fixableIssues.length > 0 && setBrazeHtml && (
                 <button 
                   onClick={handleAutoFix}
+                  disabled={isFixing}
                   className="btn btn-primary"
                   style={{ 
                     padding: '0.35rem 0.75rem', 
@@ -289,7 +294,8 @@ export default function TechnicalAuditor({
                   }}
                   title="Automatically fix links, UTM params, and color contrast issues in HTML"
                 >
-                  <Sparkles size={12} /> Auto-Fix HTML
+                  <Sparkles size={12} className={isFixing ? 'spin' : ''} />
+                  {isFixing ? '🧹 Scrubbing tags...' : 'Auto-Fix HTML'}
                 </button>
               )}
 

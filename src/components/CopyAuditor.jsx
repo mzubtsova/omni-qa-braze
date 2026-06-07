@@ -416,7 +416,7 @@ export default function CopyAuditor({
                 style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', width: 'auto' }}
               >
                 <RefreshCw size={12} className={figmaSyncLoading ? 'spin' : ''} />
-                {figmaSyncLoading ? 'Syncing...' : 'Sync Figma API'}
+                {figmaSyncLoading ? '🔌 Hooking up to Figma...' : 'Sync Figma API'}
               </button>
             </div>
             <textarea 
@@ -579,7 +579,7 @@ export default function CopyAuditor({
             disabled={isAuditing}
             style={{ width: '100%' }}
           >
-            {isAuditing ? 'Auditing Campaign...' : 'Analyze Campaign Assets'}
+            {isAuditing ? '🕵️‍♂️ Auditing your brackets...' : 'Analyze Campaign Assets'}
           </button>
         </div>
 

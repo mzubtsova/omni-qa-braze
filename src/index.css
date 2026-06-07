@@ -23,10 +23,13 @@
   --warning: #f59e0b;
   --error: #f43f5e;
   
+  --score-success-start: #34d399;
   --score-success: #10b981;
+  --score-warning-start: #fbbf24;
   --score-warning: #f59e0b;
+  --score-error-start: #f87171;
   --score-error: #f43f5e;
-  --ring-bg: rgba(59, 130, 246, 0.08);
+  --ring-bg: rgba(255, 255, 255, 0.07);
   
   --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -54,10 +57,13 @@
   --cyan-gradient: linear-gradient(135deg, #0891b2 0%, #7c3aed 100%);
   --accent-glow: 0 4px 12px rgba(37, 99, 235, 0.12);
   
+  --score-success-start: #10b981;
   --score-success: #059669;
+  --score-warning-start: #f59e0b;
   --score-warning: #d97706;
+  --score-error-start: #f43f5e;
   --score-error: #e11d48;
-  --ring-bg: rgba(59, 130, 246, 0.15);
+  --ring-bg: rgba(0, 0, 0, 0.07);
 }
 
 * {

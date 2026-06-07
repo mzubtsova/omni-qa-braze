@@ -129,6 +129,7 @@ export default function App() {
 
   const handleSyncFigma = async () => {
     setFigmaSyncLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     const token = useMockMode ? null : localStorage.getItem('figma_token');
     const fileId = useMockMode ? null : localStorage.getItem('figma_file_id');
     try {
@@ -144,6 +145,7 @@ export default function App() {
 
   const handlePredictEngagement = async () => {
     setIsPredicting(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     const apiKey = useMockMode ? null : localStorage.getItem('gemini_api_key');
     const bodyText = brazeHtml.replace(/<[^>]*>/g, ' ');
     try {
@@ -203,6 +205,7 @@ export default function App() {
 
   const runAudit = async (mockOverride, customData = {}) => {
     setIsAuditing(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     const isMock = mockOverride !== undefined ? mockOverride : useMockMode;
     const apiKey = isMock ? null : localStorage.getItem('gemini_api_key');

@@ -22,10 +22,16 @@ export default function Overview({
 }) {
   // SVG Config for Circular Progress Ring
   const radius = 80;
-  const strokeWidth = 14;
-  const normalizedRadius = radius - strokeWidth * 2;
+  const strokeWidth = 10;
+  const normalizedRadius = radius - strokeWidth / 2;
   const circumference = normalizedRadius * 2 * Math.PI;
   const strokeDashoffset = circumference - (overallScore / 100) * circumference;
+
+  const getScoreGradient = (score) => {
+    if (score >= 90) return 'url(#score-success-grad)';
+    if (score >= 70) return 'url(#score-warning-grad)';
+    return 'url(#score-error-grad)';
+  };
 
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState('');
@@ -153,6 +159,20 @@ OmniQA Quality Assurance Engine`;
           
           <div className="progress-ring-container">
             <svg viewBox={`0 0 ${radius * 2} ${radius * 2}`}>
+              <defs>
+                <linearGradient id="score-success-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="var(--score-success-start)" />
+                  <stop offset="100%" stopColor="var(--score-success)" />
+                </linearGradient>
+                <linearGradient id="score-warning-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="var(--score-warning-start)" />
+                  <stop offset="100%" stopColor="var(--score-warning)" />
+                </linearGradient>
+                <linearGradient id="score-error-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="var(--score-error-start)" />
+                  <stop offset="100%" stopColor="var(--score-error)" />
+                </linearGradient>
+              </defs>
               {/* Background Track */}
               <circle
                 stroke="var(--ring-bg)"
@@ -162,9 +182,9 @@ OmniQA Quality Assurance Engine`;
                 cx={radius}
                 cy={radius}
               />
-              {/* Foreground Glow */}
+              {/* Foreground Glow / Track */}
               <circle
-                stroke={getScoreColor(overallScore)}
+                stroke={getScoreGradient(overallScore)}
                 fill="transparent"
                 strokeWidth={strokeWidth}
                 strokeDasharray={circumference + ' ' + circumference}
@@ -189,7 +209,7 @@ OmniQA Quality Assurance Engine`;
               onClick={() => onRunAudit()}
               disabled={isAuditing}
             >
-              {isAuditing ? 'Analyzing Campaign...' : 'Re-Run QA Audit'}
+              {isAuditing ? '🕵️‍♂️ Hunting down campaign bugs...' : 'Re-Run QA Audit'}
             </button>
             
             <button 
@@ -281,7 +301,7 @@ OmniQA Quality Assurance Engine`;
             disabled={isPredicting || isAuditing}
             onClick={onPredictEngagement}
           >
-            {isPredicting ? 'Forecasting...' : 'Run Performance Predictor'}
+            {isPredicting ? '🔮 Gazing into crystal ball...' : 'Run Performance Predictor'}
           </button>
         </div>
 
