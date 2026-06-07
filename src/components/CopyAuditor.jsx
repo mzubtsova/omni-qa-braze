@@ -10,12 +10,25 @@ export default function CopyAuditor({
   setSubjectLine, 
   brazeHtml, 
   setBrazeHtml,
+  pushBody,
+  setPushBody,
+  smsBody,
+  setSmsBody,
+  iamHeader,
+  setIamHeader,
+  iamBody,
+  setIamBody,
+  iamButtonText,
+  setIamButtonText,
+  iamButtonLink,
+  setIamButtonLink,
   auditResults,
   spamAuditResults,
   isAuditing,
   onRunAudit
 }) {
   const [activeFilter, setActiveFilter] = useState('all');
+  const [editorChannel, setEditorChannel] = useState('email'); // 'email', 'push', 'sms', 'iam'
 
   const handleFigmaChange = (e) => {
     const lines = e.target.value.split('\n');
@@ -158,32 +171,153 @@ export default function CopyAuditor({
             />
           </div>
 
-          <div className="form-group" style={{ margin: 0, flex: 2, display: 'flex', flexDirection: 'column', minHeight: '380px' }}>
-            <label className="form-label" style={{ marginBottom: '0.5rem' }}>Braze Campaign HTML (Monaco Editor)</label>
-            <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-md)', overflow: 'hidden', flex: 1 }}>
-              <Editor
-                height="350px"
-                defaultLanguage="html"
-                theme="vs-dark"
-                value={brazeHtml}
-                onChange={(val) => setBrazeHtml(val || '')}
-                options={{
-                  minimap: { enabled: false },
-                  wordWrap: 'on',
-                  fontSize: 12,
-                  fontFamily: 'var(--font-mono)',
-                  lineHeight: 18,
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  padding: { top: 10, bottom: 10 }
-                }}
+          {/* Channel selector tabs inside Copy Auditor */}
+          <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', marginBottom: '0.25rem' }}>
+            <button 
+              type="button"
+              onClick={() => setEditorChannel('email')}
+              className={`sub-tab ${editorChannel === 'email' ? 'active' : ''}`}
+              style={{ flex: 1, padding: '0.35rem 0', fontSize: '0.72rem' }}
+            >
+              ✉️ Email HTML
+            </button>
+            <button 
+              type="button"
+              onClick={() => setEditorChannel('push')}
+              className={`sub-tab ${editorChannel === 'push' ? 'active' : ''}`}
+              style={{ flex: 1, padding: '0.35rem 0', fontSize: '0.72rem' }}
+            >
+              📱 Push Copy
+            </button>
+            <button 
+              type="button"
+              onClick={() => setEditorChannel('sms')}
+              className={`sub-tab ${editorChannel === 'sms' ? 'active' : ''}`}
+              style={{ flex: 1, padding: '0.35rem 0', fontSize: '0.72rem' }}
+            >
+              💬 SMS Copy
+            </button>
+            <button 
+              type="button"
+              onClick={() => setEditorChannel('iam')}
+              className={`sub-tab ${editorChannel === 'iam' ? 'active' : ''}`}
+              style={{ flex: 1, padding: '0.35rem 0', fontSize: '0.72rem' }}
+            >
+              ✨ In-App (IAM)
+            </button>
+          </div>
+
+          {editorChannel === 'email' && (
+            <div className="form-group" style={{ margin: 0, flex: 2, display: 'flex', flexDirection: 'column', minHeight: '380px' }}>
+              <label className="form-label" style={{ marginBottom: '0.5rem' }}>Braze Campaign HTML (Monaco Editor)</label>
+              <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-md)', overflow: 'hidden', flex: 1 }}>
+                <Editor
+                  height="350px"
+                  defaultLanguage="html"
+                  theme="vs-dark"
+                  value={brazeHtml}
+                  onChange={(val) => setBrazeHtml(val || '')}
+                  options={{
+                    minimap: { enabled: false },
+                    wordWrap: 'on',
+                    fontSize: 12,
+                    fontFamily: 'var(--font-mono)',
+                    lineHeight: 18,
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    padding: { top: 10, bottom: 10 }
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {editorChannel === 'push' && (
+            <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column', minHeight: '380px' }}>
+              <label className="form-label">Push Notification Body Copy</label>
+              <textarea
+                className="form-textarea"
+                value={pushBody}
+                onChange={(e) => setPushBody(e.target.value)}
+                placeholder="Enter push notification body copy..."
+                style={{ flex: 1, minHeight: '200px', fontSize: '0.85rem', padding: '0.5rem', fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}
               />
             </div>
-          </div>
+          )}
+
+          {editorChannel === 'sms' && (
+            <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column', minHeight: '380px' }}>
+              <label className="form-label">SMS Message Body Copy</label>
+              <textarea
+                className="form-textarea"
+                value={smsBody}
+                onChange={(e) => setSmsBody(e.target.value)}
+                placeholder="Enter SMS message body copy..."
+                style={{ flex: 1, minHeight: '200px', fontSize: '0.85rem', padding: '0.5rem', fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}
+              />
+            </div>
+          )}
+
+          {editorChannel === 'iam' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', minHeight: '380px' }}>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">IAM Header Title</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  value={iamHeader} 
+                  onChange={(e) => setIamHeader(e.target.value)}
+                  placeholder="Enter In-App Message title..."
+                />
+              </div>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">IAM Message Body</label>
+                <textarea
+                  className="form-textarea"
+                  value={iamBody}
+                  onChange={(e) => setIamBody(e.target.value)}
+                  placeholder="Enter In-App Message body copy..."
+                  style={{ minHeight: '100px', fontSize: '0.85rem', padding: '0.5rem', fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">IAM Button Text</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    value={iamButtonText} 
+                    onChange={(e) => setIamButtonText(e.target.value)}
+                    placeholder="e.g. Claim Offer"
+                  />
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">IAM Button Redirect URL</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    value={iamButtonLink} 
+                    onChange={(e) => setIamButtonLink(e.target.value)}
+                    placeholder="e.g. http://..."
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           <button 
             className="btn btn-primary" 
-            onClick={() => onRunAudit(undefined, { brazeHtml, subjectLine, figmaTexts })}
+            onClick={() => onRunAudit(undefined, { 
+              brazeHtml, 
+              subjectLine, 
+              figmaTexts,
+              pushBody,
+              smsBody,
+              iamHeader,
+              iamBody,
+              iamButtonText,
+              iamButtonLink
+            })}
             disabled={isAuditing}
             style={{ width: '100%' }}
           >

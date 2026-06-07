@@ -5,6 +5,13 @@ import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast } from '../util
 export default function TechnicalAuditor({ 
   brazeHtml, 
   setBrazeHtml,
+  subjectLine,
+  pushBody = '',
+  smsBody = '',
+  iamHeader = '',
+  iamBody = '',
+  iamButtonLink = '',
+  setIamButtonLink,
   spamAuditResults,
   onRunAudit 
 }) {
@@ -12,8 +19,44 @@ export default function TechnicalAuditor({
   const [toastMessage, setToastMessage] = useState(null);
 
   // Compute local non-AI audits synchronously
-  const liquidErrors = validateLiquidSyntax(brazeHtml);
+  const liquidErrors = [
+    ...validateLiquidSyntax(brazeHtml),
+    ...validateLiquidSyntax(subjectLine).map(e => ({ ...e, item: `Subject: ${e.item}` })),
+    ...validateLiquidSyntax(pushBody).map(e => ({ ...e, item: `Push: ${e.item}` })),
+    ...validateLiquidSyntax(smsBody).map(e => ({ ...e, item: `SMS: ${e.item}` })),
+    ...validateLiquidSyntax(iamHeader).map(e => ({ ...e, item: `IAM Header: ${e.item}` })),
+    ...validateLiquidSyntax(iamBody).map(e => ({ ...e, item: `IAM Body: ${e.item}` })),
+  ];
+  
   const linkIssues = auditHtmlLinks(brazeHtml);
+
+  if (iamButtonLink) {
+    const url = iamButtonLink.trim();
+    const itemLabel = 'IAM Button Link';
+    if (!url || url === '#' || url.toLowerCase().startsWith('javascript:')) {
+      linkIssues.push({
+        type: 'link',
+        severity: 'high',
+        item: itemLabel,
+        message: `Found empty or dummy href ("${url}") on the In-App Message primary button.`
+      });
+    } else if (url.includes('example.com') || url.includes('placeholder.com')) {
+      linkIssues.push({
+        type: 'link',
+        severity: 'medium',
+        item: itemLabel,
+        message: `Link points to a placeholder domain: "${url}"`
+      });
+    } else if (url.startsWith('http') && !url.includes('utm_source')) {
+      linkIssues.push({
+        type: 'link',
+        severity: 'low',
+        item: itemLabel,
+        message: `Link lacks UTM campaign parameters (utm_source): "${url}"`
+      });
+    }
+  }
+
   const contrastIssues = checkWcagContrast(brazeHtml);
   
   // Combine all alerts into one structured list
@@ -68,6 +111,7 @@ export default function TechnicalAuditor({
     if (!brazeHtml) return;
 
     let fixedHtml = brazeHtml;
+    let fixedIamLink = iamButtonLink;
     let fixCounts = { contrast: 0, utm: 0, placeholder: 0, empty: 0 };
 
     // 1. Fix low contrast (Claim Blizzard Offer)
@@ -103,6 +147,21 @@ export default function TechnicalAuditor({
       return match;
     });
 
+    // 5. Fix In-App Message (IAM) Button URL
+    if (iamButtonLink && setIamButtonLink) {
+      const url = iamButtonLink.trim();
+      if (!url || url === '#' || url.toLowerCase().startsWith('javascript:') || url.includes('example.com') || url.includes('placeholder.com')) {
+        fixedIamLink = 'https://dairyqueen.com/redeem?utm_source=braze&utm_medium=iam&utm_campaign=blizzard_promo';
+        setIamButtonLink(fixedIamLink);
+        fixCounts.placeholder++;
+      } else if (url.startsWith('http') && !url.includes('utm_source')) {
+        const separator = url.includes('?') ? '&' : '?';
+        fixedIamLink = `${url}${separator}utm_source=braze&utm_medium=iam&utm_campaign=blizzard_promo`;
+        setIamButtonLink(fixedIamLink);
+        fixCounts.utm++;
+      }
+    }
+
     // Save and re-run audits
     setBrazeHtml(fixedHtml);
     
@@ -120,7 +179,10 @@ export default function TechnicalAuditor({
       
       // Re-trigger audit validation immediately with fixed HTML
       if (onRunAudit) {
-        onRunAudit(undefined, { brazeHtml: fixedHtml });
+        onRunAudit(undefined, { 
+          brazeHtml: fixedHtml,
+          iamButtonLink: fixedIamLink
+        });
       }
     } else {
       setToastMessage("No auto-fixable formatting issues found in this template.");

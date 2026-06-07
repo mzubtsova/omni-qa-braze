@@ -95,27 +95,45 @@ async function callGemini(prompt, apiKey, systemInstruction = '') {
 /**
  * Runs a comparative copy audit between Figma text and Braze HTML
  */
-export async function auditFigmaAndBrazeCopy({ figmaTexts, brazeHtml, subjectLine }, apiKey) {
+export async function auditFigmaAndBrazeCopy({ 
+  figmaTexts, 
+  brazeHtml, 
+  subjectLine,
+  pushBody,
+  smsBody,
+  iamHeader,
+  iamBody,
+  iamButtonText
+}, apiKey) {
   if (!apiKey) {
-    return getMockCopyAudit(figmaTexts, brazeHtml, subjectLine);
+    return getMockCopyAudit(
+      figmaTexts, 
+      brazeHtml, 
+      subjectLine, 
+      pushBody, 
+      smsBody, 
+      iamHeader, 
+      iamBody, 
+      iamButtonText
+    );
   }
 
   const systemInstruction = `You are a professional copyeditor and campaign QA auditor.
-Compare a list of text layers extracted from a Figma design mock against the HTML copy and subject line of a Braze email template.
-Identify discrepancies (e.g. typos, incorrect pricing/discounts, missing terms/disclaimers, punctuation errors).
+Compare a list of text layers extracted from a Figma design mock against the HTML copy, subject line, push notification copy, SMS copy, and In-App Message (IAM) copy of a Braze campaign.
+Identify discrepancies (e.g. typos, incorrect pricing/discounts, missing terms/disclaimers, punctuation errors) between the design spec (Figma) and the actual multi-channel copy.
 Return your output ONLY as a JSON object matching this structure:
 {
   "mismatches": [
     {
       "severity": "high", // high, medium, low
       "figmaText": "The text found in Figma",
-      "brazeText": "The text found in Braze HTML",
+      "brazeText": "The text found in Braze HTML or corresponding channel field",
       "message": "Detailed description explaining what is wrong (e.g. spelling mismatch, pricing typo)."
     }
   ],
   "suggestions": [
     {
-      "context": "Subject line or section header",
+      "context": "Subject line, Push notification, SMS, IAM, or section header",
       "suggestion": "Recommendation to improve clarity, grammar, or alignment."
     }
   ]
@@ -130,7 +148,22 @@ Braze Campaign Subject Line:
 Braze Campaign HTML Body:
 ${brazeHtml}
 
-Perform a rigorous text comparison and return the logs inside the JSON structure.`;
+Braze Push Notification Body:
+"${pushBody}"
+
+Braze SMS Body:
+"${smsBody}"
+
+Braze In-App Message Header:
+"${iamHeader}"
+
+Braze In-App Message Body:
+"${iamBody}"
+
+Braze In-App Message Button Text:
+"${iamButtonText}"
+
+Perform a rigorous text comparison across all channels and return the logs inside the JSON structure.`;
 
   return callGemini(prompt, apiKey, systemInstruction);
 }
@@ -169,7 +202,16 @@ Scan the copy and output the deliverability analysis in the JSON structure.`;
 // MOCK DATA GENERATORS (FALLBACKS)
 // ==========================================
 
-function getMockCopyAudit(figmaTexts, brazeHtml, subjectLine) {
+function getMockCopyAudit(
+  figmaTexts, 
+  brazeHtml, 
+  subjectLine, 
+  pushBody = '', 
+  smsBody = '', 
+  iamHeader = '', 
+  iamBody = '', 
+  iamButtonText = ''
+) {
   const lowercaseHtml = brazeHtml.toLowerCase();
   const mismatches = [];
   const suggestions = [];
@@ -193,8 +235,14 @@ function getMockCopyAudit(figmaTexts, brazeHtml, subjectLine) {
   cleanFigmaLines.forEach(figmaLine => {
     const figmaLineLower = figmaLine.toLowerCase();
     
-    // Check if it's already exactly matched in the HTML or subject line
-    if (plainHtmlTextLower.includes(figmaLineLower) || (subjectLine && subjectLine.toLowerCase().includes(figmaLineLower))) {
+    // Check if it's already exactly matched in the HTML, subject line, or other channels
+    if (plainHtmlTextLower.includes(figmaLineLower) || 
+        (subjectLine && subjectLine.toLowerCase().includes(figmaLineLower)) ||
+        (pushBody && pushBody.toLowerCase().includes(figmaLineLower)) ||
+        (smsBody && smsBody.toLowerCase().includes(figmaLineLower)) ||
+        (iamHeader && iamHeader.toLowerCase().includes(figmaLineLower)) ||
+        (iamBody && iamBody.toLowerCase().includes(figmaLineLower)) ||
+        (iamButtonText && iamButtonText.toLowerCase().includes(figmaLineLower))) {
       return;
     }
 
@@ -226,25 +274,45 @@ function getMockCopyAudit(figmaTexts, brazeHtml, subjectLine) {
     const words = figmaLineLower.split(/\s+/).filter(w => w.length >= 3);
     if (words.length === 0) return;
 
-    // Split plain HTML text by punctuation to get clauses
-    const htmlClauses = plainHtmlText.split(/[.,;!|]|\s\s+/).map(c => c.trim()).filter(c => c.length > 0);
-    
+    // Check all channels for clause matching
+    const allChannelTexts = [
+      plainHtmlText, 
+      subjectLine, 
+      pushBody, 
+      smsBody, 
+      iamHeader, 
+      iamBody, 
+      iamButtonText
+    ].filter(Boolean);
+
     let bestMatchClause = null;
     let maxOverlap = 0;
-    
-    htmlClauses.forEach(clause => {
-      const clauseLower = clause.toLowerCase();
-      let overlap = 0;
-      words.forEach(word => {
-        if (clauseLower.includes(word)) {
-          overlap++;
+    let matchedChannel = '';
+
+    allChannelTexts.forEach(channelText => {
+      // Split channel text by punctuation to get clauses
+      const clauses = channelText.split(/[.,;!|]|\s\s+/).map(c => c.trim()).filter(c => c.length > 0);
+      
+      clauses.forEach(clause => {
+        const clauseLower = clause.toLowerCase();
+        let overlap = 0;
+        words.forEach(word => {
+          if (clauseLower.includes(word)) {
+            overlap++;
+          }
+        });
+        
+        if (overlap > maxOverlap) {
+          maxOverlap = overlap;
+          bestMatchClause = clause;
+          matchedChannel = channelText === plainHtmlText ? 'HTML' :
+                           channelText === subjectLine ? 'Subject Line' :
+                           channelText === pushBody ? 'Push Body' :
+                           channelText === smsBody ? 'SMS Body' :
+                           channelText === iamHeader ? 'IAM Header' :
+                           channelText === iamBody ? 'IAM Body' : 'IAM Button';
         }
       });
-      
-      if (overlap > maxOverlap) {
-        maxOverlap = overlap;
-        bestMatchClause = clause;
-      }
     });
 
     // If we found a clause with significant overlap
@@ -253,15 +321,15 @@ function getMockCopyAudit(figmaTexts, brazeHtml, subjectLine) {
         severity: figmaLineLower.includes('free') || figmaLineLower.includes('blizzard') || figmaLineLower.includes('offer') ? 'high' : 'medium',
         figmaText: figmaLine,
         brazeText: bestMatchClause,
-        message: `Text discrepancy detected. Figma layer text "${figmaLine}" does not match the HTML coded text "${bestMatchClause}".`
+        message: `Text discrepancy detected in ${matchedChannel}. Figma layer text "${figmaLine}" does not match the coded text "${bestMatchClause}".`
       });
     } else {
       // Entirely missing
       mismatches.push({
         severity: 'low',
         figmaText: figmaLine,
-        brazeText: 'Missing from HTML body',
-        message: `Creative layout text "${figmaLine}" was not found anywhere in the coded HTML template body.`
+        brazeText: 'Missing from coded channels',
+        message: `Creative layout text "${figmaLine}" was not found anywhere in Email, Push, SMS, or In-App Message templates.`
       });
     }
   });

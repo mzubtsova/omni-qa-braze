@@ -96,6 +96,10 @@ export default function App() {
   const [brazeHtml, setBrazeHtml] = useState(DEFAULT_HTML);
   const [pushBody, setPushBody] = useState('Get a FREE Small Blizzard! 🍦 Valid for 14 days. Claim your exclusive app reward today.');
   const [smsBody, setSmsBody] = useState('Dairy Queen: Welcome {{ user.first_name | default: \'Valued Customer\' }}! We loaded a FREE Blizzard reward into your account. Redeem here: http://example.com/redeem');
+  const [iamHeader, setIamHeader] = useState('Get a FREE Small Blizzard');
+  const [iamBody, setIamBody] = useState('Enjoy soft serve ice cream blended with your favorite toppings! Valid for 14 days.');
+  const [iamButtonText, setIamButtonText] = useState('Claim Offer');
+  const [iamButtonLink, setIamButtonLink] = useState('http://example.com/redeem');
 
   // API response logs
   const [copyAuditResults, setCopyAuditResults] = useState(null);
@@ -134,7 +138,7 @@ export default function App() {
     }, 150);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [brazeHtml, subjectLine, figmaTexts, useMockMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [brazeHtml, subjectLine, figmaTexts, pushBody, smsBody, iamHeader, iamBody, iamButtonText, iamButtonLink, useMockMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSettingsSave = (settings) => {
     setUseMockMode(settings.useMockData);
@@ -150,18 +154,67 @@ export default function App() {
     const currentHtml = customData.brazeHtml !== undefined ? customData.brazeHtml : brazeHtml;
     const currentSubject = customData.subjectLine !== undefined ? customData.subjectLine : subjectLine;
     const currentFigma = customData.figmaTexts !== undefined ? customData.figmaTexts : figmaTexts;
+    const currentPushBody = customData.pushBody !== undefined ? customData.pushBody : pushBody;
+    const currentSmsBody = customData.smsBody !== undefined ? customData.smsBody : smsBody;
+    const currentIamHeader = customData.iamHeader !== undefined ? customData.iamHeader : iamHeader;
+    const currentIamBody = customData.iamBody !== undefined ? customData.iamBody : iamBody;
+    const currentIamButtonText = customData.iamButtonText !== undefined ? customData.iamButtonText : iamButtonText;
+    const currentIamButtonLink = customData.iamButtonLink !== undefined ? customData.iamButtonLink : iamButtonLink;
 
     try {
       // 1. Copy sync comparison (Gemini AI or mockup fallback)
       const copyRes = await auditFigmaAndBrazeCopy({
         figmaTexts: currentFigma,
         brazeHtml: currentHtml,
-        subjectLine: currentSubject
+        subjectLine: currentSubject,
+        pushBody: currentPushBody,
+        smsBody: currentSmsBody,
+        iamHeader: currentIamHeader,
+        iamBody: currentIamBody,
+        iamButtonText: currentIamButtonText
       }, apiKey);
 
       // Compute client-side tech validations
-      const liquidErrors = validateLiquidSyntax(currentHtml);
-      const linkIssues = auditHtmlLinks(currentHtml);
+      const liquidErrors = [
+        ...validateLiquidSyntax(currentHtml),
+        ...validateLiquidSyntax(currentSubject).map(e => ({ ...e, item: `Subject: ${e.item}` })),
+        ...validateLiquidSyntax(currentPushBody).map(e => ({ ...e, item: `Push: ${e.item}` })),
+        ...validateLiquidSyntax(currentSmsBody).map(e => ({ ...e, item: `SMS: ${e.item}` })),
+        ...validateLiquidSyntax(currentIamHeader).map(e => ({ ...e, item: `IAM Header: ${e.item}` })),
+        ...validateLiquidSyntax(currentIamBody).map(e => ({ ...e, item: `IAM Body: ${e.item}` })),
+      ];
+
+      const linkIssues = [
+        ...auditHtmlLinks(currentHtml),
+      ];
+
+      if (currentIamButtonLink) {
+        const url = currentIamButtonLink.trim();
+        const itemLabel = 'IAM Button Link';
+        if (!url || url === '#' || url.toLowerCase().startsWith('javascript:')) {
+          linkIssues.push({
+            type: 'link',
+            severity: 'high',
+            item: itemLabel,
+            message: `Found empty or dummy href ("${url}") on the In-App Message primary button.`
+          });
+        } else if (url.includes('example.com') || url.includes('placeholder.com')) {
+          linkIssues.push({
+            type: 'link',
+            severity: 'medium',
+            item: itemLabel,
+            message: `Link points to a placeholder domain: "${url}"`
+          });
+        } else if (url.startsWith('http') && !url.includes('utm_source')) {
+          linkIssues.push({
+            type: 'link',
+            severity: 'low',
+            item: itemLabel,
+            message: `Link lacks UTM campaign parameters (utm_source): "${url}"`
+          });
+        }
+      }
+
       const contrastIssues = checkWcagContrast(currentHtml);
 
       // Merge color/contrast issues into Copy Auditor mismatches list
@@ -434,6 +487,18 @@ export default function App() {
             setSubjectLine={setSubjectLine}
             brazeHtml={brazeHtml}
             setBrazeHtml={setBrazeHtml}
+            pushBody={pushBody}
+            setPushBody={setPushBody}
+            smsBody={smsBody}
+            setSmsBody={setSmsBody}
+            iamHeader={iamHeader}
+            setIamHeader={setIamHeader}
+            iamBody={iamBody}
+            setIamBody={setIamBody}
+            iamButtonText={iamButtonText}
+            setIamButtonText={setIamButtonText}
+            iamButtonLink={iamButtonLink}
+            setIamButtonLink={setIamButtonLink}
             auditResults={copyAuditResults}
             spamAuditResults={spamAuditResults}
             isAuditing={isAuditing}
@@ -450,6 +515,14 @@ export default function App() {
             setPushBody={setPushBody}
             smsBody={smsBody}
             setSmsBody={setSmsBody}
+            iamHeader={iamHeader}
+            setIamHeader={setIamHeader}
+            iamBody={iamBody}
+            setIamBody={setIamBody}
+            iamButtonText={iamButtonText}
+            setIamButtonText={setIamButtonText}
+            iamButtonLink={iamButtonLink}
+            setIamButtonLink={setIamButtonLink}
           />
         )}
 
@@ -458,6 +531,12 @@ export default function App() {
             brazeHtml={brazeHtml}
             setBrazeHtml={setBrazeHtml}
             subjectLine={subjectLine}
+            pushBody={pushBody}
+            smsBody={smsBody}
+            iamHeader={iamHeader}
+            iamBody={iamBody}
+            iamButtonLink={iamButtonLink}
+            setIamButtonLink={setIamButtonLink}
             spamAuditResults={spamAuditResults}
             isAuditing={isAuditing}
             onRunAudit={runAudit}

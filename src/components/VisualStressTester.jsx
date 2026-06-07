@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Smartphone, Layers, Sliders, Tablet, Laptop, Maximize2, X, Sun, Moon, Bell, MessageSquare, Mail } from 'lucide-react';
+import { Smartphone, Layers, Sliders, Tablet, Laptop, Maximize2, X, Sun, Moon, Bell, MessageSquare, Mail, Sparkles } from 'lucide-react';
 
 const isGSM7 = (str) => {
   const gsm7Regex = /^[A-Za-z0-9@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,\-./:;<=>?¡¿ÄÖÑÜ§à^{}[\\\]~|€]*$/;
@@ -13,22 +13,35 @@ export default function VisualStressTester({
   pushBody,
   setPushBody,
   smsBody,
-  setSmsBody
+  setSmsBody,
+  iamHeader,
+  setIamHeader,
+  iamBody,
+  setIamBody,
+  iamButtonText,
+  setIamButtonText,
+  iamButtonLink,
+  setIamButtonLink
 }) {
   const [segment, setSegment] = useState('default');
   const [renderedHtml, setRenderedHtml] = useState('');
   const [renderedSubject, setRenderedSubject] = useState('');
   const [renderedPushBody, setRenderedPushBody] = useState('');
   const [renderedSmsBody, setRenderedSmsBody] = useState('');
+  const [renderedIamHeader, setRenderedIamHeader] = useState('');
+  const [renderedIamBody, setRenderedIamBody] = useState('');
+  const [renderedIamButtonText, setRenderedIamButtonText] = useState('');
+  
   const [device, setDevice] = useState('iphone'); // 'iphone', 'android', 'tablet', 'laptop'
   const [iframeTheme, setIframeTheme] = useState('light'); // 'light' or 'dark'
   const [showFigmaFullscreen, setShowFigmaFullscreen] = useState(false);
   const [showIframeFullscreen, setShowIframeFullscreen] = useState(false);
   
-  const [activeChannel, setActiveChannel] = useState('email'); // 'email', 'push', 'sms'
+  const [activeChannel, setActiveChannel] = useState('email'); // 'email', 'push', 'sms', 'iam'
   const [pushOS, setPushOS] = useState('ios'); // 'ios' or 'android'
   const [customName, setCustomName] = useState('');
   const [pushFullScreen, setPushFullScreen] = useState(true); // true = Lockscreen, false = Banner
+  const [iamStyle, setIamStyle] = useState('modal'); // 'modal', 'slideup', 'fullscreen'
 
   useEffect(() => {
     if (activeChannel === 'push' && device === 'laptop') {
@@ -145,7 +158,40 @@ export default function VisualStressTester({
       return showVipDetails ? ifBlock : (elseBlock || '');
     });
     setRenderedSmsBody(processedSms);
-  }, [brazeHtml, subjectLine, segment, iframeTheme, pushBody, smsBody, customName]);
+
+    // Parse IAM Header
+    let processedIamHeader = iamHeader || '';
+    processedIamHeader = processedIamHeader.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
+      return firstName || fallback;
+    });
+    processedIamHeader = processedIamHeader.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
+    processedIamHeader = processedIamHeader.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
+      return showVipDetails ? ifBlock : (elseBlock || '');
+    });
+    setRenderedIamHeader(processedIamHeader);
+
+    // Parse IAM Body
+    let processedIamBody = iamBody || '';
+    processedIamBody = processedIamBody.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
+      return firstName || fallback;
+    });
+    processedIamBody = processedIamBody.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
+    processedIamBody = processedIamBody.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
+      return showVipDetails ? ifBlock : (elseBlock || '');
+    });
+    setRenderedIamBody(processedIamBody);
+
+    // Parse IAM Button Text
+    let processedIamButtonText = iamButtonText || '';
+    processedIamButtonText = processedIamButtonText.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
+      return firstName || fallback;
+    });
+    processedIamButtonText = processedIamButtonText.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
+    processedIamButtonText = processedIamButtonText.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
+      return showVipDetails ? ifBlock : (elseBlock || '');
+    });
+    setRenderedIamButtonText(processedIamButtonText);
+  }, [brazeHtml, subjectLine, segment, iframeTheme, pushBody, smsBody, iamHeader, iamBody, iamButtonText, customName]);
 
   const getDeviceStyle = () => {
     switch (device) {
@@ -319,6 +365,13 @@ export default function VisualStressTester({
               style={{ flex: 1, padding: '0.4rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.75rem' }}
             >
               <MessageSquare size={12} /> SMS Preview
+            </button>
+            <button 
+              onClick={() => setActiveChannel('iam')}
+              className={`sub-tab ${activeChannel === 'iam' ? 'active' : ''}`}
+              style={{ flex: 1, padding: '0.4rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.75rem' }}
+            >
+              <Sparkles size={12} /> IAM Preview
             </button>
           </div>
 
@@ -802,6 +855,256 @@ export default function VisualStressTester({
                       </div>
                     </div>
                   )}
+
+                  {activeChannel === 'iam' && (
+                    <div style={{
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      height: '100%',
+                      boxSizing: 'border-box',
+                      position: 'relative',
+                      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', // App Background
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      padding: '1.25rem'
+                    }}>
+                      {/* Mock App Interface Background */}
+                      <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', fontSize: '0.65rem', color: '#64748b', fontWeight: '600' }}>
+                        Dairy Queen App
+                      </div>
+
+                      {/* Modal Style IAM Preview */}
+                      {iamStyle === 'modal' && (
+                        <div style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(0,0,0,0.6)',
+                          zIndex: 20,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '1.25rem',
+                          animation: 'fadeIn 0.2s ease'
+                        }}>
+                          <div style={{
+                            backgroundColor: iframeTheme === 'dark' ? '#1f2937' : '#ffffff',
+                            color: iframeTheme === 'dark' ? '#ffffff' : '#111827',
+                            borderRadius: '12px',
+                            width: '100%',
+                            maxWidth: '240px',
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                            padding: '1.25rem',
+                            position: 'relative',
+                            textAlign: 'center',
+                            border: '1px solid var(--border-color)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                          }}>
+                            {/* Close icon */}
+                            <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', opacity: 0.6, cursor: 'pointer' }}>
+                              <X size={12} />
+                            </div>
+
+                            {/* Campaign icon */}
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              backgroundColor: '#f43f5e',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#fff',
+                              fontSize: '0.8rem',
+                              fontWeight: '800',
+                              marginBottom: '0.25rem'
+                            }}>
+                              DQ
+                            </div>
+
+                            <h4 style={{ fontSize: '0.85rem', fontWeight: '700', margin: 0 }}>{renderedIamHeader}</h4>
+                            <p style={{ fontSize: '0.75rem', color: iframeTheme === 'dark' ? '#9ca3af' : '#4b5563', lineHeight: '1.3', margin: 0 }}>
+                              {renderedIamBody}
+                            </p>
+                            
+                            <a 
+                              href={iamButtonLink} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              style={{
+                                display: 'block',
+                                width: '100%',
+                                backgroundColor: '#f43f5e',
+                                color: '#ffffff',
+                                textAlign: 'center',
+                                padding: '0.45rem',
+                                borderRadius: '6px',
+                                fontSize: '0.75rem',
+                                fontWeight: '700',
+                                textDecoration: 'none',
+                                marginTop: '0.5rem'
+                              }}
+                            >
+                              {renderedIamButtonText}
+                            </a>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Slideup Style IAM Preview */}
+                      {iamStyle === 'slideup' && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '1rem',
+                          left: '0.75rem',
+                          right: '0.75rem',
+                          backgroundColor: iframeTheme === 'dark' ? '#1f2937' : '#ffffff',
+                          color: iframeTheme === 'dark' ? '#ffffff' : '#111827',
+                          borderRadius: '10px',
+                          boxShadow: '0 8px 25px rgba(0,0,0,0.4)',
+                          padding: '0.75rem 1rem',
+                          border: '1px solid var(--border-color)',
+                          zIndex: 20,
+                          textAlign: 'left',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          animation: 'slideUp 0.3s ease'
+                        }}>
+                          <div style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '6px',
+                            backgroundColor: '#f43f5e',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            fontSize: '0.65rem',
+                            fontWeight: '800',
+                            flexShrink: 0
+                          }}>
+                            DQ
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.75rem', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{renderedIamHeader}</div>
+                            <div style={{ fontSize: '0.65rem', color: iframeTheme === 'dark' ? '#9ca3af' : '#4b5563', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{renderedIamBody}</div>
+                          </div>
+                          <a 
+                            href={iamButtonLink} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            style={{
+                              backgroundColor: '#f43f5e',
+                              color: '#ffffff',
+                              padding: '0.3rem 0.6rem',
+                              borderRadius: '4px',
+                              fontSize: '0.65rem',
+                              fontWeight: '700',
+                              textDecoration: 'none',
+                              flexShrink: 0
+                            }}
+                          >
+                            {renderedIamButtonText}
+                          </a>
+                        </div>
+                      )}
+
+                      {/* Fullscreen Style IAM Preview */}
+                      {iamStyle === 'fullscreen' && (
+                        <div style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: iframeTheme === 'dark' ? '#0f172a' : '#f8fafc',
+                          color: iframeTheme === 'dark' ? '#ffffff' : '#111827',
+                          zIndex: 20,
+                          padding: '2rem 1.25rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          gap: '1rem',
+                          textAlign: 'center',
+                          animation: 'fadeIn 0.25s ease'
+                        }}>
+                          <div style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', opacity: 0.7, cursor: 'pointer' }}>
+                            <X size={14} />
+                          </div>
+
+                          {/* Hero Mascot Icon */}
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '10px',
+                            backgroundColor: '#f43f5e',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            fontSize: '1.1rem',
+                            fontWeight: '800',
+                            boxShadow: '0 8px 16px rgba(244,63,94,0.3)'
+                          }}>
+                            DQ
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <h3 style={{ fontSize: '1rem', fontWeight: '800', margin: 0 }}>{renderedIamHeader}</h3>
+                            <p style={{ fontSize: '0.75rem', color: iframeTheme === 'dark' ? '#cbd5e1' : '#475569', lineHeight: '1.4', margin: 0 }}>
+                              {renderedIamBody}
+                            </p>
+                          </div>
+
+                          <a 
+                             href={iamButtonLink} 
+                             target="_blank" 
+                             rel="noreferrer"
+                            style={{
+                              display: 'block',
+                              width: '100%',
+                              maxWidth: '180px',
+                              backgroundColor: '#f43f5e',
+                              color: '#ffffff',
+                              textAlign: 'center',
+                              padding: '0.5rem',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: '700',
+                              textDecoration: 'none',
+                              boxShadow: '0 4px 12px rgba(244,63,94,0.4)',
+                              marginTop: '0.75rem'
+                            }}
+                          >
+                            {renderedIamButtonText}
+                          </a>
+                          
+                          <span style={{ fontSize: '0.65rem', color: '#64748b', cursor: 'pointer' }}>
+                            Maybe Later
+                          </span>
+                        </div>
+                      )}
+
+                      {/* App Mock Home UI (Decorative behind popup/slideup) */}
+                      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', opacity: (iamStyle === 'fullscreen') ? 0 : 0.35, pointerEvents: 'none' }}>
+                        <div style={{ height: '32px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '6px' }} />
+                        <div style={{ height: '80px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px' }} />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                          <div style={{ height: '60px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '6px' }} />
+                          <div style={{ height: '60px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '6px' }} />
+                        </div>
+                        <div style={{ height: '40px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '6px' }} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -863,14 +1166,14 @@ export default function VisualStressTester({
                     className={`sub-tab ${pushFullScreen ? 'active' : ''}`}
                     style={{ flex: 1, padding: '0.35rem 0', fontSize: '0.75rem' }}
                   >
-                    📱 Lock Screen (Full)
+                    📱 Locked Phone (Full Screen)
                   </button>
                   <button 
                     onClick={() => setPushFullScreen(false)}
                     className={`sub-tab ${!pushFullScreen ? 'active' : ''}`}
                     style={{ flex: 1, padding: '0.35rem 0', fontSize: '0.75rem' }}
                   >
-                    🔔 App Banner (Not Full)
+                    🔔 Unlocked Phone (App Banner)
                   </button>
                 </div>
               </div>
@@ -889,6 +1192,81 @@ export default function VisualStressTester({
                   />
                 </div>
                 {renderSmsBillingAuditor()}
+              </div>
+            )}
+
+            {activeChannel === 'iam' && (
+              <div style={{ width: '100%', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+                <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>IAM Header Title</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={iamHeader}
+                    onChange={(e) => setIamHeader(e.target.value)}
+                    placeholder="Enter IAM header..."
+                    style={{ fontSize: '0.85rem', padding: '0.45rem 0.65rem', color: 'var(--text-primary)', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-sm)', width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>IAM Message Body</label>
+                  <textarea
+                    className="form-textarea"
+                    value={iamBody}
+                    onChange={(e) => setIamBody(e.target.value)}
+                    placeholder="Enter IAM body..."
+                    style={{ minHeight: '60px', fontSize: '0.85rem', padding: '0.5rem', fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}
+                  />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
+                    <label className="form-label" style={{ fontSize: '0.8rem' }}>Button Text</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={iamButtonText}
+                      onChange={(e) => setIamButtonText(e.target.value)}
+                      placeholder="e.g. Claim Offer"
+                      style={{ fontSize: '0.85rem', padding: '0.45rem', color: 'var(--text-primary)', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-sm)', width: '100%', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
+                    <label className="form-label" style={{ fontSize: '0.8rem' }}>Button Link</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={iamButtonLink}
+                      onChange={(e) => setIamButtonLink(e.target.value)}
+                      placeholder="e.g. http://..."
+                      style={{ fontSize: '0.85rem', padding: '0.45rem', color: 'var(--text-primary)', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-sm)', width: '100%', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+                
+                {/* IAM Layout Style Toggle */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                  <button 
+                    onClick={() => setIamStyle('modal')}
+                    className={`sub-tab ${iamStyle === 'modal' ? 'active' : ''}`}
+                    style={{ flex: 1, padding: '0.35rem 0', fontSize: '0.75rem' }}
+                  >
+                    💬 Center Modal
+                  </button>
+                  <button 
+                    onClick={() => setIamStyle('slideup')}
+                    className={`sub-tab ${iamStyle === 'slideup' ? 'active' : ''}`}
+                    style={{ flex: 1, padding: '0.35rem 0', fontSize: '0.75rem' }}
+                  >
+                    🔔 Slide-up Banner
+                  </button>
+                  <button 
+                    onClick={() => setIamStyle('fullscreen')}
+                    className={`sub-tab ${iamStyle === 'fullscreen' ? 'active' : ''}`}
+                    style={{ flex: 1, padding: '0.35rem 0', fontSize: '0.75rem' }}
+                  >
+                    📱 Full Screen Takeover
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1255,6 +1633,209 @@ export default function VisualStressTester({
                       {renderedSmsBody}
                     </div>
                   </div>
+                </div>
+              )}
+
+              {activeChannel === 'iam' && (
+                <div style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  width: '100%',
+                  height: '100%',
+                  position: 'relative',
+                  background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  padding: '2rem'
+                }}>
+                  {/* Modal Style IAM Preview */}
+                  {iamStyle === 'modal' && (
+                    <div style={{
+                      backgroundColor: iframeTheme === 'dark' ? '#1f2937' : '#ffffff',
+                      color: iframeTheme === 'dark' ? '#ffffff' : '#111827',
+                      borderRadius: '12px',
+                      width: '100%',
+                      maxWidth: '320px',
+                      boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+                      padding: '2rem',
+                      position: 'relative',
+                      textAlign: 'center',
+                      border: '1px solid var(--border-color)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.75rem'
+                    }}>
+                      <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', opacity: 0.6, cursor: 'pointer' }}>
+                        <X size={14} />
+                      </div>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        backgroundColor: '#f43f5e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        fontSize: '1rem',
+                        fontWeight: '800',
+                        marginBottom: '0.5rem'
+                      }}>
+                        DQ
+                      </div>
+                      <h4 style={{ fontSize: '1rem', fontWeight: '700', margin: 0 }}>{renderedIamHeader}</h4>
+                      <p style={{ fontSize: '0.85rem', color: iframeTheme === 'dark' ? '#cbd5e1' : '#4b5563', lineHeight: '1.4', margin: 0 }}>
+                        {renderedIamBody}
+                      </p>
+                      <a 
+                        href={iamButtonLink} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          backgroundColor: '#f43f5e',
+                          color: '#ffffff',
+                          textAlign: 'center',
+                          padding: '0.55rem',
+                          borderRadius: '8px',
+                          fontSize: '0.85rem',
+                          fontWeight: '700',
+                          textDecoration: 'none',
+                          marginTop: '0.75rem'
+                        }}
+                      >
+                        {renderedIamButtonText}
+                      </a>
+                    </div>
+                  )}
+
+                  {iamStyle === 'slideup' && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '2rem',
+                      left: '2rem',
+                      right: '2rem',
+                      backgroundColor: iframeTheme === 'dark' ? '#1f2937' : '#ffffff',
+                      color: iframeTheme === 'dark' ? '#ffffff' : '#111827',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                      padding: '1rem 1.5rem',
+                      border: '1px solid var(--border-color)',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1rem'
+                    }}>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '8px',
+                        backgroundColor: '#f43f5e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        fontSize: '0.8rem',
+                        fontWeight: '800',
+                        flexShrink: 0
+                      }}>
+                        DQ
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.85rem', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{renderedIamHeader}</div>
+                        <div style={{ fontSize: '0.75rem', color: iframeTheme === 'dark' ? '#cbd5e1' : '#4b5563', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{renderedIamBody}</div>
+                      </div>
+                      <a 
+                        href={iamButtonLink} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        style={{
+                          backgroundColor: '#f43f5e',
+                          color: '#ffffff',
+                          padding: '0.4rem 0.8rem',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          fontWeight: '700',
+                          textDecoration: 'none',
+                          flexShrink: 0
+                        }}
+                      >
+                        {renderedIamButtonText}
+                      </a>
+                    </div>
+                  )}
+
+                  {iamStyle === 'fullscreen' && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: iframeTheme === 'dark' ? '#0f172a' : '#f8fafc',
+                      color: iframeTheme === 'dark' ? '#ffffff' : '#111827',
+                      padding: '3rem 2rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: '1.5rem',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{ position: 'absolute', top: '2rem', right: '2rem', opacity: 0.7, cursor: 'pointer' }}>
+                        <X size={20} />
+                      </div>
+                      <div style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: '16px',
+                        backgroundColor: '#f43f5e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        fontSize: '1.5rem',
+                        fontWeight: '800',
+                        boxShadow: '0 8px 20px rgba(244,63,94,0.3)'
+                      }}>
+                        DQ
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <h3 style={{ fontSize: '1.4rem', fontWeight: '800', margin: 0 }}>{renderedIamHeader}</h3>
+                        <p style={{ fontSize: '0.95rem', color: iframeTheme === 'dark' ? '#cbd5e1' : '#475569', lineHeight: '1.5', margin: 0, maxWidth: '400px' }}>
+                          {renderedIamBody}
+                        </p>
+                      </div>
+                      <a 
+                        href={iamButtonLink} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          maxWidth: '240px',
+                          backgroundColor: '#f43f5e',
+                          color: '#ffffff',
+                          textAlign: 'center',
+                          padding: '0.75rem',
+                          borderRadius: '8px',
+                          fontSize: '0.9rem',
+                          fontWeight: '700',
+                          textDecoration: 'none',
+                          boxShadow: '0 4px 12px rgba(244,63,94,0.4)',
+                          marginTop: '1.5rem'
+                        }}
+                      >
+                        {renderedIamButtonText}
+                      </a>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', cursor: 'pointer' }}>
+                        Maybe Later
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
