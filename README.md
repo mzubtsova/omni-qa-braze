@@ -11,14 +11,14 @@ OmniQA is a unified, real-time diagnostic dashboard designed for CRM engineering
 ```mermaid
 graph TD
     A[Figma Mockup] -->|API Node Extraction| B(OmniQA Sync Engine)
-    C[Braze HTML Template] -->|Liquid/HTML Payload| B
+    C[Braze Campaign Payloads<br/>Email HTML / SMS / Push / IAM] -->|Liquid & Copy Payload| B
     
     B --> D[Copy Sync Auditor]
-    B --> E[Visual Stress-Tester]
+    B --> E[Multi-Channel Visual Stress-Tester]
     B --> F[Technical Health Auditor]
     
-    D -->|AI Typos & Price Audits| G[Gemini 3.5 Flash]
-    E -->|Personalization Expander| H[Device Preview iframe]
+    D -->|AI Typos & Price Audits| G[Gemini API]
+    E -->|Personalization Expander| H[Device Simulator Frame<br/>Email, Push, SMS, IAM]
     F -->|Liquid AST Parser| I[Syntax Warning logs]
     F -->|Link UTM Crawler| J[Link Health logs]
     F -->|CSS Color contrast ratio| K[WCAG Contrast alerts]
