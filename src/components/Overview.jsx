@@ -130,17 +130,17 @@ OmniQA Quality Assurance Engine`;
 
     const mailtoUrl = `mailto:${recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     
-    // Simulate API network latency
-    setTimeout(() => {
-      setIsSending(false);
-      setSuccessSent(true);
-      window.location.href = mailtoUrl;
-
-      // Automatically launch print window to save PDF
+    // Trigger mailto immediately so mobile browsers do not block it
+    window.location.href = mailtoUrl;
+    setSuccessSent(true);
+    
+    // Automatically launch print window to save PDF (Desktop only)
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (!isMobile) {
       setTimeout(() => {
         window.print();
       }, 800);
-    }, 1500);
+    }
   };
 
   return (
@@ -186,7 +186,7 @@ OmniQA Quality Assurance Engine`;
             <button 
               className="btn btn-primary" 
               style={{ width: '100%' }}
-              onClick={onRunAudit}
+              onClick={() => onRunAudit()}
               disabled={isAuditing}
             >
               {isAuditing ? 'Analyzing Campaign...' : 'Re-Run QA Audit'}
