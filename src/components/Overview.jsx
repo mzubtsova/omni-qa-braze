@@ -142,7 +142,7 @@ OmniQA Quality Assurance Engine`;
 
   return (
     <div className="fade-in">
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '2rem', marginBottom: '2rem' }}>
+      <div className="overview-main-grid">
         
         {/* Left Side: Radial Gauge Panel */}
         <div className="panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '340px' }}>
@@ -221,7 +221,7 @@ OmniQA Quality Assurance Engine`;
               OmniQA has cross-referenced Figma design assets against your coded HTML campaign body and Liquid attributes.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="overview-stats-grid">
               <div style={{ padding: '1rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <AlertCircle size={24} style={{ color: 'var(--error)' }} />
                 <div>
@@ -264,7 +264,7 @@ OmniQA Quality Assurance Engine`;
 
       {/* Grid of Categories */}
       <h3 style={{ marginBottom: '1rem' }}>Audit Categories</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+      <div className="overview-categories-grid">
         
         {/* Copy sync */}
         <div className="category-card" onClick={() => setActiveTab('copy')}>

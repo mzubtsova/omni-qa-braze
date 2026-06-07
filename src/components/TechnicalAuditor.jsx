@@ -202,7 +202,7 @@ export default function TechnicalAuditor({
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '2rem', marginBottom: '2rem' }}>
+      <div className="tech-main-grid">
         
         {/* Left Side Panel: Technical KPI cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -327,7 +327,7 @@ export default function TechnicalAuditor({
             </div>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', maxHeight: '420px' }}>
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', maxHeight: '420px', width: '100%' }}>
             {filteredAlerts.length === 0 ? (
               <div style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                 <CheckCircle size={36} style={{ color: 'var(--success)', marginBottom: '0.5rem' }} />

@@ -1218,7 +1218,7 @@ export default function VisualStressTester({
                     style={{ minHeight: '60px', fontSize: '0.85rem', padding: '0.5rem', fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}
                   />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <div className="settings-grid">
                   <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
                     <label className="form-label" style={{ fontSize: '0.8rem' }}>Button Text</label>
                     <input

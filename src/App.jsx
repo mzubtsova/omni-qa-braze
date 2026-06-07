@@ -357,7 +357,7 @@ export default function App() {
             onClick={() => setActiveTab('overview')}
           >
             <BarChart2 size={18} />
-            QA Overview
+            <span>QA Overview</span>
           </button>
           
           <button 
@@ -365,7 +365,7 @@ export default function App() {
             onClick={() => setActiveTab('copy')}
           >
             <FileText size={18} />
-            Copy Audit
+            <span>Copy Audit</span>
           </button>
 
           <button 
@@ -373,7 +373,7 @@ export default function App() {
             onClick={() => setActiveTab('visuals')}
           >
             <Smartphone size={18} />
-            Visual Stress Test
+            <span>Visual Stress Test</span>
           </button>
 
           <button 
@@ -381,7 +381,7 @@ export default function App() {
             onClick={() => setActiveTab('technical')}
           >
             <Code size={18} />
-            Technical Audits
+            <span>Technical Audits</span>
           </button>
 
           <button 
@@ -389,7 +389,7 @@ export default function App() {
             onClick={() => setActiveTab('settings')}
           >
             <SettingsIcon size={18} />
-            Settings
+            <span>Settings</span>
           </button>
         </nav>
 

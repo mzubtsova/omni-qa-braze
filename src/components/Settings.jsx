@@ -153,7 +153,7 @@ export default function Settings({ onSave }) {
             </div>
 
             {/* Figma Token & File ID */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="settings-grid">
               <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <label className="form-label" htmlFor="figmaToken" style={{ margin: 0 }}>
@@ -197,7 +197,7 @@ export default function Settings({ onSave }) {
             </div>
 
             {/* Braze Key & Endpoint */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="settings-grid">
               <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <label className="form-label" htmlFor="brazeApiKey" style={{ margin: 0 }}>

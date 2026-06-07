@@ -280,7 +280,7 @@ export default function CopyAuditor({
                   style={{ minHeight: '100px', fontSize: '0.85rem', padding: '0.5rem', fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+              <div className="settings-grid">
                 <div className="form-group" style={{ margin: 0 }}>
                   <label className="form-label">IAM Button Text</label>
                   <input 
@@ -412,12 +412,12 @@ export default function CopyAuditor({
                       </span>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.85rem', marginBottom: '0.5rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.5rem', borderRadius: '4px' }}>
+                    <div className="mismatch-detail-grid" style={{ fontSize: '0.85rem', marginBottom: '0.5rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.5rem', borderRadius: '4px' }}>
                       <div>
                         <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem', textTransform: 'uppercase' }}>{item.detail1}</span>
                         <span style={{ fontStyle: 'italic', wordBreak: 'break-all' }}>&ldquo;{item.value1}&rdquo;</span>
                       </div>
-                      <div style={{ borderLeft: '1px solid var(--border-color)', paddingLeft: '1rem' }}>
+                      <div className="mismatch-detail-coded">
                         <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem', textTransform: 'uppercase' }}>{item.detail2}</span>
                         <span style={{ fontStyle: 'italic', color: 'var(--text-primary)', wordBreak: 'break-all' }}>&ldquo;{item.value2}&rdquo;</span>
                       </div>
