@@ -198,6 +198,79 @@ Scan the copy and output the deliverability analysis in the JSON structure.`;
   return callGemini(prompt, apiKey, systemInstruction);
 }
 
+/**
+ * Predicts open rate, CTR, and overall engagement of campaign assets.
+ */
+export async function predictCampaignEngagement({
+  subjectLine,
+  bodyText,
+  pushBody,
+  smsBody,
+  iamHeader,
+  iamBody
+}, apiKey) {
+  if (!apiKey) {
+    return getMockEngagementPredictor(subjectLine);
+  }
+
+  const systemInstruction = `You are a campaign optimization and engagement forecast AI.
+Predict marketing performance metrics (Predicted Open Rate, Click-Through Rate, and Overall Engagement Score from 0 to 100) based on subject lines, email template, push copy, SMS, and In-App messages.
+Identify why it performs well, identify drag points, and offer concrete optimization recommendations.
+Return output ONLY as a JSON object:
+{
+  "engagementScore": 85,
+  "predictedOpenRate": 24.5,
+  "predictedClickRate": 4.8,
+  "spamRisk": "Low",
+  "positives": ["Short description of strong point 1", "Strong point 2"],
+  "negatives": ["Issue or friction point 1", "Friction point 2"],
+  "recommendations": ["Recommendation 1", "Recommendation 2"]
+}`;
+
+  const prompt = `Email Subject Line: "${subjectLine}"
+Email Body Text: "${bodyText}"
+Push Body: "${pushBody}"
+SMS Body: "${smsBody}"
+IAM Header: "${iamHeader}"
+IAM Body: "${iamBody}"
+
+Analyze these channel assets and output predicted performance in the JSON structure.`;
+
+  return callGemini(prompt, apiKey, systemInstruction);
+}
+
+function getMockEngagementPredictor(subjectLine) {
+  let score = 78;
+  const lowerSubject = subjectLine ? subjectLine.toLowerCase() : '';
+  if (lowerSubject.includes('free')) score += 8;
+  if (lowerSubject.includes('blizzard')) score += 5;
+  if (lowerSubject.includes('🍦') || lowerSubject.includes('reward')) score += 4;
+  if (subjectLine && subjectLine.length > 60) score -= 10;
+  
+  score = Math.min(Math.max(score, 45), 98);
+  const openRate = +(score * 0.3).toFixed(1);
+  const clickRate = +(score * 0.06).toFixed(1);
+
+  return {
+    engagementScore: score,
+    predictedOpenRate: openRate,
+    predictedClickRate: clickRate,
+    spamRisk: score > 75 ? "Low" : score > 60 ? "Medium" : "High",
+    positives: [
+      "Dynamic personalization placeholder increases user relevance.",
+      "Clear Blizzard branding triggers positive psychological associations."
+    ],
+    negatives: [
+      "Subject line contains spam-prone triggers ('Free', 'Alert').",
+      "Limited direct call-to-actions in secondary channels."
+    ],
+    recommendations: [
+      "A/B test subject lines replacing 'Free' with 'On us' to prevent delivery blocks.",
+      "Inject explicit urgency modifiers (e.g. 'Valid for 14 days' directly in subject)."
+    ]
+  };
+}
+
 // ==========================================
 // MOCK DATA GENERATORS (FALLBACKS)
 // ==========================================

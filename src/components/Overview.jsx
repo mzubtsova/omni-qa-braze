@@ -15,7 +15,10 @@ export default function Overview({
   subjectLine,
   copyAuditResults,
   spamAuditResults,
-  brazeHtml
+  brazeHtml,
+  onPredictEngagement,
+  isPredicting,
+  predictionResults
 }) {
   // SVG Config for Circular Progress Ring
   const radius = 80;
@@ -260,6 +263,91 @@ OmniQA Quality Assurance Engine`;
           </div>
         </div>
 
+      </div>
+
+      {/* AI Campaign Engagement Predictor */}
+      <h3 style={{ marginBottom: '1rem', marginTop: '2rem' }}>AI Campaign Engagement Forecast</h3>
+      <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h4 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Predictive Engagement Index</h4>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+              Simulates delivery & reads subscriber behavioral features to forecast CTR, opens, and deliverability ratings.
+            </p>
+          </div>
+          <button 
+            className="btn btn-primary"
+            style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            disabled={isPredicting || isAuditing}
+            onClick={onPredictEngagement}
+          >
+            {isPredicting ? 'Forecasting...' : 'Run Performance Predictor'}
+          </button>
+        </div>
+
+        {predictionResults ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+              
+              <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Engagement Score</span>
+                <span style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent-cyan)' }}>{predictionResults.engagementScore}/100</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>AI Grade Benchmark</span>
+              </div>
+
+              <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Predicted Open Rate</span>
+                <span style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent-purple)' }}>{predictionResults.predictedOpenRate}%</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Industry Avg: ~18.5%</span>
+              </div>
+
+              <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Predicted Click Rate (CTR)</span>
+                <span style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent-blue)' }}>{predictionResults.predictedClickRate}%</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Industry Avg: ~2.4%</span>
+              </div>
+
+              <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Filter Spam Risk</span>
+                <span style={{ fontSize: '2rem', fontWeight: '800', color: predictionResults.spamRisk === 'Low' ? 'var(--success)' : predictionResults.spamRisk === 'Medium' ? 'var(--warning)' : 'var(--error)' }}>
+                  {predictionResults.spamRisk}
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Spam Filter Check</span>
+              </div>
+
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', flexWrap: 'wrap' }} className="settings-grid">
+              
+              <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <h5 style={{ color: 'var(--success)', fontWeight: '700', fontSize: '0.9rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.4rem' }}>🌟 Strength Factors (Positives)</h5>
+                <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  {predictionResults.positives?.map((p, i) => <li key={i}>{p}</li>)}
+                </ul>
+              </div>
+
+              <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <h5 style={{ color: 'var(--warning)', fontWeight: '700', fontSize: '0.9rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.4rem' }}>⚠️ Friction Barriers (Drag Points)</h5>
+                <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  {predictionResults.negatives?.map((n, i) => <li key={i}>{n}</li>)}
+                </ul>
+              </div>
+
+            </div>
+
+            <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <h5 style={{ color: 'var(--accent-cyan)', fontWeight: '700', fontSize: '0.9rem' }}>🎯 AI Copywriting Recommendations</h5>
+              <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                {predictionResults.recommendations?.map((r, i) => <li key={i}>{r}</li>)}
+              </ul>
+            </div>
+
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)', border: '1px dashed var(--border-color)', borderRadius: 'var(--border-radius-md)' }}>
+            No prediction logs loaded. Click the button above to run AI campaign simulation diagnostics.
+          </div>
+        )}
       </div>
 
       {/* Grid of Categories */}

@@ -7,7 +7,8 @@ import {
   Settings as SettingsIcon, 
   RefreshCw,
   Sun,
-  Moon
+  Moon,
+  Database
 } from 'lucide-react';
 
 import Overview from './components/Overview';
@@ -15,8 +16,10 @@ import CopyAuditor from './components/CopyAuditor';
 import VisualStressTester from './components/VisualStressTester';
 import TechnicalAuditor from './components/TechnicalAuditor';
 import Settings from './components/Settings';
+import Catalog from './components/Catalog';
 
-import { auditFigmaAndBrazeCopy, auditSpamAndDeliverability } from './services/gemini';
+import { auditFigmaAndBrazeCopy, auditSpamAndDeliverability, predictCampaignEngagement } from './services/gemini';
+import { fetchFigmaTextLayers } from './services/figma';
 import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast } from './utils/validators';
 
 const DEFAULT_SUBJECT = 'Get a FREE Blizzard Ice Cream! 🍦 Alert';
@@ -120,6 +123,59 @@ export default function App() {
     low: 2
   });
 
+  const [figmaSyncLoading, setFigmaSyncLoading] = useState(false);
+  const [isPredicting, setIsPredicting] = useState(false);
+  const [predictionResults, setPredictionResults] = useState(null);
+
+  const handleSyncFigma = async () => {
+    setFigmaSyncLoading(true);
+    const token = useMockMode ? null : localStorage.getItem('figma_token');
+    const fileId = useMockMode ? null : localStorage.getItem('figma_file_id');
+    try {
+      const layers = await fetchFigmaTextLayers(fileId, token);
+      setFigmaTexts(layers);
+      runAudit(useMockMode, { figmaTexts: layers });
+    } catch (err) {
+      alert(`Figma Sync Failed: ${err.message}. Make sure your token and file key are configured in Settings.`);
+    } finally {
+      setFigmaSyncLoading(false);
+    }
+  };
+
+  const handlePredictEngagement = async () => {
+    setIsPredicting(true);
+    const apiKey = useMockMode ? null : localStorage.getItem('gemini_api_key');
+    const bodyText = brazeHtml.replace(/<[^>]*>/g, ' ');
+    try {
+      const res = await predictCampaignEngagement({
+        subjectLine,
+        bodyText,
+        pushBody,
+        smsBody,
+        iamHeader,
+        iamBody
+      }, apiKey);
+      setPredictionResults(res);
+    } catch (err) {
+      console.error("AI engagement forecast failed:", err);
+    } finally {
+      setIsPredicting(false);
+    }
+  };
+
+  const handleLoadCampaign = (campaign) => {
+    if (campaign.subjectLine !== undefined) setSubjectLine(campaign.subjectLine);
+    if (campaign.brazeHtml !== undefined) setBrazeHtml(campaign.brazeHtml);
+    if (campaign.pushBody !== undefined) setPushBody(campaign.pushBody);
+    if (campaign.smsBody !== undefined) setSmsBody(campaign.smsBody);
+    if (campaign.iamHeader !== undefined) setIamHeader(campaign.iamHeader);
+    if (campaign.iamBody !== undefined) setIamBody(campaign.iamBody);
+    if (campaign.iamButtonText !== undefined) setIamButtonText(campaign.iamButtonText);
+    if (campaign.iamButtonLink !== undefined) setIamButtonLink(campaign.iamButtonLink);
+    if (campaign.figmaTexts !== undefined) setFigmaTexts(campaign.figmaTexts);
+    setActiveTab('overview');
+  };
+
   // Load mode state on mount
   useEffect(() => {
     const savedMock = localStorage.getItem('omniqa_use_mock') !== 'false';
@@ -173,6 +229,18 @@ export default function App() {
         iamBody: currentIamBody,
         iamButtonText: currentIamButtonText
       }, apiKey);
+
+      // 2. Fetch AI performance predictions
+      const cleanBodyText = currentHtml.replace(/<[^>]*>/g, ' ');
+      const predRes = await predictCampaignEngagement({
+        subjectLine: currentSubject,
+        bodyText: cleanBodyText,
+        pushBody: currentPushBody,
+        smsBody: currentSmsBody,
+        iamHeader: currentIamHeader,
+        iamBody: currentIamBody
+      }, apiKey);
+      setPredictionResults(predRes);
 
       // Compute client-side tech validations
       const liquidErrors = [
@@ -385,6 +453,14 @@ export default function App() {
           </button>
 
           <button 
+            className={`sidebar-item ${activeTab === 'catalog' ? 'active' : ''}`}
+            onClick={() => setActiveTab('catalog')}
+          >
+            <Database size={18} />
+            <span>Campaign Catalog</span>
+          </button>
+
+          <button 
             className={`sidebar-item ${activeTab === 'settings' ? 'active' : ''}`}
             onClick={() => setActiveTab('settings')}
           >
@@ -418,6 +494,7 @@ export default function App() {
               {activeTab === 'copy' && 'Copy & Typography Auditor'}
               {activeTab === 'visuals' && 'Visual Layout & Variable Stress-Tester'}
               {activeTab === 'technical' && 'Liquid & Link Health Reports'}
+              {activeTab === 'catalog' && 'Braze Campaign Catalog'}
               {activeTab === 'settings' && 'Integration Settings'}
             </h1>
             <p className="header-title-desc">
@@ -425,6 +502,7 @@ export default function App() {
               {activeTab === 'copy' && 'Ensure content syncs between creative designs and CRM code layers.'}
               {activeTab === 'visuals' && 'Test rendering logic against long names, edge-case user profiles, and tiers.'}
               {activeTab === 'technical' && 'Validates liquid syntax, UTM tracking parameters, color contrast, and deliverability.'}
+              {activeTab === 'catalog' && 'Manage staging states and version controls for your campaign assets.'}
               {activeTab === 'settings' && 'Manage connections, keys, and environments.'}
             </p>
           </div>
@@ -476,6 +554,9 @@ export default function App() {
             copyAuditResults={copyAuditResults}
             spamAuditResults={spamAuditResults}
             brazeHtml={brazeHtml}
+            onPredictEngagement={handlePredictEngagement}
+            isPredicting={isPredicting}
+            predictionResults={predictionResults}
           />
         )}
 
@@ -503,6 +584,8 @@ export default function App() {
             spamAuditResults={spamAuditResults}
             isAuditing={isAuditing}
             onRunAudit={runAudit}
+            onSyncFigma={handleSyncFigma}
+            figmaSyncLoading={figmaSyncLoading}
           />
         )}
 
@@ -540,6 +623,23 @@ export default function App() {
             spamAuditResults={spamAuditResults}
             isAuditing={isAuditing}
             onRunAudit={runAudit}
+          />
+        )}
+
+        {activeTab === 'catalog' && (
+          <Catalog 
+            onLoadCampaign={handleLoadCampaign}
+            currentCampaignState={{
+              subjectLine,
+              brazeHtml,
+              pushBody,
+              smsBody,
+              iamHeader,
+              iamBody,
+              iamButtonText,
+              iamButtonLink,
+              figmaTexts
+            }}
           />
         )}
 
