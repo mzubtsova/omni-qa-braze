@@ -589,8 +589,30 @@ export default function VisualStressTester({
                     setLanguageSearch(e.target.value);
                     setDropdownOpen(true);
                   }}
-                  onFocus={() => setDropdownOpen(true)}
-                  onBlur={() => setTimeout(() => setDropdownOpen(false), 200)}
+                  onFocus={(e) => {
+                    e.target.select();
+                    setDropdownOpen(true);
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setDropdownOpen(false);
+                      const currentLang = languagesList.find(lang => lang.code === selectedLanguage);
+                      if (currentLang) {
+                        setLanguageSearch(currentLang.name);
+                      }
+                    }, 200);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      if (filteredLanguages.length > 0) {
+                        const firstMatch = filteredLanguages[0];
+                        setSelectedLanguage(firstMatch.code);
+                        setLanguageSearch(firstMatch.name);
+                        setDropdownOpen(false);
+                        e.target.blur();
+                      }
+                    }
+                  }}
                   style={{ 
                     fontSize: '0.8rem', 
                     padding: '0.45rem 0.65rem',
@@ -604,6 +626,7 @@ export default function VisualStressTester({
                 <button
                   type="button"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
+                  onMouseDown={(e) => e.preventDefault()}
                   style={{
                     position: 'absolute',
                     right: '0.5rem',
