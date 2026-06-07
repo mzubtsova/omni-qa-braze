@@ -33,9 +33,9 @@ export default function Overview({
   const [successSent, setSuccessSent] = useState(false);
 
   const getScoreColor = (score) => {
-    if (score >= 90) return 'var(--success)';
-    if (score >= 70) return 'var(--warning)';
-    return 'var(--error)';
+    if (score >= 90) return 'var(--score-success)';
+    if (score >= 70) return 'var(--score-warning)';
+    return 'var(--score-error)';
   };
 
   const handleSendEmail = (e) => {
@@ -152,10 +152,10 @@ OmniQA Quality Assurance Engine`;
           <h3 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Campaign Health</h3>
           
           <div className="progress-ring-container">
-            <svg height={radius * 2} width={radius * 2}>
+            <svg viewBox={`0 0 ${radius * 2} ${radius * 2}`}>
               {/* Background Track */}
               <circle
-                stroke="var(--border-color)"
+                stroke="var(--ring-bg)"
                 fill="transparent"
                 strokeWidth={strokeWidth}
                 r={normalizedRadius}
@@ -177,7 +177,7 @@ OmniQA Quality Assurance Engine`;
               />
             </svg>
             <div className="progress-ring-text">
-              <span>{overallScore}</span>
+              <span style={{ color: getScoreColor(overallScore) }}>{overallScore}</span>
               <span className="progress-ring-label">Health Index</span>
             </div>
           </div>
