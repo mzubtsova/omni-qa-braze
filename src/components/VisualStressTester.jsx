@@ -42,6 +42,21 @@ export default function VisualStressTester({
   const [customName, setCustomName] = useState('');
   const [pushFullScreen, setPushFullScreen] = useState(true); // true = Lockscreen, false = Banner
   const [iamStyle, setIamStyle] = useState('modal'); // 'modal', 'slideup', 'fullscreen'
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [languageSearch, setLanguageSearch] = useState('English');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const languagesList = [
+    { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'es', name: 'Spanish', flag: '🇪🇸' },
+    { code: 'fr', name: 'French', flag: '🇫🇷' },
+    { code: 'de', name: 'German', flag: '🇩🇪' }
+  ];
+
+  const filteredLanguages = languagesList.filter(lang => 
+    lang.name.toLowerCase().includes(languageSearch.toLowerCase()) ||
+    lang.code.toLowerCase().includes(languageSearch.toLowerCase())
+  );
 
   useEffect(() => {
     if (activeChannel === 'push' && device === 'laptop') {
@@ -62,30 +77,35 @@ export default function VisualStressTester({
   useEffect(() => {
     if (!brazeHtml) return;
 
-    let firstName = customName ? customName : 'Valued Customer';
+    const isSpanish = selectedLanguage === 'es';
+    const isFrench = selectedLanguage === 'fr';
+    const isGerman = selectedLanguage === 'de';
+
+    let fallbackName = 'Valued Customer';
+    if (isSpanish) fallbackName = 'Estimado Cliente';
+    else if (isFrench) fallbackName = 'Cher Client';
+    else if (isGerman) fallbackName = 'Sehr geehrter Kunde';
+
+    let firstName = customName ? customName : fallbackName;
     let showVipDetails = false;
     let cartItems = [];
-    let isSpanish = false;
 
     if (segment === 'long_name' && !customName) {
-      firstName = 'Hubert Wolfeschlegelsteinhausenbergerdorff';
+      firstName = selectedLanguage === 'de' ? 'Maximilian-Alexander Graf von und zu Liechtenstein' : 'Hubert Wolfeschlegelsteinhausenbergerdorff';
     } else if (segment === 'null_fallback' && !customName) {
       firstName = '';
     } else if (segment === 'gold_tier') {
       if (!customName) {
-        firstName = 'Marina';
+        firstName = isSpanish ? 'Carlos' : isFrench ? 'Pierre' : isGerman ? 'Hans' : 'Marina';
       }
       showVipDetails = true;
     } else if (segment === 'cart_loop') {
-      firstName = customName ? customName : 'Alex';
+      firstName = customName ? customName : (isSpanish ? 'Alejandro' : isFrench ? 'Alexandre' : isGerman ? 'Alexander' : 'Alex');
       cartItems = [
-        { name: 'Oreo Blizzard 🍦', price: '$4.99', qty: 1 },
-        { name: 'Choco Brownie Blizzard 🍫', price: '$5.49', qty: 2 },
-        { name: 'Strawberry Cheesecake Blizzard 🍓', price: '$5.99', qty: 1 }
+        { name: isSpanish ? 'Blizzard de Oreo 🍦' : isFrench ? 'Blizzard Oreo 🍦' : 'Oreo Blizzard 🍦', price: '$4.99', qty: 1 },
+        { name: isSpanish ? 'Blizzard de Brownie de Chocolate 🍫' : isFrench ? 'Blizzard Brownie Chocolat 🍫' : 'Schoko-Brownie-Blizzard 🍫', price: '$5.49', qty: 2 },
+        { name: isSpanish ? 'Blizzard de Tarta de Fresa 🍓' : isFrench ? 'Blizzard Gâteau Fraise 🍓' : 'Erdbeer-Käsekuchen-Blizzard 🍓', price: '$5.99', qty: 1 }
       ];
-    } else if (segment === 'localization_es') {
-      firstName = customName ? customName : 'Carlos';
-      isSpanish = true;
     }
 
     // Basic Liquid interpreter for rendering simulation
@@ -105,7 +125,10 @@ export default function VisualStressTester({
     processedHtml = processedHtml.replace(/\{\{\s*campaign\.coupon_code\s*\}\}/g, 'DQ-BLIZZARD-SUMMER26');
 
     // Resolve: {{ campaign.expiry_date | default: '...' }}
-    const expiryDateStr = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(isSpanish ? 'es-ES' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const expiryDateStr = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(
+      isSpanish ? 'es-ES' : isFrench ? 'fr-FR' : isGerman ? 'de-DE' : 'en-US',
+      { month: 'long', day: 'numeric', year: 'numeric' }
+    );
     processedHtml = processedHtml.replace(/\{\{\s*campaign\.expiry_date\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, expiryDateStr);
     // Resolve: {{ campaign.expiry_date }}
     processedHtml = processedHtml.replace(/\{\{\s*campaign\.expiry_date\s*\}\}/g, expiryDateStr);
@@ -140,7 +163,7 @@ export default function VisualStressTester({
       return elseBlock || '';
     });
 
-    // Translate if segment is Spanish Locale
+    // Translate based on selected language
     if (isSpanish) {
       processedHtml = processedHtml
         .replace(/Welcome,/gi, '¡Bienvenido/a,')
@@ -155,6 +178,34 @@ export default function VisualStressTester({
         .replace(/If you wish to unsubscribe, click/gi, 'Si desea darse de baja, haga clic')
         .replace(/here/gi, 'aquí')
         .replace(/Dairy Queen Rewards/gi, 'Recompensas de Dairy Queen');
+    } else if (isFrench) {
+      processedHtml = processedHtml
+        .replace(/Welcome,/gi, 'Bienvenue,')
+        .replace(/We loaded a special reward into your account to say thanks for being an app member\./gi, "Nous avons chargé une récompense spéciale sur votre compte pour vous remercier d'être membre de l'application.")
+        .replace(/Claim Blizzard Offer/gi, "Réclamer l'offre Blizzard")
+        .replace(/This offer is valid for 7 days at participating locations\./gi, "Cette offre est valable pendant 7 jours dans les établissements participants.")
+        .replace(/VIP GOLD MEMBERS-ONLY PERK:/gi, "🌟 AVANTAGE EXCLUSIF MEMBRES VIP OR:")
+        .replace(/FREE SMALL BLIZZARD coupon valid for Gold members only\. Enjoy your double points day!/gi, "Bon pour un PETIT BLIZZARD GRATUIT valable uniquement pour les membres Or. Profitez de votre journée double points !")
+        .replace(/Items Left in Your Cart:/gi, "Articles restants dans votre panier:")
+        .replace(/Use coupon code:/gi, "Utilisez le code de coupon:")
+        .replace(/Offer Expires:/gi, "L'offre expire le:")
+        .replace(/If you wish to unsubscribe, click/gi, "Si vous souhaitez vous désabonner, cliquez")
+        .replace(/here/gi, "ici")
+        .replace(/Dairy Queen Rewards/gi, "Récompenses de Dairy Queen");
+    } else if (isGerman) {
+      processedHtml = processedHtml
+        .replace(/Welcome,/gi, 'Willkommen,')
+        .replace(/We loaded a special reward into your account to say thanks for being an app member\./gi, "Wir haben eine besondere Belohnung auf Ihr Konto geladen, um uns für Ihre App-Mitgliedschaft zu bedanken.")
+        .replace(/Claim Blizzard Offer/gi, "Blizzard-Angebot einlösen")
+        .replace(/This offer is valid for 7 days at participating locations\./gi, "Dieses Angebot ist 7 Tage lang an teilnehmenden Standorten gültig.")
+        .replace(/VIP GOLD MEMBERS-ONLY PERK:/gi, "🌟 EXKLUSIVER VORTEIL FÜR VIP-GOLD-MITGLIEDER:")
+        .replace(/FREE SMALL BLIZZARD coupon valid for Gold members only\. Enjoy your double points day!/gi, "Kostenloser KLEINER BLIZZARD-Gutschein, nur gültig für Gold-Mitglieder. Genießen Sie Ihren Tag der doppelten Punkte!")
+        .replace(/Items Left in Your Cart:/gi, "Artikel in Ihrem Warenkorb:")
+        .replace(/Use coupon code:/gi, "Gutscheincode verwenden:")
+        .replace(/Offer Expires:/gi, "Angebot läuft ab am:")
+        .replace(/If you wish to unsubscribe, click/gi, "Wenn Sie sich abmelden möchten, klicken Sie")
+        .replace(/here/gi, "hier")
+        .replace(/Dairy Queen Rewards/gi, "Dairy Queen Belohnungen");
     }
 
     // Inject simulated dark mode styles when in dark preview mode
@@ -192,6 +243,10 @@ export default function VisualStressTester({
     let processedSubject = subjectLine || '';
     if (isSpanish) {
       processedSubject = '¡Consigue un Blizzard GRATIS! 🍦 Alerta';
+    } else if (isFrench) {
+      processedSubject = 'Obtenez un Blizzard GRATUIT ! 🍦 Alerte';
+    } else if (isGerman) {
+      processedSubject = 'Holen Sie sich einen GRATIS Blizzard! 🍦 Info';
     } else {
       processedSubject = processedSubject.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
         return firstName || fallback;
@@ -204,6 +259,10 @@ export default function VisualStressTester({
     let processedPush = pushBody || '';
     if (isSpanish) {
       processedPush = '¡Consigue un Blizzard Pequeño GRATIS! 🍦 Válido durante 14 días. Reclama tu recompensa hoy.';
+    } else if (isFrench) {
+      processedPush = 'Obtenez un petit Blizzard GRATUIT ! 🍦 Valable 14 jours. Réclamez votre récompense.';
+    } else if (isGerman) {
+      processedPush = 'Holen Sie sich einen GRATIS kleinen Blizzard! 🍦 14 Tage gültig. Jetzt einlösen.';
     } else {
       processedPush = processedPush.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
         return firstName || fallback;
@@ -219,6 +278,10 @@ export default function VisualStressTester({
     let processedSms = smsBody || '';
     if (isSpanish) {
       processedSms = `Dairy Queen: ¡Bienvenido/a Carlos! Cargamos una recompensa de Blizzard GRATIS en tu cuenta. Canjea aquí: http://example.com/redeem`;
+    } else if (isFrench) {
+      processedSms = `Dairy Queen: Bienvenue Pierre ! Nous avons chargé un Blizzard GRATUIT sur votre compte. Réclamez ici: http://example.com/redeem`;
+    } else if (isGerman) {
+      processedSms = `Dairy Queen: Willkommen Hans ! Wir haben einen GRATIS Blizzard auf Ihr Konto geladen. Hier einlösen: http://example.com/redeem`;
     } else {
       processedSms = processedSms.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
         return firstName || fallback;
@@ -234,6 +297,10 @@ export default function VisualStressTester({
     let processedIamHeader = iamHeader || '';
     if (isSpanish) {
       processedIamHeader = 'Consigue un Blizzard Pequeño GRATIS';
+    } else if (isFrench) {
+      processedIamHeader = 'Obtenez un petit Blizzard GRATUIT';
+    } else if (isGerman) {
+      processedIamHeader = 'GRATIS kleiner Blizzard';
     } else {
       processedIamHeader = processedIamHeader.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
         return firstName || fallback;
@@ -249,6 +316,10 @@ export default function VisualStressTester({
     let processedIamBody = iamBody || '';
     if (isSpanish) {
       processedIamBody = 'Cargamos una recompensa de Blizzard GRATIS en tu cuenta.';
+    } else if (isFrench) {
+      processedIamBody = 'Nous avons chargé un Blizzard GRATUIT sur votre compte.';
+    } else if (isGerman) {
+      processedIamBody = 'Wir haben einen GRATIS Blizzard auf Ihr Konto geladen.';
     } else {
       processedIamBody = processedIamBody.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
         return firstName || fallback;
@@ -264,6 +335,10 @@ export default function VisualStressTester({
     let processedIamButtonText = iamButtonText || '';
     if (isSpanish) {
       processedIamButtonText = 'Reclamar Oferta';
+    } else if (isFrench) {
+      processedIamButtonText = "Réclamer l'offre";
+    } else if (isGerman) {
+      processedIamButtonText = 'Angebot einlösen';
     } else {
       processedIamButtonText = processedIamButtonText.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
         return firstName || fallback;
@@ -274,7 +349,7 @@ export default function VisualStressTester({
       });
     }
     setRenderedIamButtonText(processedIamButtonText);
-  }, [brazeHtml, subjectLine, segment, iframeTheme, pushBody, smsBody, iamHeader, iamBody, iamButtonText, customName]);
+  }, [brazeHtml, subjectLine, segment, iframeTheme, pushBody, smsBody, iamHeader, iamBody, iamButtonText, customName, selectedLanguage]);
 
   const getDeviceStyle = () => {
     switch (device) {
@@ -463,7 +538,7 @@ export default function VisualStressTester({
               <Sliders size={14} />
               Simulate Personalization Segment
             </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.85rem' }}>
               <button 
                 onClick={() => setSegment('default')}
                 className={`sub-tab ${segment === 'default' ? 'active' : ''}`}
@@ -495,17 +570,99 @@ export default function VisualStressTester({
               <button 
                 onClick={() => setSegment('cart_loop')}
                 className={`sub-tab ${segment === 'cart_loop' ? 'active' : ''}`}
-                style={{ width: '100%', padding: '0.5rem' }}
+                style={{ width: '100%', padding: '0.5rem', gridColumn: 'span 2' }}
               >
-                🛒 Abandoned Cart
+                🛒 Abandoned Cart (Loop Logic)
               </button>
-              <button 
-                onClick={() => setSegment('localization_es')}
-                className={`sub-tab ${segment === 'localization_es' ? 'active' : ''}`}
-                style={{ width: '100%', padding: '0.5rem' }}
-              >
-                🇪🇸 Spanish Locale
-              </button>
+            </div>
+
+            {/* Searchable Language Dropdown */}
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.85rem' }}>
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Simulate Campaign Locale (Type to search):</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Search language (e.g. Spanish, French, German...)"
+                  value={languageSearch}
+                  onChange={(e) => {
+                    setLanguageSearch(e.target.value);
+                    setDropdownOpen(true);
+                  }}
+                  onFocus={() => setDropdownOpen(true)}
+                  onBlur={() => setTimeout(() => setDropdownOpen(false), 200)}
+                  style={{ 
+                    fontSize: '0.8rem', 
+                    padding: '0.45rem 0.65rem',
+                    color: 'var(--text-primary)', 
+                    backgroundColor: 'var(--bg-primary)', 
+                    border: '1px solid var(--border-color)',
+                    width: '100%',
+                    paddingRight: '2rem'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  style={{
+                    position: 'absolute',
+                    right: '0.5rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    fontSize: '0.65rem'
+                  }}
+                >
+                  ▼
+                </button>
+                
+                {dropdownOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    width: '100%',
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--border-radius-sm)',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
+                    zIndex: 200,
+                    maxHeight: '180px',
+                    overflowY: 'auto',
+                    marginTop: '0.25rem'
+                  }}>
+                    {filteredLanguages.length > 0 ? (
+                      filteredLanguages.map(lang => (
+                        <div
+                          key={lang.code}
+                          onMouseDown={() => {
+                            setSelectedLanguage(lang.code);
+                            setLanguageSearch(lang.name);
+                            setDropdownOpen(false);
+                          }}
+                          style={{
+                            padding: '0.6rem 0.8rem',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            color: selectedLanguage === lang.code ? 'var(--accent-cyan)' : 'var(--text-primary)',
+                            backgroundColor: selectedLanguage === lang.code ? 'rgba(6, 182, 212, 0.08)' : 'transparent',
+                            transition: 'background-color 0.15s ease'
+                          }}
+                        >
+                          {lang.flag} {lang.name} ({lang.code.toUpperCase()})
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: '0.6rem 0.8rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        No languages found
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Custom Name Override Input */}
