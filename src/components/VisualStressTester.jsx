@@ -812,7 +812,7 @@ export default function VisualStressTester({
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
                           <span style={{ fontSize: '0.75rem', fontWeight: '600' }}>Dairy Queen Promo</span>
-                          <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)' }}>+1 (833) 247-3367</span>
+                          <span style={{ fontSize: '0.55rem', color: iframeTheme === 'dark' ? '#94a3b8' : '#64748b' }}>+1 (833) 247-3367</span>
                         </div>
                       </div>
 
@@ -829,7 +829,7 @@ export default function VisualStressTester({
                         <div style={{
                           alignSelf: 'center',
                           fontSize: '0.6rem',
-                          color: 'var(--text-muted)',
+                          color: iframeTheme === 'dark' ? '#94a3b8' : '#64748b',
                           backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
                           padding: '0.2rem 0.5rem',
                           borderRadius: '10px'
@@ -864,13 +864,15 @@ export default function VisualStressTester({
                       height: '100%',
                       boxSizing: 'border-box',
                       position: 'relative',
-                      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', // App Background
+                      background: iframeTheme === 'dark' 
+                        ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' 
+                        : 'linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%)',
                       justifyContent: 'center',
                       alignItems: 'center',
                       padding: '1.25rem'
                     }}>
                       {/* Mock App Interface Background */}
-                      <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', fontSize: '0.65rem', color: '#64748b', fontWeight: '600' }}>
+                      <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', fontSize: '0.65rem', color: iframeTheme === 'dark' ? '#94a3b8' : '#475569', fontWeight: '600' }}>
                         Dairy Queen App
                       </div>
 
@@ -900,7 +902,7 @@ export default function VisualStressTester({
                             padding: '1.25rem',
                             position: 'relative',
                             textAlign: 'center',
-                            border: '1px solid var(--border-color)',
+                            border: iframeTheme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
@@ -969,7 +971,7 @@ export default function VisualStressTester({
                           borderRadius: '10px',
                           boxShadow: '0 8px 25px rgba(0,0,0,0.4)',
                           padding: '0.75rem 1rem',
-                          border: '1px solid var(--border-color)',
+                          border: iframeTheme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
                           zIndex: 20,
                           textAlign: 'left',
                           display: 'flex',
@@ -1087,7 +1089,7 @@ export default function VisualStressTester({
                             {renderedIamButtonText}
                           </a>
                           
-                          <span style={{ fontSize: '0.65rem', color: '#64748b', cursor: 'pointer' }}>
+                          <span style={{ fontSize: '0.65rem', color: iframeTheme === 'dark' ? '#94a3b8' : '#64748b', cursor: 'pointer' }}>
                             Maybe Later
                           </span>
                         </div>
@@ -1095,13 +1097,13 @@ export default function VisualStressTester({
 
                       {/* App Mock Home UI (Decorative behind popup/slideup) */}
                       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', opacity: (iamStyle === 'fullscreen') ? 0 : 0.35, pointerEvents: 'none' }}>
-                        <div style={{ height: '32px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '6px' }} />
-                        <div style={{ height: '80px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px' }} />
+                        <div style={{ height: '32px', backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: '6px' }} />
+                        <div style={{ height: '80px', backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: '8px' }} />
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                          <div style={{ height: '60px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '6px' }} />
-                          <div style={{ height: '60px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '6px' }} />
+                          <div style={{ height: '60px', backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: '6px' }} />
+                          <div style={{ height: '60px', backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: '6px' }} />
                         </div>
-                        <div style={{ height: '40px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '6px' }} />
+                        <div style={{ height: '40px', backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: '6px' }} />
                       </div>
                     </div>
                   )}
