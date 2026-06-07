@@ -43,7 +43,8 @@ graph TD
 
 ### 2. Multi-Device & Multi-Channel Visual Stress-Tester
 *   **Personalized Custom Name Typing**: Features an interactive text input allowing developers to type custom subscriber names, instantly resolving personalization tags (`{{ user.first_name }}`) across all channel previews.
-*   **Simulated Push Notifications**: Toggles between **iOS Lock Screen (Full)** (displays lockscreen wallpaper, clock/calendar overlay, and rich push notification cards containing the Blizzard campaign banner image) and **Android App Banner (Not Full)** (overlays a floating push banner over an active app grid home screen). Laptop preview is automatically hidden in push mode.
+*   **Simulated Push Notifications**: Toggles between **Locked Phone (Full Screen)** (displays lockscreen wallpaper, clock/calendar overlay, and rich push notification cards containing the Blizzard campaign banner image) and **Unlocked Phone (App Banner)** (overlays a floating push banner over an active app grid home screen). Laptop preview is automatically hidden in push mode.
+*   **In-App Message (IAM) Layout Simulator**: Renders center modals, slide-up banners, and full-screen takeovers directly inside the simulated device with editable headers, body text, dynamic action buttons, and redirect link validators.
 *   **SMS Preview & Billing Segment Auditor**: Renders message bubbles in a text chat interface, scans for non-GSM-7 unicode inputs (emojis or smart quotes), calculates text lengths, and warns developers when copy exceeds character limits and triggers multi-segment billing costs.
 *   **Email Client Dark Mode Inversion**: Injects dynamic overrides into the email iframe context to invert styles, guaranteeing text legibility in simulated dark mobile environments.
 
