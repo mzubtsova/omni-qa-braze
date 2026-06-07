@@ -172,7 +172,7 @@ export default function CopyAuditor({
           </div>
 
           {/* Channel selector tabs inside Copy Auditor */}
-          <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', marginBottom: '0.25rem' }}>
+          <div className="copy-auditor-tabs">
             <button 
               type="button"
               onClick={() => setEditorChannel('email')}

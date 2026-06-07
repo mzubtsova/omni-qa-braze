@@ -248,7 +248,7 @@ OmniQA Quality Assurance Engine`;
             </div>
           </div>
 
-          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="overview-footer-stats" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
             <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
               {issuesCount.high + issuesCount.medium === 0 
                 ? '🎉 Campaign is in perfect shape to deploy!' 

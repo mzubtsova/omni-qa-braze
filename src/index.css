@@ -723,6 +723,22 @@ h1, h2, h3, h4, h5, h6 {
   padding-left: 1rem;
 }
 
+.overview-footer-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.copy-auditor-tabs {
+  display: flex;
+  gap: 0.25rem;
+  background-color: var(--bg-tertiary);
+  padding: 0.25rem;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+  margin-bottom: 0.25rem;
+}
+
 /* Media Queries for Tablet and Mobile viewports */
 @media (max-width: 1024px) {
   .split-view {
@@ -831,6 +847,20 @@ h1, h2, h3, h4, h5, h6 {
   .mismatch-detail-grid {
     grid-template-columns: 1fr;
     gap: 0.75rem;
+  }
+
+  .overview-footer-stats {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .copy-auditor-tabs {
+    flex-wrap: wrap;
+  }
+
+  .copy-auditor-tabs button {
+    flex: 1 1 calc(50% - 0.25rem) !important;
   }
 
   .mismatch-detail-coded {
