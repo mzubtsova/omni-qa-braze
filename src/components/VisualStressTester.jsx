@@ -930,7 +930,7 @@ export default function VisualStressTester({
                               DQ
                             </div>
 
-                            <h4 style={{ fontSize: '0.85rem', fontWeight: '700', margin: 0 }}>{renderedIamHeader}</h4>
+                            <h4 style={{ fontSize: '0.85rem', fontWeight: '700', margin: 0, color: iframeTheme === 'dark' ? '#ffffff' : '#111827' }}>{renderedIamHeader}</h4>
                             <p style={{ fontSize: '0.75rem', color: iframeTheme === 'dark' ? '#9ca3af' : '#4b5563', lineHeight: '1.3', margin: 0 }}>
                               {renderedIamBody}
                             </p>
@@ -995,7 +995,7 @@ export default function VisualStressTester({
                             DQ
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '0.75rem', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{renderedIamHeader}</div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: iframeTheme === 'dark' ? '#ffffff' : '#111827' }}>{renderedIamHeader}</div>
                             <div style={{ fontSize: '0.65rem', color: iframeTheme === 'dark' ? '#9ca3af' : '#4b5563', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{renderedIamBody}</div>
                           </div>
                           <a 
@@ -1060,7 +1060,7 @@ export default function VisualStressTester({
                           </div>
 
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <h3 style={{ fontSize: '1rem', fontWeight: '800', margin: 0 }}>{renderedIamHeader}</h3>
+                            <h3 style={{ fontSize: '1rem', fontWeight: '800', margin: 0, color: iframeTheme === 'dark' ? '#ffffff' : '#111827' }}>{renderedIamHeader}</h3>
                             <p style={{ fontSize: '0.75rem', color: iframeTheme === 'dark' ? '#cbd5e1' : '#475569', lineHeight: '1.4', margin: 0 }}>
                               {renderedIamBody}
                             </p>
@@ -1687,7 +1687,7 @@ export default function VisualStressTester({
                       }}>
                         DQ
                       </div>
-                      <h4 style={{ fontSize: '1rem', fontWeight: '700', margin: 0 }}>{renderedIamHeader}</h4>
+                      <h4 style={{ fontSize: '1rem', fontWeight: '700', margin: 0, color: iframeTheme === 'dark' ? '#ffffff' : '#111827' }}>{renderedIamHeader}</h4>
                       <p style={{ fontSize: '0.85rem', color: iframeTheme === 'dark' ? '#cbd5e1' : '#4b5563', lineHeight: '1.4', margin: 0 }}>
                         {renderedIamBody}
                       </p>
@@ -1747,7 +1747,7 @@ export default function VisualStressTester({
                         DQ
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{renderedIamHeader}</div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: iframeTheme === 'dark' ? '#ffffff' : '#111827' }}>{renderedIamHeader}</div>
                         <div style={{ fontSize: '0.75rem', color: iframeTheme === 'dark' ? '#cbd5e1' : '#4b5563', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{renderedIamBody}</div>
                       </div>
                       <a 
@@ -1806,7 +1806,7 @@ export default function VisualStressTester({
                         DQ
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        <h3 style={{ fontSize: '1.4rem', fontWeight: '800', margin: 0 }}>{renderedIamHeader}</h3>
+                        <h3 style={{ fontSize: '1.4rem', fontWeight: '800', margin: 0, color: iframeTheme === 'dark' ? '#ffffff' : '#111827' }}>{renderedIamHeader}</h3>
                         <p style={{ fontSize: '0.95rem', color: iframeTheme === 'dark' ? '#cbd5e1' : '#475569', lineHeight: '1.5', margin: 0, maxWidth: '400px' }}>
                           {renderedIamBody}
                         </p>
