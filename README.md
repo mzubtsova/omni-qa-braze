@@ -16,19 +16,23 @@ graph TD
     B --> D[Copy Sync Auditor]
     B --> E[Multi-Channel Visual Stress-Tester]
     B --> F[Technical Health Auditor]
+    B --> N[A/B Copy Compare Engine]
     
     D -->|AI Typos & Price Audits| G[Gemini API]
     E -->|Personalization Expander| H[Device Simulator Frame<br/>Email, Push, SMS, IAM]
     F -->|Liquid AST Parser| I[Syntax Warning logs]
     F -->|Link UTM Crawler| J[Link Health logs]
     F -->|CSS Color contrast ratio| K[WCAG Contrast alerts]
+    N -->|Local AI Engagement Heuristics| O[Variant Open/CTR Scores]
     
     G --> L[QA Score Dashboard]
     H --> L
     I --> L
     J --> L
     K --> L
+    O --> L
     L --> M[Dynamic Campaign Reports]
+    N -->|Sync Back Chosen Variant| C
 ```
 
 ---
@@ -53,6 +57,11 @@ graph TD
 *   **UTM Link Crawler**: Crawls all anchor links to detect dead hrefs, placeholder domains, and missing marketing UTM analytics keys.
 *   **HTML Contrast Auto-Fixer**: Features a one-click repair engine that automatically adjusts violating button contrasts, resolves empty placeholder links, and appends missing UTM trackers.
 *   **Staging PDF & Email Dispatcher**: Dispatches live email report drafts with detailed bulleted campaign issues lists and exports print-ready visual QA scorecards.
+
+### 4. A/B Copy Compare & Predictive CTR Engine
+*   **Standalone Side-by-Side Evaluator**: Compares subject lines, body copy snippets, CTA button texts, and CTA links for two variants (Baseline vs Challenger) in a dedicated tab.
+*   **Local AI Predictive Model**: Predicts open rates, click-through rates (CTR), and overall grades based on character lengths, emojis, capitalization rules, urgency triggers, CTA verbs, and UTM configurations.
+*   **Active Workspace Application**: Automatically updates the active workspace campaign (including direct parsing and updating of your template's HTML anchor elements) with your winning variant parameters.
 
 ---
 
