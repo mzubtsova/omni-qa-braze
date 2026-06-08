@@ -39,6 +39,96 @@ export default function Overview({
   const [isSending, setIsSending] = useState(false);
   const [successSent, setSuccessSent] = useState(false);
 
+  const [abActive, setAbActive] = useState(false);
+  const [abSubjectA, setAbSubjectA] = useState(subjectLine || '');
+  const [abCopyA, setAbCopyA] = useState('Claim your buy-one-get-one free Blizzard at Dairy Queen today!');
+  const [abSubjectB, setAbSubjectB] = useState('🍦 BOGO FREE Blizzard is waiting for you...');
+  const [abCopyB, setAbCopyB] = useState('Marina, your BOGO Blizzard coupon expires in 3 days. Tap to redeem now!');
+  const [abResults, setAbResults] = useState(null);
+  const [abEvaluating, setAbEvaluating] = useState(false);
+
+  const handleEvaluateAB = () => {
+    setAbEvaluating(true);
+    setTimeout(() => {
+      const evaluate = (sub, cop) => {
+        let openRate = 18.5; // base
+        let clickRate = 2.4;  // base
+        let score = 75;      // base
+        const feedback = [];
+
+        // Subject Line Length
+        if (sub.length > 30 && sub.length < 65) {
+          openRate += 2.1;
+          score += 5;
+          feedback.push('Optimal subject line length (30-65 chars).');
+        } else if (sub.length >= 65) {
+          openRate -= 1.5;
+          score -= 4;
+          feedback.push('Subject is too long; will be truncated on mobile devices.');
+        } else {
+          openRate -= 0.8;
+          feedback.push('Subject is very short; could add more context.');
+        }
+
+        // Subject Emojis
+        const emojiRegex = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u;
+        if (emojiRegex.test(sub)) {
+          openRate += 1.8;
+          score += 4;
+          feedback.push('Emoji detected: increases visual prominence in inbox (+1.8%).');
+        }
+
+        // Personalization
+        if (sub.includes('{{') || cop.includes('{{') || sub.toLowerCase().includes('marina') || cop.toLowerCase().includes('marina')) {
+          openRate += 2.5;
+          clickRate += 0.6;
+          score += 8;
+          feedback.push('Dynamic personalization detected: increases relevance.');
+        }
+
+        // Urgency / Action words
+        const urgencyRegex = /\b(now|limited|expire|fast|today|free|bogo|off|gift)\b/i;
+        if (urgencyRegex.test(sub) || urgencyRegex.test(cop)) {
+          openRate += 1.5;
+          clickRate += 0.8;
+          score += 6;
+          feedback.push('High-urgency promotional triggers detected (+1.5%).');
+        }
+
+        // Punctuation / Capitals
+        if (sub === sub.toUpperCase() && sub.length > 5) {
+          openRate -= 3.0;
+          score -= 10;
+          feedback.push('ALL-CAPS subject looks spammy; risk of filter blocking.');
+        }
+
+        // Click Rate factors (Copy CTA)
+        const ctaVerbs = /\b(claim|redeem|get|click|tap|buy|shop|order|download|view)\b/i;
+        if (ctaVerbs.test(cop)) {
+          clickRate += 1.1;
+          score += 7;
+          feedback.push('Strong, action-oriented call to action (CTA).');
+        } else {
+          clickRate -= 0.5;
+          feedback.push('CTA lacks action verbs (e.g. redeem, claim).');
+        }
+
+        return {
+          openRate: parseFloat(openRate.toFixed(1)),
+          clickRate: parseFloat(clickRate.toFixed(1)),
+          score: Math.min(100, Math.max(0, score)),
+          feedback: feedback.slice(0, 3)
+        };
+      };
+
+      const resA = evaluate(abSubjectA, abCopyA);
+      const resB = evaluate(abSubjectB, abCopyB);
+
+      setAbResults({ variantA: resA, variantB: resB });
+      setAbEvaluating(false);
+    }, 1000);
+  };
+
   const getScoreColor = (score) => {
     if (score >= 90) return 'var(--score-success)';
     if (score >= 70) return 'var(--score-warning)';
@@ -388,6 +478,195 @@ OmniQA Quality Assurance Engine`;
         ) : (
           <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)', border: '1px dashed var(--border-color)', borderRadius: 'var(--border-radius-md)' }}>
             No prediction logs loaded. Click the button above to run AI campaign simulation diagnostics.
+          </div>
+        )}
+      </div>
+
+      {/* AI A/B CTR Evaluator Section */}
+      <h3 style={{ marginBottom: '1rem', marginTop: '2rem' }}>AI A/B Performance Compare Engine</h3>
+      <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h4 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Head-to-Head A/B Copy Evaluator</h4>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+              Compare subject lines and snippet copies side-by-side to predict which variant wins on Open Rate & CTR.
+            </p>
+          </div>
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setAbActive(!abActive);
+              if (!abSubjectA && subjectLine) {
+                setAbSubjectA(subjectLine);
+              }
+              const plainText = brazeHtml ? brazeHtml.replace(/<[^>]*>/g, '').trim().substring(0, 120) : '';
+              if (!abCopyA && plainText) {
+                setAbCopyA(plainText);
+              }
+            }}
+            style={{ borderColor: 'var(--accent-purple)', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}
+          >
+            {abActive ? 'Hide Evaluator Panel' : '⚡ Compare Variations'}
+          </button>
+        </div>
+
+        {abActive && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }} className="settings-grid">
+              {/* Variant A Inputs */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)' }}>
+                <h5 style={{ color: 'var(--accent-cyan)', fontWeight: '600', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.4rem', margin: 0 }}>Variant A (Current Baseline)</h5>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Subject Line A:</label>
+                  <input
+                    type="text"
+                    value={abSubjectA}
+                    onChange={(e) => setAbSubjectA(e.target.value)}
+                    className="form-input"
+                    style={{ fontSize: '0.8rem', padding: '0.45rem', backgroundColor: 'var(--bg-primary)' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Body copy snippet A:</label>
+                  <textarea
+                    value={abCopyA}
+                    onChange={(e) => setAbCopyA(e.target.value)}
+                    rows={3}
+                    className="form-input"
+                    style={{ fontSize: '0.8rem', padding: '0.45rem', backgroundColor: 'var(--bg-primary)', resize: 'vertical' }}
+                  />
+                </div>
+              </div>
+
+              {/* Variant B Inputs */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)' }}>
+                <h5 style={{ color: 'var(--accent-purple)', fontWeight: '600', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.4rem', margin: 0 }}>Variant B (Alternative Challenger)</h5>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Subject Line B:</label>
+                  <input
+                    type="text"
+                    value={abSubjectB}
+                    onChange={(e) => setAbSubjectB(e.target.value)}
+                    className="form-input"
+                    style={{ fontSize: '0.8rem', padding: '0.45rem', backgroundColor: 'var(--bg-primary)' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Body copy snippet B:</label>
+                  <textarea
+                    value={abCopyB}
+                    onChange={(e) => setAbCopyB(e.target.value)}
+                    rows={3}
+                    className="form-input"
+                    style={{ fontSize: '0.8rem', padding: '0.45rem', backgroundColor: 'var(--bg-primary)', resize: 'vertical' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button
+                className="btn btn-primary"
+                onClick={handleEvaluateAB}
+                disabled={abEvaluating}
+                style={{ padding: '0.5rem 2rem', background: 'var(--cyan-gradient)', cursor: 'pointer' }}
+              >
+                {abEvaluating ? '🤖 Consulting AI robot overlords... 🔮' : '⚖️ Evaluate Head-to-Head CTR'}
+              </button>
+            </div>
+
+            {/* Results Side by Side */}
+            {abResults && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+                <h5 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700', textAlign: 'center' }}>AI Predictive CTR Matrix</h5>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }} className="settings-grid">
+                  {/* Results Variant A */}
+                  <div style={{
+                    padding: '1.25rem',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    borderRadius: 'var(--border-radius-md)',
+                    border: '1px solid ' + (abResults.variantA.score >= abResults.variantB.score ? 'var(--success)' : 'var(--border-color)'),
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem',
+                    position: 'relative'
+                  }}>
+                    {abResults.variantA.score >= abResults.variantB.score && (
+                      <span style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', backgroundColor: 'var(--success)', color: '#fff', fontSize: '0.65rem', fontWeight: 'bold', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+                        👑 AI CHOSEN WINNER
+                      </span>
+                    )}
+                    <h6 style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Variant A Scorecard</h6>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--accent-cyan)' }}>{abResults.variantA.score}%</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Engagement Grade</span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Predicted Open Rate:</span>
+                      <strong style={{ color: 'var(--text-primary)' }}>{abResults.variantA.openRate}%</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Predicted Click Rate (CTR):</span>
+                      <strong style={{ color: 'var(--text-primary)' }}>{abResults.variantA.clickRate}%</strong>
+                    </div>
+
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      <strong>Key Triggers:</strong>
+                      <ul style={{ paddingLeft: '1rem', marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.2rem', margin: 0 }}>
+                        {abResults.variantA.feedback.map((f, idx) => <li key={idx}>{f}</li>)}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Results Variant B */}
+                  <div style={{
+                    padding: '1.25rem',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    borderRadius: 'var(--border-radius-md)',
+                    border: '1px solid ' + (abResults.variantB.score >= abResults.variantA.score ? 'var(--success)' : 'var(--border-color)'),
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem',
+                    position: 'relative'
+                  }}>
+                    {abResults.variantB.score >= abResults.variantA.score && (
+                      <span style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', backgroundColor: 'var(--success)', color: '#fff', fontSize: '0.65rem', fontWeight: 'bold', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+                        👑 AI CHOSEN WINNER
+                      </span>
+                    )}
+                    <h6 style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Variant B Scorecard</h6>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--accent-purple)' }}>{abResults.variantB.score}%</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Engagement Grade</span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Predicted Open Rate:</span>
+                      <strong style={{ color: 'var(--text-primary)' }}>{abResults.variantB.openRate}%</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Predicted Click Rate (CTR):</span>
+                      <strong style={{ color: 'var(--text-primary)' }}>{abResults.variantB.clickRate}%</strong>
+                    </div>
+
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      <strong>Key Triggers:</strong>
+                      <ul style={{ paddingLeft: '1rem', marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.2rem', margin: 0 }}>
+                        {abResults.variantB.feedback.map((f, idx) => <li key={idx}>{f}</li>)}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

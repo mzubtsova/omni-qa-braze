@@ -91,6 +91,7 @@ export default function Catalog({
   const [newCampaignName, setNewCampaignName] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [syncingId, setSyncingId] = useState(null);
+  const [loadingLoadId, setLoadingLoadId] = useState(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('omniqa_braze_catalog');
@@ -108,9 +109,13 @@ export default function Catalog({
   };
 
   const handleLoad = (campaign) => {
-    if (onLoadCampaign) {
-      onLoadCampaign(campaign);
-    }
+    setLoadingLoadId(campaign.id);
+    setTimeout(() => {
+      if (onLoadCampaign) {
+        onLoadCampaign(campaign);
+      }
+      setLoadingLoadId(null);
+    }, 1000);
   };
 
   const handleSync = (id) => {
@@ -257,20 +262,21 @@ export default function Catalog({
                   <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
                     <button 
                       onClick={() => handleLoad(c)}
+                      disabled={loadingLoadId === c.id || syncingId === c.id}
                       className="btn btn-secondary" 
                       style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
                       title="Load into Editor"
                     >
-                      <FileEdit size={12} /> Load
+                      <FileEdit size={12} className={loadingLoadId === c.id ? 'spin' : ''} /> {loadingLoadId === c.id ? '🚚 Loading...' : 'Load'}
                     </button>
                     <button 
                       onClick={() => handleSync(c.id)}
                       className="btn btn-secondary" 
-                      disabled={syncingId === c.id}
+                      disabled={loadingLoadId === c.id || syncingId === c.id}
                       style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', borderColor: 'var(--accent-blue)', color: 'var(--accent-blue)' }}
                       title="Simulate Braze API Sync"
                     >
-                      <RefreshCw size={12} className={syncingId === c.id ? 'spin' : ''} /> {syncingId === c.id ? 'Syncing...' : 'Sync API'}
+                      <RefreshCw size={12} className={syncingId === c.id ? 'spin' : ''} /> {syncingId === c.id ? '🚀 Syncing...' : 'Sync API'}
                     </button>
                     <button 
                       onClick={() => handleDelete(c.id)}

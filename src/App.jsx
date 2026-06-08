@@ -129,17 +129,17 @@ export default function App() {
 
   // Scores state (initialized to the exact pre-calculated score of default campaign)
   const [scores, setScores] = useState({
-    overall: 76,
-    copy: 72,
+    overall: 70,
+    copy: 58,
     visual: 95,
-    tech: 55,
+    tech: 43,
     spam: 83
   });
 
   const [issuesCount, setIssuesCount] = useState({
-    high: 1,
-    medium: 7,
-    low: 5
+    high: 4,
+    medium: 6,
+    low: 4
   });
 
   const [figmaSyncLoading, setFigmaSyncLoading] = useState(false);

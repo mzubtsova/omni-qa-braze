@@ -1,9 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Smartphone, Layers, Sliders, Tablet, Laptop, Maximize2, X, Sun, Moon, Bell, MessageSquare, Mail, Sparkles } from 'lucide-react';
-
-const isGSM7 = (str) => {
-  const gsm7Regex = /^[A-Za-z0-9@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,\-./:;<=>?¡¿ÄÖÑÜ§à^{}[\\\]~|€]*$/;
-  return gsm7Regex.test(str);
+const getNonGSM7Characters = (str) => {
+  if (!str) return [];
+  const gsm7SingleCharRegex = /^[A-Za-z0-9@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,\-./:;<=>?¡¿ÄÖÑÜ§à^{}[\\\]~|€]$/;
+  const nonGsm = [];
+  const seen = new Set();
+  for (const char of Array.from(str)) {
+    if (!gsm7SingleCharRegex.test(char)) {
+      if (!seen.has(char)) {
+        seen.add(char);
+        nonGsm.push(char);
+      }
+    }
+  }
+  return nonGsm;
 };
 
 export default function VisualStressTester({ 
@@ -45,12 +55,49 @@ export default function VisualStressTester({
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [languageSearch, setLanguageSearch] = useState('English');
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [uploadedLanguages, setUploadedLanguages] = useState([]);
+  const [showEventProps, setShowEventProps] = useState(false);
+  const [eventPropsJson, setEventPropsJson] = useState(JSON.stringify({
+    purchase_amount: 125.00,
+    promo_code: "SUMMER-BLIZZARD",
+    is_first_purchase: true
+  }, null, 2));
+
+  const handleUploadTranslation = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+        if (!data.code || !data.name || !data.translations) {
+          alert("Invalid translation dictionary schema. Must contain 'code', 'name', 'flag', and 'translations' keys.");
+          return;
+        }
+        setUploadedLanguages(prev => {
+          const filtered = prev.filter(l => l.code !== data.code);
+          return [...filtered, {
+            code: data.code,
+            name: data.name,
+            flag: data.flag || '🌐',
+            translations: data.translations
+          }];
+        });
+        alert(`Success: Added ${data.name} (${data.flag || '🌐'}) dictionary with ${Object.keys(data.translations).length} translations!`);
+      } catch (err) {
+        alert("Failed to parse JSON: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const languagesList = [
     { code: 'en', name: 'English', flag: '🇺🇸' },
     { code: 'es', name: 'Spanish', flag: '🇪🇸' },
     { code: 'fr', name: 'French', flag: '🇫🇷' },
-    { code: 'de', name: 'German', flag: '🇩🇪' }
+    { code: 'de', name: 'German', flag: '🇩🇪' },
+    ...uploadedLanguages
   ];
 
   const filteredLanguages = languagesList.filter(lang => 
@@ -73,10 +120,23 @@ export default function VisualStressTester({
   const figmaDashBg = isDarkTheme ? 'rgba(255,255,255,0.01)' : 'rgba(15, 23, 42, 0.01)';
   const figmaOverlayBg = isDarkTheme ? 'rgba(6, 182, 212, 0.05)' : 'rgba(6, 182, 212, 0.02)';
 
-  // Expand Liquid tags client-side for sandbox simulation
   useEffect(() => {
-    if (!brazeHtml) return;
 
+    let eventProps = {};
+    try {
+      eventProps = JSON.parse(eventPropsJson);
+    } catch {
+      // safe fallback
+    }
+
+    const resolveEventProps = (textStr) => {
+      if (!textStr) return '';
+      return textStr.replace(/\{\{\s*event_properties\.([a-zA-Z0-9_-]+)\s*\}\}/g, (match, prop) => {
+        return eventProps[prop] !== undefined ? String(eventProps[prop]) : '';
+      });
+    };
+
+    const activeLangObj = languagesList.find(l => l.code === selectedLanguage);
     const isSpanish = selectedLanguage === 'es';
     const isFrench = selectedLanguage === 'fr';
     const isGerman = selectedLanguage === 'de';
@@ -85,6 +145,9 @@ export default function VisualStressTester({
     if (isSpanish) fallbackName = 'Estimado Cliente';
     else if (isFrench) fallbackName = 'Cher Client';
     else if (isGerman) fallbackName = 'Sehr geehrter Kunde';
+    else if (activeLangObj && activeLangObj.translations && activeLangObj.translations['Valued Customer']) {
+      fallbackName = activeLangObj.translations['Valued Customer'];
+    }
 
     let firstName = customName ? customName : fallbackName;
     let showVipDetails = false;
@@ -237,8 +300,6 @@ export default function VisualStressTester({
       }
     }
 
-    setRenderedHtml(processedHtml);
-
     // Parse Subject line
     let processedSubject = subjectLine || '';
     if (isSpanish) {
@@ -253,7 +314,6 @@ export default function VisualStressTester({
       });
       processedSubject = processedSubject.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
     }
-    setRenderedSubject(processedSubject);
 
     // Parse Push notification body
     let processedPush = pushBody || '';
@@ -272,7 +332,6 @@ export default function VisualStressTester({
         return showVipDetails ? ifBlock : (elseBlock || '');
       });
     }
-    setRenderedPushBody(processedPush);
 
     // Parse SMS body
     let processedSms = smsBody || '';
@@ -291,7 +350,6 @@ export default function VisualStressTester({
         return showVipDetails ? ifBlock : (elseBlock || '');
       });
     }
-    setRenderedSmsBody(processedSms);
 
     // Parse IAM Header
     let processedIamHeader = iamHeader || '';
@@ -310,7 +368,6 @@ export default function VisualStressTester({
         return showVipDetails ? ifBlock : (elseBlock || '');
       });
     }
-    setRenderedIamHeader(processedIamHeader);
 
     // Parse IAM Body
     let processedIamBody = iamBody || '';
@@ -329,7 +386,6 @@ export default function VisualStressTester({
         return showVipDetails ? ifBlock : (elseBlock || '');
       });
     }
-    setRenderedIamBody(processedIamBody);
 
     // Parse IAM Button Text
     let processedIamButtonText = iamButtonText || '';
@@ -348,8 +404,39 @@ export default function VisualStressTester({
         return showVipDetails ? ifBlock : (elseBlock || '');
       });
     }
+
+    // Resolve event properties
+    processedHtml = resolveEventProps(processedHtml);
+    processedSubject = resolveEventProps(processedSubject);
+    processedPush = resolveEventProps(processedPush);
+    processedSms = resolveEventProps(processedSms);
+    processedIamHeader = resolveEventProps(processedIamHeader);
+    processedIamBody = resolveEventProps(processedIamBody);
+    processedIamButtonText = resolveEventProps(processedIamButtonText);
+
+    // Apply custom translations if active
+    if (activeLangObj && activeLangObj.translations) {
+      Object.entries(activeLangObj.translations).forEach(([key, val]) => {
+        const escapedKey = key.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const keyRegex = new RegExp(escapedKey, 'gi');
+        processedHtml = processedHtml.replace(keyRegex, val);
+        processedSubject = processedSubject.replace(keyRegex, val);
+        processedPush = processedPush.replace(keyRegex, val);
+        processedSms = processedSms.replace(keyRegex, val);
+        processedIamHeader = processedIamHeader.replace(keyRegex, val);
+        processedIamBody = processedIamBody.replace(keyRegex, val);
+        processedIamButtonText = processedIamButtonText.replace(keyRegex, val);
+      });
+    }
+
+    setRenderedHtml(processedHtml);
+    setRenderedSubject(processedSubject);
+    setRenderedPushBody(processedPush);
+    setRenderedSmsBody(processedSms);
+    setRenderedIamHeader(processedIamHeader);
+    setRenderedIamBody(processedIamBody);
     setRenderedIamButtonText(processedIamButtonText);
-  }, [brazeHtml, subjectLine, segment, iframeTheme, pushBody, smsBody, iamHeader, iamBody, iamButtonText, customName, selectedLanguage]);
+  }, [brazeHtml, subjectLine, segment, iframeTheme, pushBody, smsBody, iamHeader, iamBody, iamButtonText, customName, selectedLanguage, eventPropsJson, uploadedLanguages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getDeviceStyle = () => {
     switch (device) {
@@ -417,7 +504,8 @@ export default function VisualStressTester({
   const renderSmsBillingAuditor = () => {
     const text = renderedSmsBody || '';
     const length = text.length;
-    const usesUnicode = !isGSM7(text);
+    const nonGsmChars = getNonGSM7Characters(text);
+    const usesUnicode = nonGsmChars.length > 0;
     
     let segmentLimit = usesUnicode ? 70 : 160;
     let concatLimit = usesUnicode ? 67 : 153;
@@ -474,6 +562,43 @@ export default function VisualStressTester({
         {usesUnicode && (
           <div style={{ fontSize: '0.72rem', color: 'var(--warning)', marginTop: '0.4rem', lineHeight: '1.25' }}>
             * Emojis, smart quotes or non-latin characters force UCS-2 encoding (limits segments to 70 chars).
+            {nonGsmChars.length > 0 && (
+              <div style={{ 
+                marginTop: '0.5rem', 
+                padding: '0.4rem 0.5rem', 
+                backgroundColor: 'rgba(234, 179, 8, 0.08)', 
+                border: '1px dashed rgba(234, 179, 8, 0.3)', 
+                borderRadius: '4px',
+                color: 'var(--warning)'
+              }}>
+                <strong style={{ display: 'block', marginBottom: '0.2rem', color: 'var(--text-primary)' }}>
+                  Detected Non-GSM-7 Characters ({nonGsmChars.length}):
+                </strong>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.15rem' }}>
+                  {nonGsmChars.map((char, index) => (
+                    <span 
+                      key={index} 
+                      style={{ 
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: '1.2rem',
+                        height: '1.2rem',
+                        padding: '0 0.2rem',
+                        backgroundColor: 'var(--bg-secondary)', 
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '3px',
+                        fontSize: '0.8rem',
+                        fontWeight: 'bold',
+                        color: 'var(--text-primary)'
+                      }}
+                    >
+                      {char}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
         
@@ -686,6 +811,21 @@ export default function VisualStressTester({
                   </div>
                 )}
               </div>
+              {/* Custom Locale Dictionary Uploader */}
+              <div style={{ marginTop: '0.35rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Upload Locale Dictionary (JSON):</label>
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleUploadTranslation}
+                  style={{
+                    fontSize: '0.7rem',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    width: '100%'
+                  }}
+                />
+              </div>
             </div>
 
             {/* Custom Name Override Input */}
@@ -708,6 +848,55 @@ export default function VisualStressTester({
                   boxSizing: 'border-box' 
                 }}
               />
+            </div>
+
+            {/* Custom Event Properties JSON Textarea */}
+            <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <button
+                type="button"
+                onClick={() => setShowEventProps(!showEventProps)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--accent-cyan)',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  fontWeight: '600',
+                  padding: 0,
+                  textAlign: 'left'
+                }}
+              >
+                {showEventProps ? '▼ Hide Event Properties (JSON)' : '▶ Show Event Properties (JSON)'}
+              </button>
+              {showEventProps && (
+                <div>
+                  <textarea
+                    value={eventPropsJson}
+                    onChange={(e) => setEventPropsJson(e.target.value)}
+                    placeholder='{"purchase_amount": 125.00}'
+                    rows={4}
+                    style={{
+                      fontSize: '0.75rem',
+                      fontFamily: 'monospace',
+                      padding: '0.45rem 0.65rem',
+                      color: 'var(--text-primary)',
+                      backgroundColor: 'var(--bg-primary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 'var(--border-radius-sm)',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      resize: 'vertical',
+                      marginTop: '0.25rem'
+                    }}
+                  />
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                    Access in copy: <code>{"{{ event_properties.prop_name }}"}</code>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
