@@ -146,6 +146,9 @@ export default function App() {
   const [isPredicting, setIsPredicting] = useState(false);
   const [predictionResults, setPredictionResults] = useState(null);
 
+  // Lifted severity filter state for campaign issues tracking
+  const [filterSeverity, setFilterSeverity] = useState('all');
+
   const handleSyncFigma = async () => {
     setFigmaSyncLoading(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -493,7 +496,10 @@ export default function App() {
 
           <button 
             className={`sidebar-item ${activeTab === 'technical' ? 'active' : ''}`}
-            onClick={() => setActiveTab('technical')}
+            onClick={() => {
+              setFilterSeverity('all');
+              setActiveTab('technical');
+            }}
           >
             <Code size={18} />
             <span>Technical Audits</span>
@@ -604,6 +610,7 @@ export default function App() {
             onPredictEngagement={handlePredictEngagement}
             isPredicting={isPredicting}
             predictionResults={predictionResults}
+            setFilterSeverity={setFilterSeverity}
           />
         )}
 
@@ -670,6 +677,8 @@ export default function App() {
             spamAuditResults={spamAuditResults}
             isAuditing={isAuditing}
             onRunAudit={runAudit}
+            filterSeverity={filterSeverity}
+            setFilterSeverity={setFilterSeverity}
           />
         )}
 

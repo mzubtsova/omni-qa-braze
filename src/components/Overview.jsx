@@ -18,7 +18,8 @@ export default function Overview({
   brazeHtml,
   onPredictEngagement,
   isPredicting,
-  predictionResults
+  predictionResults,
+  setFilterSeverity
 }) {
   // SVG Config for Circular Progress Ring
   const radius = 80;
@@ -245,7 +246,14 @@ OmniQA Quality Assurance Engine`;
             </p>
 
             <div className="overview-stats-grid">
-              <div style={{ padding: '1rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div 
+                className="severity-card"
+                onClick={() => {
+                  if (setFilterSeverity) setFilterSeverity('high');
+                  setActiveTab('technical');
+                }}
+                title="View High Severity Issues"
+              >
                 <AlertCircle size={24} style={{ color: 'var(--error)' }} />
                 <div>
                   <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>{issuesCount.high}</div>
@@ -253,7 +261,14 @@ OmniQA Quality Assurance Engine`;
                 </div>
               </div>
               
-              <div style={{ padding: '1rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div 
+                className="severity-card"
+                onClick={() => {
+                  if (setFilterSeverity) setFilterSeverity('medium');
+                  setActiveTab('technical');
+                }}
+                title="View Medium Severity Issues"
+              >
                 <AlertTriangle size={24} style={{ color: 'var(--warning)' }} />
                 <div>
                   <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>{issuesCount.medium}</div>
@@ -261,7 +276,14 @@ OmniQA Quality Assurance Engine`;
                 </div>
               </div>
 
-              <div style={{ padding: '1rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div 
+                className="severity-card"
+                onClick={() => {
+                  if (setFilterSeverity) setFilterSeverity('low');
+                  setActiveTab('technical');
+                }}
+                title="View Low Severity Issues"
+              >
                 <CheckCircle2 size={24} style={{ color: 'var(--success)' }} />
                 <div>
                   <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>{issuesCount.low}</div>

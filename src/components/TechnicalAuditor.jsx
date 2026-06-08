@@ -13,9 +13,10 @@ export default function TechnicalAuditor({
   iamButtonLink = '',
   setIamButtonLink,
   spamAuditResults,
-  onRunAudit 
+  onRunAudit,
+  filterSeverity = 'all',
+  setFilterSeverity
 }) {
-  const [filterSeverity, setFilterSeverity] = useState('all');
   const [toastMessage, setToastMessage] = useState(null);
   const [isFixing, setIsFixing] = useState(false);
 
