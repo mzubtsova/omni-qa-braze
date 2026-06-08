@@ -8,7 +8,8 @@ import {
   RefreshCw,
   Sun,
   Moon,
-  Database
+  Database,
+  Scale
 } from 'lucide-react';
 
 import Overview from './components/Overview';
@@ -17,6 +18,7 @@ import VisualStressTester from './components/VisualStressTester';
 import TechnicalAuditor from './components/TechnicalAuditor';
 import Settings from './components/Settings';
 import Catalog from './components/Catalog';
+import AbEvaluator from './components/AbEvaluator';
 
 import { auditFigmaAndBrazeCopy, auditSpamAndDeliverability, predictCampaignEngagement } from './services/gemini';
 import { fetchFigmaTextLayers } from './services/figma';
@@ -506,6 +508,14 @@ export default function App() {
           </button>
 
           <button 
+            className={`sidebar-item ${activeTab === 'ab_evaluator' ? 'active' : ''}`}
+            onClick={() => setActiveTab('ab_evaluator')}
+          >
+            <Scale size={18} />
+            <span>A/B Copy Compare</span>
+          </button>
+
+          <button 
             className={`sidebar-item ${activeTab === 'catalog' ? 'active' : ''}`}
             onClick={() => setActiveTab('catalog')}
           >
@@ -547,6 +557,7 @@ export default function App() {
               {activeTab === 'copy' && 'Copy & Typography Auditor'}
               {activeTab === 'visuals' && 'Visual Layout & Variable Stress-Tester'}
               {activeTab === 'technical' && 'Liquid & Link Health Reports'}
+              {activeTab === 'ab_evaluator' && 'A/B Performance Engine'}
               {activeTab === 'catalog' && 'Braze Campaign Catalog'}
               {activeTab === 'settings' && 'Integration Settings'}
             </h1>
@@ -555,6 +566,7 @@ export default function App() {
               {activeTab === 'copy' && 'Ensure content syncs between creative designs and CRM code layers.'}
               {activeTab === 'visuals' && 'Test rendering logic against long names, edge-case user profiles, and tiers.'}
               {activeTab === 'technical' && 'Validates liquid syntax, UTM tracking parameters, color contrast, and deliverability.'}
+              {activeTab === 'ab_evaluator' && 'Predictively evaluate and score competing campaign copy versions.'}
               {activeTab === 'catalog' && 'Manage staging states and version controls for your campaign assets.'}
               {activeTab === 'settings' && 'Manage connections, keys, and environments.'}
             </p>
@@ -696,6 +708,13 @@ export default function App() {
               iamButtonLink,
               figmaTexts
             }}
+          />
+        )}
+
+        {activeTab === 'ab_evaluator' && (
+          <AbEvaluator 
+            subjectLine={subjectLine}
+            brazeHtml={brazeHtml}
           />
         )}
 
