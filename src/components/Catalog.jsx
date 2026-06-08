@@ -222,76 +222,114 @@ export default function Catalog({
         </form>
       )}
 
-      {/* Catalog Grid */}
-      <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-        <table className="diagnostics-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-          <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }}>
-              <th style={{ padding: '1rem' }}>Campaign Name</th>
-              <th style={{ padding: '1rem' }}>Version</th>
-              <th style={{ padding: '1rem' }}>Sync Status</th>
-              <th style={{ padding: '1rem' }}>Last Synced</th>
-              <th style={{ padding: '1rem', textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {campaigns.map((c) => (
-              <tr key={c.id} style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)' }}>
-                <td style={{ padding: '1rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                    <strong style={{ color: 'var(--text-primary)' }}>{c.name}</strong>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                      {c.channel === 'email' ? '✉️ Email' : c.channel === 'push' ? '📱 Push' : c.channel === 'sms' ? '💬 SMS' : '✨ In-App'}
-                    </span>
-                  </div>
-                </td>
-                <td style={{ padding: '1rem', fontFamily: 'var(--font-mono)' }}>{c.version}</td>
-                <td style={{ padding: '1rem' }}>
-                  <span style={{ 
-                    padding: '0.25rem 0.5rem', 
-                    borderRadius: '4px', 
-                    fontSize: '0.78rem',
-                    fontWeight: '600',
-                    ...getStatusStyle(c.status)
-                  }}>
-                    {c.status}
-                  </span>
-                </td>
-                <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>{c.lastSynced}</td>
-                <td style={{ padding: '1rem', textAlign: 'right' }}>
-                  <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
-                    <button 
-                      onClick={() => handleLoad(c)}
-                      disabled={loadingLoadId === c.id || syncingId === c.id}
-                      className="btn btn-secondary" 
-                      style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                      title="Load into Editor"
-                    >
-                      <FileEdit size={12} className={loadingLoadId === c.id ? 'spin' : ''} /> {loadingLoadId === c.id ? '🚚 Loading...' : 'Load'}
-                    </button>
-                    <button 
-                      onClick={() => handleSync(c.id)}
-                      className="btn btn-secondary" 
-                      disabled={loadingLoadId === c.id || syncingId === c.id}
-                      style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', borderColor: 'var(--accent-blue)', color: 'var(--accent-blue)' }}
-                      title="Simulate Braze API Sync"
-                    >
-                      <RefreshCw size={12} className={syncingId === c.id ? 'spin' : ''} /> {syncingId === c.id ? '🚀 Syncing...' : 'Sync API'}
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(c.id)}
-                      className="btn btn-secondary" 
-                      style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', borderColor: 'var(--error)', color: 'var(--error)' }}
-                      title="Delete Campaign"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Catalog Card Grid */}
+      <div className="catalog-grid">
+        {campaigns.map((c) => (
+          <div key={c.id} className="panel" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            padding: '1.25rem',
+            background: 'var(--bg-tertiary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--border-radius-md)',
+            position: 'relative'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {c.channel === 'email' ? '✉️ Email' : c.channel === 'push' ? '📱 Push' : c.channel === 'sms' ? '💬 SMS' : '✨ In-App'}
+                </span>
+                <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-primary)' }}>{c.name}</h4>
+              </div>
+              <span style={{ 
+                padding: '0.2rem 0.5rem', 
+                borderRadius: '4px', 
+                fontSize: '0.72rem',
+                fontWeight: '700',
+                ...getStatusStyle(c.status)
+              }}>
+                {c.status}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)', padding: '0.5rem 0', margin: '0.1rem 0' }}>
+              <div>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Version</span>
+                <strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{c.version}</strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Last Synced</span>
+                <strong style={{ color: 'var(--text-primary)' }}>{c.lastSynced}</strong>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+              <button 
+                onClick={() => handleLoad(c)}
+                disabled={loadingLoadId === c.id || syncingId === c.id}
+                className="btn btn-secondary" 
+                style={{
+                  flex: 1,
+                  padding: '0.45rem 0.6rem',
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  justifyContent: 'center',
+                  backgroundColor: 'var(--bg-secondary)',
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer'
+                }}
+                title="Load into Editor"
+              >
+                <FileEdit size={12} className={loadingLoadId === c.id ? 'spin' : ''} /> {loadingLoadId === c.id ? 'Loading...' : 'Load'}
+              </button>
+              <button 
+                onClick={() => handleSync(c.id)}
+                disabled={loadingLoadId === c.id || syncingId === c.id}
+                className="btn btn-secondary" 
+                style={{
+                  flex: 1,
+                  padding: '0.45rem 0.6rem',
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  justifyContent: 'center',
+                  borderColor: 'var(--accent-blue)',
+                  color: 'var(--accent-blue)',
+                  backgroundColor: 'var(--bg-secondary)',
+                  cursor: 'pointer'
+                }}
+                title="Simulate Braze API Sync"
+              >
+                <RefreshCw size={12} className={syncingId === c.id ? 'spin' : ''} /> {syncingId === c.id ? 'Syncing...' : 'Sync API'}
+              </button>
+              <button 
+                onClick={() => handleDelete(c.id)}
+                className="btn btn-secondary" 
+                style={{
+                  padding: '0.45rem 0.6rem',
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  justifyContent: 'center',
+                  borderColor: 'var(--error)',
+                  color: 'var(--error)',
+                  backgroundColor: 'var(--bg-secondary)',
+                  cursor: 'pointer'
+                }}
+                title="Delete Campaign"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
     </div>

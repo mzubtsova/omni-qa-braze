@@ -226,7 +226,7 @@ export default function AbEvaluator({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }} className="settings-grid">
+          <div className="ab-grid">
             {/* Variant A Inputs */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)' }}>
               <h5 style={{ color: 'var(--accent-cyan)', fontWeight: '600', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', margin: 0, display: 'flex', justifyContent: 'space-between' }}>
@@ -368,7 +368,7 @@ export default function AbEvaluator({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', marginTop: '0.5rem' }}>
               <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '700', textAlign: 'center', color: 'var(--text-primary)' }}>AI Predictive CTR Matrix</h4>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }} className="settings-grid">
+              <div className="ab-grid">
                 {/* Results Variant A */}
                 <div style={{
                   padding: '1.5rem',

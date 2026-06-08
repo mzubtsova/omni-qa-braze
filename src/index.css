@@ -939,3 +939,40 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* Responsive Grid layouts for A/B Evaluator and Campaign Catalog */
+.ab-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+/* Screen rotations & mobile-friendly checks */
+@media (max-width: 768px) {
+  /* Default to 1 column vertical stack on mobile/tablet screens in portrait mode */
+  .ab-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+}
+
+@media (max-width: 950px) and (orientation: landscape) {
+  /* Side-by-side landscape mode layouts for rotated mobile phones and small tablets */
+  .ab-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 1.25rem !important;
+  }
+  
+  .catalog-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 1rem !important;
+  }
+}
+
