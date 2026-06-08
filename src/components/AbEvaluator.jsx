@@ -34,7 +34,7 @@ export default function AbEvaluator({
       setIamButtonLink(btnLink);
     }
     if (brazeHtml && setBrazeHtml && btnText && btnLink) {
-      const anchorRegex = /(<a\s+[^>]*href=["'])([^"']*)(["'][^>]*>)(.*?)(<\/a>)/i;
+      const anchorRegex = /(<a\s+[^>]*href\s*=\s*["'])([^"']*)(["'][^>]*>)(.*?)(<\/a>)/i;
       const updatedHtml = brazeHtml.replace(anchorRegex, (match, p1, p2, p3, p4, p5) => {
         return `${p1}${btnLink}${p3}${btnText}${p5}`;
       });
@@ -55,7 +55,7 @@ export default function AbEvaluator({
     setAbCopyA(plainText || 'Claim your buy-one-get-one free Blizzard at Dairy Queen today!');
 
     if (brazeHtml) {
-      const anchorRegex = /<a\s+[^>]*href=["']([^"']*)["'][^>]*>(.*?)<\/a>/i;
+      const anchorRegex = /<a\s+[^>]*href\s*=\s*["']([^"']*)["'][^>]*>(.*?)<\/a>/i;
       const match = brazeHtml.match(anchorRegex);
       if (match) {
         setAbButtonLinkA(match[1] || '');
