@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   BarChart2, 
   FileText, 
@@ -95,6 +95,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isAuditing, setIsAuditing] = useState(false);
   const [useMockMode, setUseMockMode] = useState(true);
+  
+  const isFirstRender = useRef(true);
 
   // Theme states
   const [theme, setTheme] = useState(() => {
@@ -125,19 +127,19 @@ export default function App() {
   const [copyAuditResults, setCopyAuditResults] = useState(null);
   const [spamAuditResults, setSpamAuditResults] = useState(null);
 
-  // Scores state
+  // Scores state (initialized to the exact pre-calculated score of default campaign)
   const [scores, setScores] = useState({
-    overall: 82,
-    copy: 85,
+    overall: 76,
+    copy: 72,
     visual: 95,
-    tech: 70,
-    spam: 98
+    tech: 55,
+    spam: 83
   });
 
   const [issuesCount, setIssuesCount] = useState({
-    high: 2,
-    medium: 2,
-    low: 2
+    high: 1,
+    medium: 7,
+    low: 5
   });
 
   const [figmaSyncLoading, setFigmaSyncLoading] = useState(false);
@@ -200,13 +202,19 @@ export default function App() {
     const savedMock = localStorage.getItem('omniqa_use_mock') !== 'false';
     setUseMockMode(savedMock);
     
-    // Automatically trigger an initial mock audit for visual feedback
-    runAudit(savedMock);
+    // Automatically trigger an initial mock audit instantly on mount (no 1-second delay for smooth load)
+    runAudit(savedMock, {}, true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Automatically re-run the audit when campaign inputs change (only in mock sandbox mode for instant responsiveness)
   useEffect(() => {
     if (!useMockMode) return;
+    
+    // Skip the very first render since the initial mount useEffect already runs it instantly
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     
     const delayDebounceFn = setTimeout(() => {
       runAudit(true);
@@ -220,9 +228,11 @@ export default function App() {
     runAudit(settings.useMockData);
   };
 
-  const runAudit = async (mockOverride, customData = {}) => {
+  const runAudit = async (mockOverride, customData = {}, skipDelay = false) => {
     setIsAuditing(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    if (!skipDelay) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
     
     const isMock = mockOverride !== undefined ? mockOverride : useMockMode;
     const apiKey = isMock ? null : localStorage.getItem('gemini_api_key');
