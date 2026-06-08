@@ -698,9 +698,42 @@ export default function CopyAuditor({
                       </div>
                     </div>
 
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: item.category === 'link' ? '0.5rem' : '0' }}>
                       {item.message}
                     </p>
+
+                    {item.category === 'link' && (() => {
+                      const match = item.message.match(/(https?:\/\/[^\s"']+)/i) || (item.value1 && item.value1.startsWith('http') ? [null, item.value1] : null);
+                      const url = match ? match[1] : null;
+                      if (url) {
+                        return (
+                          <div style={{ marginTop: '0.5rem' }}>
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-secondary"
+                              style={{
+                                padding: '0.2rem 0.5rem',
+                                fontSize: '0.7rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                border: '1px solid var(--border-color)',
+                                backgroundColor: 'var(--bg-secondary)',
+                                textDecoration: 'none',
+                                borderRadius: '4px',
+                                color: 'var(--success)',
+                                fontWeight: '500'
+                              }}
+                            >
+                              🔗 Open & Test Link
+                            </a>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 ))}
               </div>

@@ -490,26 +490,49 @@ export default function TechnicalAuditor({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                           <span>{alert.message}</span>
                           {alert.category === 'Link Health' && extractUrl(alert) && (
-                            <button
-                              onClick={() => handleDiagnoseLink(extractUrl(alert))}
-                              className="btn btn-secondary"
-                              style={{
-                                alignSelf: 'flex-start',
-                                padding: '0.2rem 0.5rem',
-                                fontSize: '0.7rem',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                                marginTop: '0.2rem',
-                                border: '1px solid var(--border-color)',
-                                backgroundColor: 'var(--bg-secondary)',
-                                cursor: 'pointer',
-                                borderRadius: '4px',
-                                color: 'var(--accent-cyan)'
-                              }}
-                            >
-                              🔍 Diagnose Redirection
-                            </button>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
+                              <button
+                                onClick={() => handleDiagnoseLink(extractUrl(alert))}
+                                className="btn btn-secondary"
+                                style={{
+                                  padding: '0.2rem 0.5rem',
+                                  fontSize: '0.7rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  border: '1px solid var(--border-color)',
+                                  backgroundColor: 'var(--bg-secondary)',
+                                  cursor: 'pointer',
+                                  borderRadius: '4px',
+                                  color: 'var(--accent-cyan)'
+                                }}
+                              >
+                                🔍 Diagnose Redirection
+                              </button>
+                              {extractUrl(alert).startsWith('http') && (
+                                <a
+                                  href={extractUrl(alert)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn btn-secondary"
+                                  style={{
+                                    padding: '0.2rem 0.5rem',
+                                    fontSize: '0.7rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.25rem',
+                                    border: '1px solid var(--border-color)',
+                                    backgroundColor: 'var(--bg-secondary)',
+                                    textDecoration: 'none',
+                                    borderRadius: '4px',
+                                    color: 'var(--success)',
+                                    fontWeight: '500'
+                                  }}
+                                >
+                                  🔗 Open & Test Link
+                                </a>
+                              )}
+                            </div>
                           )}
                         </div>
                       </td>
