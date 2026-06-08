@@ -1,24 +1,50 @@
 import { useState } from 'react';
 import { Scale, RefreshCw, Check } from 'lucide-react';
 
-export default function AbEvaluator({ subjectLine, brazeHtml, setSubjectLine }) {
+export default function AbEvaluator({ 
+  subjectLine, 
+  brazeHtml, 
+  setSubjectLine, 
+  setBrazeHtml,
+  setIamButtonText,
+  setIamButtonLink
+}) {
   const [abSubjectA, setAbSubjectA] = useState(subjectLine || '');
   const [abCopyA, setAbCopyA] = useState('Claim your buy-one-get-one free Blizzard at Dairy Queen today!');
+  const [abButtonTextA, setAbButtonTextA] = useState('Claim Blizzard Offer');
+  const [abButtonLinkA, setAbButtonLinkA] = useState('http://example.com/redeem');
+
   const [abSubjectB, setAbSubjectB] = useState('🍦 BOGO FREE Blizzard is waiting for you...');
   const [abCopyB, setAbCopyB] = useState('Marina, your BOGO Blizzard coupon expires in 3 days. Tap to redeem now!');
+  const [abButtonTextB, setAbButtonTextB] = useState('Redeem BOGO Offer');
+  const [abButtonLinkB, setAbButtonLinkB] = useState('https://dairyqueen.com/redeem?utm_source=braze&utm_medium=email&utm_campaign=bogo_promo');
+
   const [abResults, setAbResults] = useState(null);
   const [abEvaluating, setAbEvaluating] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const handleApplyVariant = (subject, copy) => {
+  const handleApplyVariant = (subject, copy, btnText, btnLink) => {
     if (setSubjectLine) {
       setSubjectLine(subject);
     }
+    if (setIamButtonText && btnText) {
+      setIamButtonText(btnText);
+    }
+    if (setIamButtonLink && btnLink) {
+      setIamButtonLink(btnLink);
+    }
+    if (brazeHtml && setBrazeHtml && btnText && btnLink) {
+      const anchorRegex = /(<a\s+[^>]*href=["'])([^"']*)(["'][^>]*>)(.*?)(<\/a>)/i;
+      const updatedHtml = brazeHtml.replace(anchorRegex, (match, p1, p2, p3, p4, p5) => {
+        return `${p1}${btnLink}${p3}${btnText}${p5}`;
+      });
+      setBrazeHtml(updatedHtml);
+    }
     navigator.clipboard.writeText(copy).then(() => {
-      setToast('Applied subject line to workspace & copied body snippet to clipboard!');
+      setToast('Applied subject, CTA button, and link to active workspace campaign!');
       setTimeout(() => setToast(null), 3000);
     }).catch(() => {
-      setToast('Applied subject line to workspace!');
+      setToast('Applied campaign copy to workspace!');
       setTimeout(() => setToast(null), 3000);
     });
   };
@@ -27,12 +53,24 @@ export default function AbEvaluator({ subjectLine, brazeHtml, setSubjectLine }) 
     setAbSubjectA(subjectLine || '');
     const plainText = brazeHtml ? brazeHtml.replace(/<[^>]*>/g, '').trim().substring(0, 120) : '';
     setAbCopyA(plainText || 'Claim your buy-one-get-one free Blizzard at Dairy Queen today!');
+
+    if (brazeHtml) {
+      const anchorRegex = /<a\s+[^>]*href=["']([^"']*)["'][^>]*>(.*?)<\/a>/i;
+      const match = brazeHtml.match(anchorRegex);
+      if (match) {
+        setAbButtonLinkA(match[1] || '');
+        setAbButtonTextA(match[2].replace(/<[^>]*>/g, '').trim() || '');
+      } else {
+        setAbButtonLinkA('');
+        setAbButtonTextA('');
+      }
+    }
   };
 
   const handleEvaluateAB = () => {
     setAbEvaluating(true);
     setTimeout(() => {
-      const evaluate = (sub, cop) => {
+      const evaluate = (sub, cop, btnText, btnLink) => {
         let openRate = 18.5; // base
         let clickRate = 2.4;  // base
         let score = 75;      // base
@@ -46,7 +84,7 @@ export default function AbEvaluator({ subjectLine, brazeHtml, setSubjectLine }) 
         } else if (sub.length >= 65) {
           openRate -= 1.5;
           score -= 4;
-          feedback.push('Subject is too long; will be truncated on mobile devices.');
+          feedback.push('Subject is too long; will be truncated on mobile.');
         } else {
           openRate -= 0.8;
           feedback.push('Subject is very short; could add more context.');
@@ -57,7 +95,7 @@ export default function AbEvaluator({ subjectLine, brazeHtml, setSubjectLine }) 
         if (emojiRegex.test(sub)) {
           openRate += 1.8;
           score += 4;
-          feedback.push('Emoji detected: increases visual prominence in inbox (+1.8%).');
+          feedback.push('Emoji detected: increases prominence (+1.8%).');
         }
 
         // Personalization
@@ -74,7 +112,7 @@ export default function AbEvaluator({ subjectLine, brazeHtml, setSubjectLine }) 
           openRate += 1.5;
           clickRate += 0.8;
           score += 6;
-          feedback.push('High-urgency promotional triggers detected (+1.5%).');
+          feedback.push('High-urgency promotional triggers detected.');
         }
 
         // Punctuation / Capitals
@@ -84,27 +122,70 @@ export default function AbEvaluator({ subjectLine, brazeHtml, setSubjectLine }) 
           feedback.push('ALL-CAPS subject looks spammy; risk of filter blocking.');
         }
 
-        // Click Rate factors (Copy CTA)
+        // Click Rate factors (Copy CTA in snippet body)
         const ctaVerbs = /\b(claim|redeem|get|click|tap|buy|shop|order|download|view)\b/i;
         if (ctaVerbs.test(cop)) {
-          clickRate += 1.1;
-          score += 7;
-          feedback.push('Strong, action-oriented call to action (CTA).');
+          clickRate += 0.5;
+          score += 3;
+        }
+
+        // Button/Link specific evaluations
+        if (btnText) {
+          if (ctaVerbs.test(btnText)) {
+            clickRate += 1.2;
+            score += 8;
+            feedback.push(`Strong CTA button verb detected ("${btnText}").`);
+          } else {
+            clickRate -= 0.3;
+            feedback.push(`CTA button ("${btnText}") lacks action verb (e.g. claim, get).`);
+          }
+
+          if (btnText.length > 25) {
+            score -= 3;
+            feedback.push('CTA text is long; may wrap on smaller screen devices.');
+          }
         } else {
-          clickRate -= 0.5;
-          feedback.push('CTA lacks action verbs (e.g. redeem, claim).');
+          clickRate -= 1.0;
+          score -= 10;
+          feedback.push('No primary CTA button copy defined. Click rate is low.');
+        }
+
+        if (btnLink) {
+          const url = btnLink.trim();
+          if (url === '#' || url === '') {
+            clickRate -= 1.5;
+            score -= 12;
+            feedback.push('CTA points to empty/placeholder href ("#").');
+          } else if (url.includes('example.com') || url.includes('placeholder.com')) {
+            clickRate -= 0.8;
+            score -= 6;
+            feedback.push('CTA points to a placeholder domain.');
+          } else {
+            if (url.includes('utm_source') && url.includes('utm_campaign')) {
+              clickRate += 0.5;
+              score += 5;
+              feedback.push('CTA includes active campaign tracking UTM parameters.');
+            } else {
+              score -= 3;
+              feedback.push('CTA link lacks UTM source/campaign tracking variables.');
+            }
+
+            if (url.startsWith('https://')) {
+              score += 2;
+            }
+          }
         }
 
         return {
           openRate: parseFloat(openRate.toFixed(1)),
           clickRate: parseFloat(clickRate.toFixed(1)),
           score: Math.min(100, Math.max(0, score)),
-          feedback: feedback.slice(0, 3)
+          feedback: feedback.slice(0, 4)
         };
       };
 
-      const resA = evaluate(abSubjectA, abCopyA);
-      const resB = evaluate(abSubjectB, abCopyB);
+      const resA = evaluate(abSubjectA, abCopyA, abButtonTextA, abButtonLinkA);
+      const resB = evaluate(abSubjectB, abCopyB, abButtonTextB, abButtonLinkB);
 
       setAbResults({ variantA: resA, variantB: resB });
       setAbEvaluating(false);
@@ -176,6 +257,30 @@ export default function AbEvaluator({ subjectLine, brazeHtml, setSubjectLine }) 
                   placeholder="Variant A body copy text..."
                 />
               </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>CTA Button Text A (optional):</label>
+                <input
+                  type="text"
+                  value={abButtonTextA}
+                  onChange={(e) => setAbButtonTextA(e.target.value)}
+                  className="form-input"
+                  style={{ fontSize: '0.85rem', padding: '0.5rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}
+                  placeholder="e.g. Claim Offer"
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>CTA Button Link A (optional):</label>
+                <input
+                  type="text"
+                  value={abButtonLinkA}
+                  onChange={(e) => setAbButtonLinkA(e.target.value)}
+                  className="form-input"
+                  style={{ fontSize: '0.85rem', padding: '0.5rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}
+                  placeholder="e.g. https://example.com/redeem"
+                />
+              </div>
             </div>
 
             {/* Variant B Inputs */}
@@ -206,6 +311,30 @@ export default function AbEvaluator({ subjectLine, brazeHtml, setSubjectLine }) 
                   className="form-input"
                   style={{ fontSize: '0.85rem', padding: '0.5rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', resize: 'vertical' }}
                   placeholder="Variant B body copy text..."
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>CTA Button Text B (optional):</label>
+                <input
+                  type="text"
+                  value={abButtonTextB}
+                  onChange={(e) => setAbButtonTextB(e.target.value)}
+                  className="form-input"
+                  style={{ fontSize: '0.85rem', padding: '0.5rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}
+                  placeholder="e.g. Redeem Offer"
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>CTA Button Link B (optional):</label>
+                <input
+                  type="text"
+                  value={abButtonLinkB}
+                  onChange={(e) => setAbButtonLinkB(e.target.value)}
+                  className="form-input"
+                  style={{ fontSize: '0.85rem', padding: '0.5rem', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}
+                  placeholder="e.g. https://example.com/redeem"
                 />
               </div>
             </div>
@@ -282,7 +411,7 @@ export default function AbEvaluator({ subjectLine, brazeHtml, setSubjectLine }) 
 
                   <button
                     className="btn btn-secondary"
-                    onClick={() => handleApplyVariant(abSubjectA, abCopyA)}
+                    onClick={() => handleApplyVariant(abSubjectA, abCopyA, abButtonTextA, abButtonLinkA)}
                     style={{
                       marginTop: '0.75rem',
                       padding: '0.45rem 0.85rem',
@@ -345,7 +474,7 @@ export default function AbEvaluator({ subjectLine, brazeHtml, setSubjectLine }) 
 
                   <button
                     className="btn btn-secondary"
-                    onClick={() => handleApplyVariant(abSubjectB, abCopyB)}
+                    onClick={() => handleApplyVariant(abSubjectB, abCopyB, abButtonTextB, abButtonLinkB)}
                     style={{
                       marginTop: '0.75rem',
                       padding: '0.45rem 0.85rem',

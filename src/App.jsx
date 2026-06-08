@@ -716,6 +716,9 @@ export default function App() {
             subjectLine={subjectLine}
             brazeHtml={brazeHtml}
             setSubjectLine={setSubjectLine}
+            setBrazeHtml={setBrazeHtml}
+            setIamButtonText={setIamButtonText}
+            setIamButtonLink={setIamButtonLink}
           />
         )}
 
