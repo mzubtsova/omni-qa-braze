@@ -715,6 +715,7 @@ export default function App() {
           <AbEvaluator 
             subjectLine={subjectLine}
             brazeHtml={brazeHtml}
+            setSubjectLine={setSubjectLine}
           />
         )}
 

@@ -1,13 +1,27 @@
 import { useState } from 'react';
-import { Scale, RefreshCw } from 'lucide-react';
+import { Scale, RefreshCw, Check } from 'lucide-react';
 
-export default function AbEvaluator({ subjectLine, brazeHtml }) {
+export default function AbEvaluator({ subjectLine, brazeHtml, setSubjectLine }) {
   const [abSubjectA, setAbSubjectA] = useState(subjectLine || '');
   const [abCopyA, setAbCopyA] = useState('Claim your buy-one-get-one free Blizzard at Dairy Queen today!');
   const [abSubjectB, setAbSubjectB] = useState('🍦 BOGO FREE Blizzard is waiting for you...');
   const [abCopyB, setAbCopyB] = useState('Marina, your BOGO Blizzard coupon expires in 3 days. Tap to redeem now!');
   const [abResults, setAbResults] = useState(null);
   const [abEvaluating, setAbEvaluating] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const handleApplyVariant = (subject, copy) => {
+    if (setSubjectLine) {
+      setSubjectLine(subject);
+    }
+    navigator.clipboard.writeText(copy).then(() => {
+      setToast('Applied subject line to workspace & copied body snippet to clipboard!');
+      setTimeout(() => setToast(null), 3000);
+    }).catch(() => {
+      setToast('Applied subject line to workspace!');
+      setTimeout(() => setToast(null), 3000);
+    });
+  };
 
   const handleLoadBaseline = () => {
     setAbSubjectA(subjectLine || '');
@@ -113,7 +127,18 @@ export default function AbEvaluator({ subjectLine, brazeHtml }) {
           <button
             className="btn btn-secondary"
             onClick={handleLoadBaseline}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              cursor: 'pointer',
+              backgroundColor: 'var(--bg-secondary)',
+              borderColor: 'var(--border-color)',
+              color: 'var(--text-primary)',
+              padding: '0.5rem 0.85rem',
+              fontSize: '0.85rem',
+              fontWeight: '600'
+            }}
           >
             📋 Load Current Workspace Baseline
           </button>
@@ -191,7 +216,18 @@ export default function AbEvaluator({ subjectLine, brazeHtml }) {
               className="btn btn-primary"
               onClick={handleEvaluateAB}
               disabled={abEvaluating}
-              style={{ padding: '0.6rem 2.5rem', background: 'var(--cyan-gradient)', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              style={{
+                padding: '0.65rem 2.75rem',
+                background: 'var(--cyan-gradient)',
+                color: '#ffffff',
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                border: 'none',
+                boxShadow: 'var(--accent-glow)'
+              }}
             >
               {abEvaluating && <RefreshCw size={16} className="spin" />}
               {abEvaluating ? '🤖 Consulting AI robot overlords... 🔮' : '⚖️ Evaluate Head-to-Head CTR'}
@@ -243,6 +279,28 @@ export default function AbEvaluator({ subjectLine, brazeHtml }) {
                       {abResults.variantA.feedback.map((f, idx) => <li key={idx}>{f}</li>)}
                     </ul>
                   </div>
+
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => handleApplyVariant(abSubjectA, abCopyA)}
+                    style={{
+                      marginTop: '0.75rem',
+                      padding: '0.45rem 0.85rem',
+                      fontSize: '0.8rem',
+                      backgroundColor: 'var(--bg-secondary)',
+                      borderColor: 'var(--border-color)',
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      width: '100%',
+                      justifyContent: 'center',
+                      fontWeight: '600'
+                    }}
+                  >
+                    📥 Apply Variant A to Workspace
+                  </button>
                 </div>
 
                 {/* Results Variant B */}
@@ -284,12 +342,58 @@ export default function AbEvaluator({ subjectLine, brazeHtml }) {
                       {abResults.variantB.feedback.map((f, idx) => <li key={idx}>{f}</li>)}
                     </ul>
                   </div>
+
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => handleApplyVariant(abSubjectB, abCopyB)}
+                    style={{
+                      marginTop: '0.75rem',
+                      padding: '0.45rem 0.85rem',
+                      fontSize: '0.8rem',
+                      backgroundColor: 'var(--bg-secondary)',
+                      borderColor: 'var(--border-color)',
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      width: '100%',
+                      justifyContent: 'center',
+                      fontWeight: '600'
+                    }}
+                  >
+                    📥 Apply Variant B to Workspace
+                  </button>
                 </div>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Floating Toast Notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '2rem',
+          right: '2rem',
+          backgroundColor: 'var(--success)',
+          color: '#ffffff',
+          padding: '0.75rem 1.25rem',
+          borderRadius: 'var(--border-radius-md)',
+          boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+          zIndex: 1000,
+          fontSize: '0.85rem',
+          fontWeight: '600',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <Check size={16} />
+          {toast}
+        </div>
+      )}
     </div>
   );
 }
