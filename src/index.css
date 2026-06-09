@@ -984,3 +984,198 @@ h1, h2, h3, h4, h5, h6 {
 .spin {
   animation: spin 1s linear infinite;
 }
+
+/* Responsive Inbox Previews */
+.gmail-preview-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.gmail-preview-indicators {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.gmail-preview-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.gmail-preview-sender {
+  font-weight: bold;
+  min-width: 85px;
+  max-width: 85px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gmail-preview-date-mobile {
+  display: none;
+}
+
+.gmail-preview-date-desktop {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.gmail-preview-body {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.gmail-preview-subject {
+  font-weight: 600;
+}
+
+.gmail-preview-snippet {
+  color: var(--text-muted);
+}
+
+/* Outlook Responsive Preview */
+.outlook-preview-container {
+  padding: 0.65rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  transition: all 0.2s ease;
+}
+
+.outlook-preview-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #0078d4;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.outlook-preview-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  overflow: hidden;
+}
+
+.outlook-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.outlook-preview-sender {
+  color: #0078d4;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+
+.outlook-preview-date {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.outlook-preview-subject {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.outlook-preview-snippet {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Mobile responsive media query for inbox previews */
+@media (max-width: 640px) {
+  .gmail-preview-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+    padding: 0.75rem;
+  }
+  
+  .gmail-preview-indicators {
+    display: none !important;
+  }
+  
+  .gmail-preview-meta {
+    justify-content: space-between;
+    width: 100%;
+  }
+  
+  .gmail-preview-sender {
+    min-width: unset;
+    max-width: unset;
+  }
+  
+  .gmail-preview-date-mobile {
+    display: inline !important;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+  }
+  
+  .gmail-preview-date-desktop {
+    display: none !important;
+  }
+  
+  .gmail-preview-body {
+    width: 100%;
+    white-space: normal;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  
+  .gmail-preview-subject {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .gmail-preview-snippet {
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .outlook-preview-container {
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+  
+  .outlook-preview-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 0.7rem;
+  }
+}
+

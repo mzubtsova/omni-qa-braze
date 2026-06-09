@@ -687,6 +687,96 @@ export default function VisualStressTester({
 
   return (
     <div className="fade-in">
+      {/* 🧪 Live Liquid Variable Overrides Bar */}
+      <div className="panel" style={{ marginBottom: '1.5rem', border: '1px solid var(--border-color)' }}>
+        <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '0.50rem' }}>
+          <Sliders size={14} style={{ color: 'var(--accent-cyan)' }} />
+          Interactive Liquid Variable Overrides
+        </h4>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem', margin: '0 0 0.75rem 0', lineHeight: '1.3' }}>
+          Type custom override values for detected campaign variables below. The simulator resolves these replacements live across all channel previews:
+        </p>
+        
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          alignItems: 'flex-start'
+        }}>
+          {(() => {
+            const scannedVars = scanVariablesWithDefaults([
+              brazeHtml,
+              subjectLine,
+              pushBody,
+              smsBody,
+              iamHeader,
+              iamBody,
+              iamButtonText
+            ]);
+            const varKeys = Object.keys(scannedVars);
+            if (varKeys.length === 0) {
+              return (
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  No Liquid variables detected in campaign templates.
+                </span>
+              );
+            }
+            
+            const presets = getPresetValues(segment, selectedLanguage, customName, eventPropsJson);
+            
+            return varKeys.map(key => {
+              const presetVal = presets[key] !== undefined ? presets[key] : (scannedVars[key] || '');
+              const currentVal = liquidOverrides[key] !== undefined ? liquidOverrides[key] : presetVal;
+              const isEventProp = key.startsWith('event_properties.');
+              const cleanKey = isEventProp ? key.replace('event_properties.', '') : key;
+              
+              return (
+                <div key={key} style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.2rem',
+                  minWidth: '200px',
+                  flex: '1 1 200px',
+                  maxWidth: '350px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: isEventProp ? 'var(--accent-purple)' : 'var(--accent-cyan)', fontWeight: '500' }}>
+                      {cleanKey}
+                    </span>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.03)', padding: '0.05rem 0.25rem', borderRadius: '3px' }}>
+                      {isEventProp ? 'Event Property' : key.split('.')[0] || 'Variable'}
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={currentVal}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setLiquidOverrides(prev => ({ ...prev, [key]: val }));
+                      if (key === 'user.first_name') {
+                        setCustomName(val);
+                      }
+                    }}
+                    placeholder={presetVal || `Value for ${key}`}
+                    style={{
+                      fontSize: '0.78rem',
+                      padding: '0.35rem 0.5rem',
+                      color: 'var(--text-primary)',
+                      backgroundColor: 'var(--bg-primary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 'var(--border-radius-sm)',
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              );
+            });
+          })()}
+        </div>
+      </div>
+
       <div className="split-view" style={{ marginBottom: '2rem' }}>
         
         {/* Left Side: Controller and Phone Render */}
@@ -973,90 +1063,7 @@ export default function VisualStressTester({
               )}
             </div>
 
-            {/* Interactive Liquid Variable Field Editor */}
-            <div style={{ 
-              marginTop: '1.25rem', 
-              paddingTop: '1rem', 
-              borderTop: '1px solid var(--border-color)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.65rem'
-            }}>
-              <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.825rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                <Sliders size={14} style={{ color: 'var(--accent-cyan)' }} />
-                Interactive Variable Editor
-              </h4>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem', margin: 0, lineHeight: '1.3' }}>
-                Extracted template variables. Modify their values directly to test substitution:
-              </p>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.35rem' }}>
-                {(() => {
-                  const scannedVars = scanVariablesWithDefaults([
-                    brazeHtml,
-                    subjectLine,
-                    pushBody,
-                    smsBody,
-                    iamHeader,
-                    iamBody,
-                    iamButtonText
-                  ]);
-                  const varKeys = Object.keys(scannedVars);
-                  if (varKeys.length === 0) {
-                    return (
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                        No Liquid variables detected in campaign templates.
-                      </span>
-                    );
-                  }
-                  
-                  const presets = getPresetValues(segment, selectedLanguage, customName, eventPropsJson);
-                  
-                  return varKeys.map(key => {
-                    const presetVal = presets[key] !== undefined ? presets[key] : (scannedVars[key] || '');
-                    const currentVal = liquidOverrides[key] !== undefined ? liquidOverrides[key] : presetVal;
-                    const isEventProp = key.startsWith('event_properties.');
-                    const cleanKey = isEventProp ? key.replace('event_properties.', '') : key;
-                    
-                    return (
-                      <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: isEventProp ? 'var(--accent-purple)' : 'var(--accent-cyan)', fontWeight: '500' }}>
-                            {cleanKey}
-                          </span>
-                          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.03)', padding: '0.05rem 0.25rem', borderRadius: '3px' }}>
-                            {isEventProp ? 'Event Property' : key.split('.')[0] || 'Variable'}
-                          </span>
-                        </div>
-                        <input
-                          type="text"
-                          className="form-input"
-                          value={currentVal}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setLiquidOverrides(prev => ({ ...prev, [key]: val }));
-                            if (key === 'user.first_name') {
-                              setCustomName(val);
-                            }
-                          }}
-                          placeholder={presetVal || `Value for ${key}`}
-                          style={{
-                            fontSize: '0.78rem',
-                            padding: '0.35rem 0.5rem',
-                            color: 'var(--text-primary)',
-                            backgroundColor: 'var(--bg-primary)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: 'var(--border-radius-sm)',
-                            width: '100%',
-                            boxSizing: 'border-box'
-                          }}
-                        />
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
+            {/* Variables editor moved to top-level bar */}
           </div>
 
 
@@ -2027,31 +2034,29 @@ export default function VisualStressTester({
                   )}
                 </div>
                 
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.5rem',
+                <div className="gmail-preview-container" style={{
                   backgroundColor: iframeTheme === 'dark' ? '#090d16' : '#ffffff',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                  borderRadius: '6px',
-                  fontSize: '0.8rem',
                   color: iframeTheme === 'dark' ? '#f1f5f9' : '#1e293b'
                 }}>
-                  <input type="checkbox" readOnly checked={false} style={{ opacity: 0.4, cursor: 'pointer' }} />
-                  <span style={{ color: '#fbbf24', fontSize: '0.95rem', cursor: 'pointer' }}>☆</span>
-                  <span style={{ fontWeight: 'bold', minWidth: '85px', maxWidth: '85px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    Dairy Queen
-                  </span>
-                  <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', gap: '0.35rem' }}>
-                    <span style={{ fontWeight: '600', color: iframeTheme === 'dark' ? '#ffffff' : '#000000' }}>
+                  <div className="gmail-preview-indicators">
+                    <input type="checkbox" readOnly checked={false} style={{ opacity: 0.4, cursor: 'pointer' }} />
+                    <span style={{ color: '#fbbf24', fontSize: '0.95rem', cursor: 'pointer' }}>☆</span>
+                  </div>
+                  <div className="gmail-preview-meta">
+                    <strong className="gmail-preview-sender" style={{ color: iframeTheme === 'dark' ? '#ffffff' : '#000000' }}>
+                      Dairy Queen
+                    </strong>
+                    <span className="gmail-preview-date-mobile">12:00 PM</span>
+                  </div>
+                  <div className="gmail-preview-body">
+                    <span className="gmail-preview-subject" style={{ color: iframeTheme === 'dark' ? '#ffffff' : '#000000' }}>
                       {getTruncatedSubject(renderedSubject, 60).text}
                     </span>
-                    <span style={{ color: 'var(--text-muted)' }}>
+                    <span className="gmail-preview-snippet">
                       - We loaded a special reward into your account to say thanks...
                     </span>
                   </div>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>12:00 PM</span>
+                  <span className="gmail-preview-date-desktop">12:00 PM</span>
                 </div>
               </div>
 
@@ -2168,54 +2173,24 @@ export default function VisualStressTester({
                   )}
                 </div>
 
-                <div style={{
-                  padding: '0.65rem 0.75rem',
-                  backgroundColor: iframeTheme === 'dark' ? '#090d16' : '#ffffff',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                  borderRadius: '6px',
-                  fontSize: '0.8rem',
-                  display: 'flex',
-                  gap: '0.75rem',
-                  alignItems: 'flex-start'
+                <div className="outlook-preview-container" style={{
+                  backgroundColor: iframeTheme === 'dark' ? '#090d16' : '#ffffff'
                 }}>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    backgroundColor: '#0078d4',
-                    color: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold',
-                    fontSize: '0.75rem',
-                    flexShrink: 0
-                  }}>
+                  <div className="outlook-preview-avatar">
                     DQ
                   </div>
                   
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.1rem', overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ color: '#0078d4', fontSize: '0.8rem' }}>Dairy Queen</strong>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>12:00 PM</span>
+                  <div className="outlook-preview-body">
+                    <div className="outlook-preview-header">
+                      <strong className="outlook-preview-sender">Dairy Queen</strong>
+                      <span className="outlook-preview-date">12:00 PM</span>
                     </div>
-                    <div style={{ 
-                      fontWeight: '600', 
-                      color: iframeTheme === 'dark' ? '#ffffff' : '#323130',
-                      fontSize: '0.8rem',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                    <div className="outlook-preview-subject" style={{ 
+                      color: iframeTheme === 'dark' ? '#ffffff' : '#323130'
                     }}>
                       {getTruncatedSubject(renderedSubject, 70).text}
                     </div>
-                    <div style={{ 
-                      fontSize: '0.75rem', 
-                      color: 'var(--text-muted)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
+                    <div className="outlook-preview-snippet">
                       We loaded a special reward into your account to say thanks...
                     </div>
                   </div>

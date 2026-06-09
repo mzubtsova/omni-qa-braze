@@ -8,6 +8,7 @@ export default function Settings({ onSave }) {
   const [savedStatus, setSavedStatus] = useState(false);
   const [isDiagnosing, setIsDiagnosing] = useState(false);
   const [diagnosticLogs, setDiagnosticLogs] = useState([]);
+  const [simulateErrors, setSimulateErrors] = useState(false);
 
   const [settings, setSettings] = useState({
     geminiApiKey: '',
@@ -81,7 +82,9 @@ export default function Settings({ onSave }) {
     }, 800);
 
     setTimeout(() => {
-      if (settings.useMockData) {
+      if (simulateErrors) {
+        addLog(`Figma API Error 401 Unauthorized: Personal access token has expired or scope is invalid. Please generate a new token in Figma Account Settings.`, 'error');
+      } else if (settings.useMockData) {
         addLog(`Figma Sandbox handshake: OK (responded in 45ms)`, 'success');
       } else if (!settings.figmaToken) {
         addLog(`Figma personal token is empty. Staging fallback mock data will be used.`, 'warning');
@@ -95,7 +98,9 @@ export default function Settings({ onSave }) {
     }, 2400);
 
     setTimeout(() => {
-      if (settings.useMockData) {
+      if (simulateErrors) {
+        addLog(`Braze API Error 403 Forbidden: Mismatched API key signature or network request blocked. Ensure the API key has 'campaigns.list' and 'templates.email.create' scopes.`, 'error');
+      } else if (settings.useMockData) {
         addLog(`Braze Sandbox endpoint handshake: OK (rest.iad-01.braze.com responded in 68ms)`, 'success');
       } else if (!settings.brazeApiKey) {
         addLog(`Braze REST API key is empty. Live publishing to catalog campaigns will fail.`, 'warning');
@@ -109,7 +114,9 @@ export default function Settings({ onSave }) {
     }, 4000);
 
     setTimeout(() => {
-      if (settings.useMockData) {
+      if (simulateErrors) {
+        addLog(`Gemini API Error 503 Service Unavailable: Authentication handshake timed out (DNS resolution failed). Check your Google AI Studio key status.`, 'error');
+      } else if (settings.useMockData) {
         addLog(`Gemini platform connection verified: OK (api.google.dev responded in 92ms)`, 'success');
       } else if (!settings.geminiApiKey) {
         addLog(`Gemini API key is empty. AI CTR Predictor will execute in simulated mock mode.`, 'warning');
@@ -119,11 +126,15 @@ export default function Settings({ onSave }) {
     }, 4800);
 
     setTimeout(() => {
-      const hasWarnings = !settings.useMockData && (!settings.figmaToken || !settings.brazeApiKey || !settings.geminiApiKey);
-      if (hasWarnings) {
-        addLog(`Diagnostics complete with warnings. External integrations running in sandbox mode.`, 'warning');
+      if (simulateErrors) {
+        addLog(`Diagnostics complete: 3 critical handshake failures detected. External APIs are offline. Check credentials validity and try again.`, 'error');
       } else {
-        addLog(`All 3 external API handshakes completed successfully! Connection state verified.`, 'success');
+        const hasWarnings = !settings.useMockData && (!settings.figmaToken || !settings.brazeApiKey || !settings.geminiApiKey);
+        if (hasWarnings) {
+          addLog(`Diagnostics complete with warnings. External integrations running in sandbox mode.`, 'warning');
+        } else {
+          addLog(`All 3 external API handshakes completed successfully! Connection state verified.`, 'success');
+        }
       }
       setIsDiagnosing(false);
     }, 5500);
@@ -336,7 +347,7 @@ export default function Settings({ onSave }) {
           Trigger a step-by-step diagnostic ping sequence to test network accessibility and API token scopes for Figma, Braze, and Gemini endpoints.
         </p>
 
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={runDiagnostics}
@@ -347,6 +358,18 @@ export default function Settings({ onSave }) {
             <RefreshCw size={14} className={isDiagnosing ? 'spin' : ''} />
             {isDiagnosing ? 'Running Diagnostics...' : 'Run Diagnostics Handshake'}
           </button>
+          
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--text-secondary)', userSelect: 'none' }}>
+            <input 
+              type="checkbox" 
+              checked={simulateErrors} 
+              onChange={(e) => setSimulateErrors(e.target.checked)} 
+              disabled={isDiagnosing}
+              style={{ cursor: 'pointer' }}
+            />
+            ⚠️ Simulate Connection Failures
+          </label>
+
           {isDiagnosing && (
             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
               Pinging endpoints...
@@ -410,6 +433,9 @@ export default function Settings({ onSave }) {
                   } else if (log.type === 'warning') {
                     color = 'var(--warning)';
                     prefix = '[WARN]';
+                  } else if (log.type === 'error') {
+                    color = 'var(--error)';
+                    prefix = '[FAIL]';
                   }
                   return (
                     <div key={index} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
