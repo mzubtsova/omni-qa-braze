@@ -658,7 +658,9 @@ export default function App() {
         {activeTab === 'visuals' && (
           <VisualStressTester 
             brazeHtml={brazeHtml}
+            setBrazeHtml={setBrazeHtml}
             subjectLine={subjectLine}
+            setSubjectLine={setSubjectLine}
             theme={theme}
             pushBody={pushBody}
             setPushBody={setPushBody}

@@ -54,7 +54,9 @@ const scanVariablesWithDefaults = (texts) => {
 
 export default function VisualStressTester({ 
   brazeHtml, 
+  setBrazeHtml,
   subjectLine, 
+  setSubjectLine,
   theme,
   pushBody,
   setPushBody,
@@ -1004,16 +1006,31 @@ export default function VisualStressTester({
           <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
             
             {activeChannel === 'email' && (
-              <div style={{
-                padding: '1rem',
-                backgroundColor: 'var(--bg-tertiary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: 'var(--border-radius-md)',
-                fontSize: '0.8rem',
-                color: 'var(--text-secondary)',
-                lineHeight: '1.4'
-              }}>
-                📧 Email template copy and subject line are managed in the main <strong>Copy Editor</strong> tab. Use the right-hand panel simulator to preview live personalization rendering.
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Email Subject Line</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={subjectLine}
+                    onChange={(e) => setSubjectLine(e.target.value)}
+                    placeholder="Enter email subject line..."
+                    style={{ fontSize: '0.85rem', padding: '0.45rem 0.65rem', color: 'var(--text-primary)', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-sm)', width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Email HTML Body Copy</label>
+                  <textarea
+                    className="form-textarea"
+                    value={brazeHtml}
+                    onChange={(e) => setBrazeHtml(e.target.value)}
+                    placeholder="Enter campaign HTML code..."
+                    style={{ minHeight: '180px', fontSize: '0.8rem', padding: '0.5rem', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}
+                  />
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '0.2rem' }}>
+                  💡 Tip: You can also edit this HTML with rich syntax highlighting in the main <strong>Copy Audit</strong> tab.
+                </div>
               </div>
             )}
 
