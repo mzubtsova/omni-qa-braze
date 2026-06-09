@@ -16,6 +16,48 @@ const getNonGSM7Characters = (str) => {
   return nonGsm;
 };
 
+const scanVariablesWithDefaults = (texts) => {
+  const vars = {};
+  const regex = /\{\{\s*([^}|]+?)(?:\s*\|\s*default\s*:\s*['"]([^'"]+)['"])?\s*\}\}/g;
+  for (const text of texts) {
+    if (!text) continue;
+    let match;
+    regex.lastIndex = 0;
+    while ((match = regex.exec(text)) !== null) {
+      const varName = match[1].trim();
+      const fallback = match[2] || '';
+      if (varName.startsWith('item.')) continue;
+      if (!vars[varName]) {
+        vars[varName] = fallback;
+      }
+    }
+  }
+
+  const condRegex = /\{%\s*if\s+([a-zA-Z0-9_.]+)(?:\s*==|\s*>|\s*<|\s*!|\s*%)/g;
+  for (const text of texts) {
+    if (!text) continue;
+    let match;
+    condRegex.lastIndex = 0;
+    while ((match = condRegex.exec(text)) !== null) {
+      const varName = match[1].trim();
+      if (varName && varName !== 'cart.items' && !vars[varName]) {
+        vars[varName] = '';
+      }
+    }
+  }
+
+  return vars;
+};
+
+const getTruncatedSubject = (subject, limit) => {
+  if (!subject) return { text: '', truncated: false };
+  if (subject.length <= limit) {
+    return { text: subject, truncated: false };
+  }
+  return { text: subject.substring(0, limit) + '...', truncated: true };
+};
+
+
 export default function VisualStressTester({ 
   brazeHtml, 
   subjectLine, 
@@ -62,6 +104,9 @@ export default function VisualStressTester({
     promo_code: "SUMMER-BLIZZARD",
     is_first_purchase: true
   }, null, 2));
+
+  const [liquidOverrides, setLiquidOverrides] = useState({});
+  const [rightPanelTab, setRightPanelTab] = useState('figma'); // 'figma' or 'inbox'
 
   const handleUploadTranslation = (e) => {
     const file = e.target.files[0];
@@ -111,6 +156,58 @@ export default function VisualStressTester({
     }
   }, [activeChannel, device]);
 
+  const getPresetValues = (selectedSeg, selectedLang, nameOverride, eventPropsStr) => {
+    const isSpanish = selectedLang === 'es';
+    const isFrench = selectedLang === 'fr';
+    const isGerman = selectedLang === 'de';
+
+    const expiryDateStr = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(
+      isSpanish ? 'es-ES' : isFrench ? 'fr-FR' : isGerman ? 'de-DE' : 'en-US',
+      { month: 'long', day: 'numeric', year: 'numeric' }
+    );
+
+    let fallbackName = 'Valued Customer';
+    if (isSpanish) fallbackName = 'Estimado Cliente';
+    else if (isFrench) fallbackName = 'Cher Client';
+    else if (isGerman) fallbackName = 'Sehr geehrter Kunde';
+
+    let firstName = nameOverride ? nameOverride : fallbackName;
+
+    if (selectedSeg === 'long_name' && !nameOverride) {
+      firstName = selectedLang === 'de' ? 'Maximilian-Alexander Graf von und zu Liechtenstein' : 'Hubert Wolfeschlegelsteinhausenbergerdorff';
+    } else if (selectedSeg === 'null_fallback' && !nameOverride) {
+      firstName = '';
+    } else if (selectedSeg === 'gold_tier') {
+      if (!nameOverride) {
+        firstName = isSpanish ? 'Carlos' : isFrench ? 'Pierre' : isGerman ? 'Hans' : 'Marina';
+      }
+    } else if (selectedSeg === 'cart_loop') {
+      firstName = nameOverride ? nameOverride : (isSpanish ? 'Alejandro' : isFrench ? 'Alexandre' : isGerman ? 'Alexander' : 'Alex');
+    }
+
+    const presets = {
+      'user.first_name': firstName,
+      'campaign.coupon_code': 'DQ-BLIZZARD-SUMMER26',
+      'campaign.expiry_date': expiryDateStr,
+    };
+
+    try {
+      const eventProps = JSON.parse(eventPropsStr);
+      Object.entries(eventProps).forEach(([k, v]) => {
+        presets[`event_properties.${k}`] = String(v);
+      });
+    } catch {
+      // ignore JSON parse errors
+    }
+
+    return presets;
+  };
+
+  useEffect(() => {
+    setLiquidOverrides({});
+  }, [segment, selectedLanguage, eventPropsJson]);
+
+
   const isDarkTheme = theme === 'dark';
   const figmaBg = isDarkTheme ? '#111827' : '#ffffff';
   const figmaStroke = 'var(--accent-cyan)';
@@ -129,6 +226,36 @@ export default function VisualStressTester({
       // safe fallback
     }
 
+    const getActiveValue = (varName, fallbackVal = '') => {
+      if (liquidOverrides[varName] !== undefined && liquidOverrides[varName] !== '') {
+        return liquidOverrides[varName];
+      }
+      const presets = getPresetValues(segment, selectedLanguage, customName, eventPropsJson);
+      if (presets[varName] !== undefined) {
+        return presets[varName];
+      }
+      return fallbackVal;
+    };
+
+    const resolveAllLiquid = (textStr) => {
+      if (!textStr) return '';
+      let res = textStr;
+      
+      // Resolve: {{ varName | default: '...' }}
+      res = res.replace(/\{\{\s*([^}|]+?)\s*\|\s*default\s*:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, varName, fallback) => {
+        return getActiveValue(varName.trim(), fallback);
+      });
+      
+      // Resolve: {{ varName }}
+      res = res.replace(/\{\{\s*([^}|]+?)\s*\}\}/g, (match, varName) => {
+        const trimmed = varName.trim();
+        if (trimmed.startsWith('item.')) return match;
+        return getActiveValue(trimmed, '');
+      });
+      
+      return res;
+    };
+
     const resolveEventProps = (textStr) => {
       if (!textStr) return '';
       return textStr.replace(/\{\{\s*event_properties\.([a-zA-Z0-9_-]+)\s*\}\}/g, (match, prop) => {
@@ -141,29 +268,14 @@ export default function VisualStressTester({
     const isFrench = selectedLanguage === 'fr';
     const isGerman = selectedLanguage === 'de';
 
-    let fallbackName = 'Valued Customer';
-    if (isSpanish) fallbackName = 'Estimado Cliente';
-    else if (isFrench) fallbackName = 'Cher Client';
-    else if (isGerman) fallbackName = 'Sehr geehrter Kunde';
-    else if (activeLangObj && activeLangObj.translations && activeLangObj.translations['Valued Customer']) {
-      fallbackName = activeLangObj.translations['Valued Customer'];
-    }
 
-    let firstName = customName ? customName : fallbackName;
-    let showVipDetails = false;
+
+
+    const activeTier = getActiveValue('tier');
+    const showVipDetails = activeTier === 'Gold' || (segment === 'gold_tier' && activeTier !== 'Silver' && activeTier !== 'Bronze');
     let cartItems = [];
 
-    if (segment === 'long_name' && !customName) {
-      firstName = selectedLanguage === 'de' ? 'Maximilian-Alexander Graf von und zu Liechtenstein' : 'Hubert Wolfeschlegelsteinhausenbergerdorff';
-    } else if (segment === 'null_fallback' && !customName) {
-      firstName = '';
-    } else if (segment === 'gold_tier') {
-      if (!customName) {
-        firstName = isSpanish ? 'Carlos' : isFrench ? 'Pierre' : isGerman ? 'Hans' : 'Marina';
-      }
-      showVipDetails = true;
-    } else if (segment === 'cart_loop') {
-      firstName = customName ? customName : (isSpanish ? 'Alejandro' : isFrench ? 'Alexandre' : isGerman ? 'Alexander' : 'Alex');
+    if (segment === 'cart_loop') {
       cartItems = [
         { name: isSpanish ? 'Blizzard de Oreo 🍦' : isFrench ? 'Blizzard Oreo 🍦' : 'Oreo Blizzard 🍦', price: '$4.99', qty: 1 },
         { name: isSpanish ? 'Blizzard de Brownie de Chocolate 🍫' : isFrench ? 'Blizzard Brownie Chocolat 🍫' : 'Schoko-Brownie-Blizzard 🍫', price: '$5.49', qty: 2 },
@@ -173,28 +285,6 @@ export default function VisualStressTester({
 
     // Basic Liquid interpreter for rendering simulation
     let processedHtml = brazeHtml;
-    
-    // Resolve: {{ user.first_name | default: 'Valued Customer' }}
-    processedHtml = processedHtml.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
-      return firstName || fallback;
-    });
-
-    // Resolve: {{ user.first_name }}
-    processedHtml = processedHtml.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
-
-    // Resolve: {{ campaign.coupon_code | default: '...' }}
-    processedHtml = processedHtml.replace(/\{\{\s*campaign\.coupon_code\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, 'DQ-BLIZZARD-SUMMER26');
-    // Resolve: {{ campaign.coupon_code }}
-    processedHtml = processedHtml.replace(/\{\{\s*campaign\.coupon_code\s*\}\}/g, 'DQ-BLIZZARD-SUMMER26');
-
-    // Resolve: {{ campaign.expiry_date | default: '...' }}
-    const expiryDateStr = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(
-      isSpanish ? 'es-ES' : isFrench ? 'fr-FR' : isGerman ? 'de-DE' : 'en-US',
-      { month: 'long', day: 'numeric', year: 'numeric' }
-    );
-    processedHtml = processedHtml.replace(/\{\{\s*campaign\.expiry_date\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, expiryDateStr);
-    // Resolve: {{ campaign.expiry_date }}
-    processedHtml = processedHtml.replace(/\{\{\s*campaign\.expiry_date\s*\}\}/g, expiryDateStr);
 
     // Resolve: {% if cart.items %} ... {% endif %}
     const cartConditionalRegex = /\{%\s*if\s+cart\.items\s*%\}([\s\S]*?)\{%\s*endif\s*%\}/g;
@@ -225,6 +315,8 @@ export default function VisualStressTester({
       }
       return elseBlock || '';
     });
+
+    processedHtml = resolveAllLiquid(processedHtml);
 
     // Translate based on selected language
     if (isSpanish) {
@@ -309,10 +401,7 @@ export default function VisualStressTester({
     } else if (isGerman) {
       processedSubject = 'Holen Sie sich einen GRATIS Blizzard! 🍦 Info';
     } else {
-      processedSubject = processedSubject.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
-        return firstName || fallback;
-      });
-      processedSubject = processedSubject.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
+      processedSubject = resolveAllLiquid(processedSubject);
     }
 
     // Parse Push notification body
@@ -324,13 +413,10 @@ export default function VisualStressTester({
     } else if (isGerman) {
       processedPush = 'Holen Sie sich einen GRATIS kleinen Blizzard! 🍦 14 Tage gültig. Jetzt einlösen.';
     } else {
-      processedPush = processedPush.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
-        return firstName || fallback;
-      });
-      processedPush = processedPush.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
       processedPush = processedPush.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
         return showVipDetails ? ifBlock : (elseBlock || '');
       });
+      processedPush = resolveAllLiquid(processedPush);
     }
 
     // Parse SMS body
@@ -342,13 +428,10 @@ export default function VisualStressTester({
     } else if (isGerman) {
       processedSms = `Dairy Queen: Willkommen Hans ! Wir haben einen GRATIS Blizzard auf Ihr Konto geladen. Hier einlösen: http://example.com/redeem`;
     } else {
-      processedSms = processedSms.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
-        return firstName || fallback;
-      });
-      processedSms = processedSms.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
       processedSms = processedSms.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
         return showVipDetails ? ifBlock : (elseBlock || '');
       });
+      processedSms = resolveAllLiquid(processedSms);
     }
 
     // Parse IAM Header
@@ -360,13 +443,10 @@ export default function VisualStressTester({
     } else if (isGerman) {
       processedIamHeader = 'GRATIS kleiner Blizzard';
     } else {
-      processedIamHeader = processedIamHeader.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
-        return firstName || fallback;
-      });
-      processedIamHeader = processedIamHeader.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
       processedIamHeader = processedIamHeader.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
         return showVipDetails ? ifBlock : (elseBlock || '');
       });
+      processedIamHeader = resolveAllLiquid(processedIamHeader);
     }
 
     // Parse IAM Body
@@ -378,13 +458,10 @@ export default function VisualStressTester({
     } else if (isGerman) {
       processedIamBody = 'Wir haben einen GRATIS Blizzard auf Ihr Konto geladen.';
     } else {
-      processedIamBody = processedIamBody.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
-        return firstName || fallback;
-      });
-      processedIamBody = processedIamBody.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
       processedIamBody = processedIamBody.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
         return showVipDetails ? ifBlock : (elseBlock || '');
       });
+      processedIamBody = resolveAllLiquid(processedIamBody);
     }
 
     // Parse IAM Button Text
@@ -396,13 +473,10 @@ export default function VisualStressTester({
     } else if (isGerman) {
       processedIamButtonText = 'Angebot einlösen';
     } else {
-      processedIamButtonText = processedIamButtonText.replace(/\{\{\s*user\.first_name\s*\|\s*default:\s*['"]([^'"]+)['"]\s*\}\}/g, (match, fallback) => {
-        return firstName || fallback;
-      });
-      processedIamButtonText = processedIamButtonText.replace(/\{\{\s*user\.first_name\s*\}\}/g, firstName);
       processedIamButtonText = processedIamButtonText.replace(conditionalRegex, (match, ifBlock, elseBlock) => {
         return showVipDetails ? ifBlock : (elseBlock || '');
       });
+      processedIamButtonText = resolveAllLiquid(processedIamButtonText);
     }
 
     // Resolve event properties
@@ -436,7 +510,7 @@ export default function VisualStressTester({
     setRenderedIamHeader(processedIamHeader);
     setRenderedIamBody(processedIamBody);
     setRenderedIamButtonText(processedIamButtonText);
-  }, [brazeHtml, subjectLine, segment, iframeTheme, pushBody, smsBody, iamHeader, iamBody, iamButtonText, customName, selectedLanguage, eventPropsJson, uploadedLanguages]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [brazeHtml, subjectLine, segment, iframeTheme, pushBody, smsBody, iamHeader, iamBody, iamButtonText, customName, selectedLanguage, eventPropsJson, uploadedLanguages, liquidOverrides]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getDeviceStyle = () => {
     switch (device) {
@@ -898,7 +972,93 @@ export default function VisualStressTester({
                 </div>
               )}
             </div>
+
+            {/* Interactive Liquid Variable Field Editor */}
+            <div style={{ 
+              marginTop: '1.25rem', 
+              paddingTop: '1rem', 
+              borderTop: '1px solid var(--border-color)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.65rem'
+            }}>
+              <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.825rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                <Sliders size={14} style={{ color: 'var(--accent-cyan)' }} />
+                Interactive Variable Editor
+              </h4>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem', margin: 0, lineHeight: '1.3' }}>
+                Extracted template variables. Modify their values directly to test substitution:
+              </p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.35rem' }}>
+                {(() => {
+                  const scannedVars = scanVariablesWithDefaults([
+                    brazeHtml,
+                    subjectLine,
+                    pushBody,
+                    smsBody,
+                    iamHeader,
+                    iamBody,
+                    iamButtonText
+                  ]);
+                  const varKeys = Object.keys(scannedVars);
+                  if (varKeys.length === 0) {
+                    return (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                        No Liquid variables detected in campaign templates.
+                      </span>
+                    );
+                  }
+                  
+                  const presets = getPresetValues(segment, selectedLanguage, customName, eventPropsJson);
+                  
+                  return varKeys.map(key => {
+                    const presetVal = presets[key] !== undefined ? presets[key] : (scannedVars[key] || '');
+                    const currentVal = liquidOverrides[key] !== undefined ? liquidOverrides[key] : presetVal;
+                    const isEventProp = key.startsWith('event_properties.');
+                    const cleanKey = isEventProp ? key.replace('event_properties.', '') : key;
+                    
+                    return (
+                      <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: isEventProp ? 'var(--accent-purple)' : 'var(--accent-cyan)', fontWeight: '500' }}>
+                            {cleanKey}
+                          </span>
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.03)', padding: '0.05rem 0.25rem', borderRadius: '3px' }}>
+                            {isEventProp ? 'Event Property' : key.split('.')[0] || 'Variable'}
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          className="form-input"
+                          value={currentVal}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setLiquidOverrides(prev => ({ ...prev, [key]: val }));
+                            if (key === 'user.first_name') {
+                              setCustomName(val);
+                            }
+                          }}
+                          placeholder={presetVal || `Value for ${key}`}
+                          style={{
+                            fontSize: '0.78rem',
+                            padding: '0.35rem 0.5rem',
+                            color: 'var(--text-primary)',
+                            backgroundColor: 'var(--bg-primary)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: 'var(--border-radius-sm)',
+                            width: '100%',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
           </div>
+
 
           {/* Device Mockup with Preset Controllers */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
@@ -1741,67 +1901,329 @@ export default function VisualStressTester({
           </div>
         </div>
 
-        {/* Right Side: Figma Design Reference & Layout Checks */}
+
+        {/* Right Side: Figma Design Reference or Subject Inbox Previews */}
         <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3>Figma Spec Blueprint</h3>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <Layers size={14} /> Layer Outlines
-            </span>
-          </div>
-
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            This panel represents the pixel-perfect design reference as drawn in Figma. Click the mockup below to zoom full screen.
-          </p>
-
-          <div 
-            onClick={() => setShowFigmaFullscreen(true)}
-            style={{ 
-              flex: 1, 
-              border: '2px dashed var(--border-color)', 
-              borderRadius: 'var(--border-radius-md)', 
-              backgroundColor: figmaDashBg,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '2rem',
-              textAlign: 'center',
-              cursor: 'zoom-in',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-cyan)'; e.currentTarget.style.backgroundColor = figmaOverlayBg; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.backgroundColor = figmaDashBg; }}
-          >
-            {/* Beautiful SVG graphic mimicking Figma Vector Node UI */}
-            <svg width="150" height="200" viewBox="0 0 180 240" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '1.5rem', filter: 'drop-shadow(0 10px 20px rgba(6, 182, 212, 0.15))' }}>
-              <rect x="10" y="10" width="160" height="220" rx="16" fill={figmaBg} stroke={figmaStroke} strokeWidth="2" />
-              <line x1="25" y1="35" x2="155" y2="35" stroke={figmaLineColor} strokeWidth="2" strokeDasharray="4 4" />
-              <path d="M90 60 C80 60, 75 75, 90 90 C105 75, 100 60, 90 60 Z" fill="var(--accent-blue)" />
-              <path d="M80 90 H100 L95 110 H85 Z" fill="var(--accent-cyan)" />
-              <rect x="35" y="125" width="110" height="12" rx="4" fill={figmaRectColor1} />
-              <rect x="50" y="145" width="80" height="8" rx="4" fill={figmaRectColor2} />
-              <rect x="25" y="165" width="130" height="40" rx="6" fill="rgba(6, 182, 212, 0.05)" stroke="var(--accent-cyan)" strokeWidth="1" strokeDasharray="3 3" />
-              <rect x="40" y="177" width="100" height="8" rx="4" fill="var(--accent-cyan)" fillOpacity="0.4" />
-              <rect x="55" y="191" width="70" height="6" rx="3" fill="var(--accent-blue)" fillOpacity="0.6" />
-            </svg>
-
-            <h4 style={{ color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Figma Frame: Campaign Mockup</h4>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', maxWidth: '300px' }}>
-              Reference node <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)' }}>#4329:104</code> (DQ Blizzard Campaign Mock).
-            </p>
-          </div>
-
-          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Figma Viewport Spec:</span>
-              <span style={{ fontFamily: 'var(--font-mono)' }}>375px × 812px</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
+              <button
+                onClick={() => setRightPanelTab('figma')}
+                className={`sub-tab ${rightPanelTab === 'figma' ? 'active' : ''}`}
+                style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', border: 'none', cursor: 'pointer' }}
+              >
+                📐 Figma Spec
+              </button>
+              <button
+                onClick={() => setRightPanelTab('inbox')}
+                className={`sub-tab ${rightPanelTab === 'inbox' ? 'active' : ''}`}
+                style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', border: 'none', cursor: 'pointer' }}
+              >
+                📥 Inbox Previews
+              </button>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Visual Health Check:</span>
-              <span style={{ color: 'var(--success)' }}>Passed (Aspect Match)</span>
-            </div>
+            {rightPanelTab === 'figma' ? (
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <Layers size={14} /> Layer Outlines
+              </span>
+            ) : (
+              <span className="api-badge simulated" style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}>
+                Subject QA
+              </span>
+            )}
           </div>
+
+          {rightPanelTab === 'figma' ? (
+            <>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                This panel represents the pixel-perfect design reference as drawn in Figma. Click the mockup below to zoom full screen.
+              </p>
+
+              <div 
+                onClick={() => setShowFigmaFullscreen(true)}
+                style={{ 
+                  flex: 1, 
+                  border: '2px dashed var(--border-color)', 
+                  borderRadius: 'var(--border-radius-md)', 
+                  backgroundColor: figmaDashBg,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '2rem',
+                  textAlign: 'center',
+                  cursor: 'zoom-in',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-cyan)'; e.currentTarget.style.backgroundColor = figmaOverlayBg; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.backgroundColor = figmaDashBg; }}
+              >
+                {/* Beautiful SVG graphic mimicking Figma Vector Node UI */}
+                <svg width="150" height="200" viewBox="0 0 180 240" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '1.5rem', filter: 'drop-shadow(0 10px 20px rgba(6, 182, 212, 0.15))' }}>
+                  <rect x="10" y="10" width="160" height="220" rx="16" fill={figmaBg} stroke={figmaStroke} strokeWidth="2" />
+                  <line x1="25" y1="35" x2="155" y2="35" stroke={figmaLineColor} strokeWidth="2" strokeDasharray="4 4" />
+                  <path d="M90 60 C80 60, 75 75, 90 90 C105 75, 100 60, 90 60 Z" fill="var(--accent-blue)" />
+                  <path d="M80 90 H100 L95 110 H85 Z" fill="var(--accent-cyan)" />
+                  <rect x="35" y="125" width="110" height="12" rx="4" fill={figmaRectColor1} />
+                  <rect x="50" y="145" width="80" height="8" rx="4" fill={figmaRectColor2} />
+                  <rect x="25" y="165" width="130" height="40" rx="6" fill="rgba(6, 182, 212, 0.05)" stroke="var(--accent-cyan)" strokeWidth="1" strokeDasharray="3 3" />
+                  <rect x="40" y="177" width="100" height="8" rx="4" fill="var(--accent-cyan)" fillOpacity="0.4" />
+                  <rect x="55" y="191" width="70" height="6" rx="3" fill="var(--accent-blue)" fillOpacity="0.6" />
+                </svg>
+
+                <h4 style={{ color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Figma Frame: Campaign Mockup</h4>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', maxWidth: '300px' }}>
+                  Reference node <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)' }}>#4329:104</code> (DQ Blizzard Campaign Mock).
+                </p>
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Figma Viewport Spec:</span>
+                  <span style={{ fontFamily: 'var(--font-mono)' }}>375px × 812px</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Visual Health Check:</span>
+                  <span style={{ color: 'var(--success)' }}>Passed (Aspect Match)</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0, lineHeight: '1.4' }}>
+                Inspect subject line rendering and character truncation warning threshold flags across different mail apps:
+              </p>
+              
+              {/* Gmail Desktop */}
+              <div 
+                onClick={() => {
+                  setActiveChannel('email');
+                  const target = document.querySelector('.phone-wrapper');
+                  if (target) target.scrollIntoView({ behavior: 'smooth' });
+                }}
+                style={{
+                  backgroundColor: iframeTheme === 'dark' ? '#182235' : '#f8fafc',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--border-radius-md)',
+                  padding: '1rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-cyan)'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem' }}>
+                  <span style={{ fontWeight: '600', color: 'var(--text-muted)' }}>GMAIL (DESKTOP) &bull; Max ~60 Chars</span>
+                  {renderedSubject.length > 60 ? (
+                    <span style={{ color: 'var(--warning)', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
+                      Truncated (-{renderedSubject.length - 60} chars)
+                    </span>
+                  ) : (
+                    <span style={{ color: 'var(--success)', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
+                      Fits
+                    </span>
+                  )}
+                </div>
+                
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.5rem',
+                  backgroundColor: iframeTheme === 'dark' ? '#090d16' : '#ffffff',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  color: iframeTheme === 'dark' ? '#f1f5f9' : '#1e293b'
+                }}>
+                  <input type="checkbox" readOnly checked={false} style={{ opacity: 0.4, cursor: 'pointer' }} />
+                  <span style={{ color: '#fbbf24', fontSize: '0.95rem', cursor: 'pointer' }}>☆</span>
+                  <span style={{ fontWeight: 'bold', minWidth: '85px', maxWidth: '85px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    Dairy Queen
+                  </span>
+                  <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', gap: '0.35rem' }}>
+                    <span style={{ fontWeight: '600', color: iframeTheme === 'dark' ? '#ffffff' : '#000000' }}>
+                      {getTruncatedSubject(renderedSubject, 60).text}
+                    </span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      - We loaded a special reward into your account to say thanks...
+                    </span>
+                  </div>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>12:00 PM</span>
+                </div>
+              </div>
+
+              {/* Apple Mail iOS */}
+              <div 
+                onClick={() => {
+                  setActiveChannel('email');
+                  const target = document.querySelector('.phone-wrapper');
+                  if (target) target.scrollIntoView({ behavior: 'smooth' });
+                }}
+                style={{
+                  backgroundColor: iframeTheme === 'dark' ? '#182235' : '#f8fafc',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--border-radius-md)',
+                  padding: '1rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-cyan)'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem' }}>
+                  <span style={{ fontWeight: '600', color: 'var(--text-muted)' }}>APPLE MAIL (iOS) &bull; Max ~41 Chars</span>
+                  {renderedSubject.length > 41 ? (
+                    <span style={{ color: 'var(--warning)', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
+                      Truncated (-{renderedSubject.length - 41} chars)
+                    </span>
+                  ) : (
+                    <span style={{ color: 'var(--success)', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
+                      Fits
+                    </span>
+                  )}
+                </div>
+
+                <div style={{
+                  padding: '0.75rem',
+                  backgroundColor: iframeTheme === 'dark' ? '#090d16' : '#ffffff',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  borderRadius: '6px',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  gap: '0.5rem',
+                  position: 'relative'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#007aff' }} />
+                  </div>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <strong style={{ color: iframeTheme === 'dark' ? '#ffffff' : '#000000', fontSize: '0.85rem' }}>Dairy Queen</strong>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>12:00 PM 〉</span>
+                    </div>
+                    <div style={{ 
+                      fontWeight: '700', 
+                      color: iframeTheme === 'dark' ? '#f1f5f9' : '#1e293b',
+                      fontSize: '0.8rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {getTruncatedSubject(renderedSubject, 41).text}
+                    </div>
+                    <div style={{ 
+                      fontSize: '0.75rem', 
+                      color: 'var(--text-muted)',
+                      lineHeight: '1.25',
+                      height: '2.4rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical'
+                    }}>
+                      We loaded a special reward into your account to say thanks for being an app member. Claim Blizzard Offer...
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Outlook Web */}
+              <div 
+                onClick={() => {
+                  setActiveChannel('email');
+                  const target = document.querySelector('.phone-wrapper');
+                  if (target) target.scrollIntoView({ behavior: 'smooth' });
+                }}
+                style={{
+                  backgroundColor: iframeTheme === 'dark' ? '#182235' : '#f8fafc',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--border-radius-md)',
+                  padding: '1rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-cyan)'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem' }}>
+                  <span style={{ fontWeight: '600', color: 'var(--text-muted)' }}>OUTLOOK (WEB) &bull; Max ~70 Chars</span>
+                  {renderedSubject.length > 70 ? (
+                    <span style={{ color: 'var(--warning)', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
+                      Truncated (-{renderedSubject.length - 70} chars)
+                    </span>
+                  ) : (
+                    <span style={{ color: 'var(--success)', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
+                      Fits
+                    </span>
+                  )}
+                </div>
+
+                <div style={{
+                  padding: '0.65rem 0.75rem',
+                  backgroundColor: iframeTheme === 'dark' ? '#090d16' : '#ffffff',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  gap: '0.75rem',
+                  alignItems: 'flex-start'
+                }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    backgroundColor: '#0078d4',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '0.75rem',
+                    flexShrink: 0
+                  }}>
+                    DQ
+                  </div>
+                  
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.1rem', overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <strong style={{ color: '#0078d4', fontSize: '0.8rem' }}>Dairy Queen</strong>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>12:00 PM</span>
+                    </div>
+                    <div style={{ 
+                      fontWeight: '600', 
+                      color: iframeTheme === 'dark' ? '#ffffff' : '#323130',
+                      fontSize: '0.8rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {getTruncatedSubject(renderedSubject, 70).text}
+                    </div>
+                    <div style={{ 
+                      fontSize: '0.75rem', 
+                      color: 'var(--text-muted)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      We loaded a special reward into your account to say thanks...
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
 
       </div>
