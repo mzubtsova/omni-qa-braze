@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, RefreshCw, Trash2, CloudLightning, FileEdit } from 'lucide-react';
+import { Plus, RefreshCw, Trash2, CloudLightning, FileEdit, ExternalLink } from 'lucide-react';
 
 const SEED_CAMPAIGNS = [
   {
@@ -237,11 +237,45 @@ export default function Catalog({
             position: 'relative'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: 1 }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   {c.channel === 'email' ? '✉️ Email' : c.channel === 'push' ? '📱 Push' : c.channel === 'sms' ? '💬 SMS' : '✨ In-App'}
                 </span>
-                <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-primary)' }}>{c.name}</h4>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <h4 
+                    onClick={() => handleLoad(c)}
+                    style={{ 
+                      margin: 0, 
+                      fontSize: '1.05rem', 
+                      fontWeight: '700', 
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                      transition: 'color 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => e.target.style.color = 'var(--accent-cyan)'}
+                    onMouseLeave={(e) => e.target.style.color = 'var(--text-primary)'}
+                    title="Click to load campaign into editor workspace"
+                  >
+                    {c.name}
+                  </h4>
+                  <a 
+                    href={`https://dashboard.braze.com/campaigns/editor/${c.id === '1' ? 'dq_welcome_lifecycle' : c.id === '2' ? 'blizzard_summer_boost' : 'qsr_app_download'}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ 
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      color: 'var(--text-muted)',
+                      textDecoration: 'none',
+                      transition: 'color 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-blue)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                    title="Open in Braze Dashboard"
+                  >
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
               </div>
               <span style={{ 
                 padding: '0.2rem 0.5rem', 
