@@ -49,13 +49,7 @@ const scanVariablesWithDefaults = (texts) => {
   return vars;
 };
 
-const getTruncatedSubject = (subject, limit) => {
-  if (!subject) return { text: '', truncated: false };
-  if (subject.length <= limit) {
-    return { text: subject, truncated: false };
-  }
-  return { text: subject.substring(0, limit) + '...', truncated: true };
-};
+
 
 
 export default function VisualStressTester({ 
@@ -2049,8 +2043,8 @@ export default function VisualStressTester({
                     <span className="gmail-preview-date-mobile">12:00 PM</span>
                   </div>
                   <div className="gmail-preview-body">
-                    <span className="gmail-preview-subject" style={{ color: iframeTheme === 'dark' ? '#ffffff' : '#000000' }}>
-                      {getTruncatedSubject(renderedSubject, 60).text}
+                    <span className="gmail-preview-subject" style={{ color: iframeTheme === 'dark' ? '#ffffff' : '#000000', marginRight: '0.35rem' }}>
+                      {renderedSubject}
                     </span>
                     <span className="gmail-preview-snippet">
                       - We loaded a special reward into your account to say thanks...
@@ -2116,11 +2110,9 @@ export default function VisualStressTester({
                       fontWeight: '700', 
                       color: iframeTheme === 'dark' ? '#f1f5f9' : '#1e293b',
                       fontSize: '0.8rem',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      lineHeight: '1.3'
                     }}>
-                      {getTruncatedSubject(renderedSubject, 41).text}
+                      {renderedSubject}
                     </div>
                     <div style={{ 
                       fontSize: '0.75rem', 
@@ -2188,7 +2180,7 @@ export default function VisualStressTester({
                     <div className="outlook-preview-subject" style={{ 
                       color: iframeTheme === 'dark' ? '#ffffff' : '#323130'
                     }}>
-                      {getTruncatedSubject(renderedSubject, 70).text}
+                      {renderedSubject}
                     </div>
                     <div className="outlook-preview-snippet">
                       We loaded a special reward into your account to say thanks...

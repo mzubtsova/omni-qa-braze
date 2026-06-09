@@ -1032,11 +1032,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .gmail-preview-body {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: flex;
-  gap: 0.35rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
 }
 
 .gmail-preview-subject {
@@ -1076,7 +1073,7 @@ h1, h2, h3, h4, h5, h6 {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.15rem;
   overflow: hidden;
 }
 
@@ -1100,17 +1097,13 @@ h1, h2, h3, h4, h5, h6 {
 
 .outlook-preview-subject {
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.3;
 }
 
 .outlook-preview-snippet {
   font-size: 0.75rem;
   color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.3;
 }
 
 /* Mobile responsive media query for inbox previews */
@@ -1148,23 +1141,18 @@ h1, h2, h3, h4, h5, h6 {
   
   .gmail-preview-body {
     width: 100%;
-    white-space: normal;
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
   }
   
   .gmail-preview-subject {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.3;
   }
   
   .gmail-preview-snippet {
     font-size: 0.75rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.3;
   }
   
   .outlook-preview-container {
