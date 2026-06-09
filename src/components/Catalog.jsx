@@ -5,6 +5,7 @@ const SEED_CAMPAIGNS = [
   {
     id: '1',
     name: 'Dairy Queen Welcome Lifecycle',
+    brazeCampaignId: '65a2d8f9b1c0e3a4f5d6c7b8',
     channel: 'email',
     version: 'v1.4',
     status: 'Live',
@@ -52,6 +53,7 @@ const SEED_CAMPAIGNS = [
   {
     id: '2',
     name: 'Blizzard Summer Points Boost',
+    brazeCampaignId: '65b3e9a0c2d1f4b5e6f7d8a9',
     channel: 'push',
     version: 'v2.1',
     status: 'Out of Sync',
@@ -68,6 +70,7 @@ const SEED_CAMPAIGNS = [
   {
     id: '3',
     name: 'QSR App Download Campaign',
+    brazeCampaignId: '65c4f0b1d3e2a5c6f7a8b9c0',
     channel: 'iam',
     version: 'v1.0',
     status: 'Draft',
@@ -83,15 +86,37 @@ const SEED_CAMPAIGNS = [
   }
 ];
 
+const getBrazeDashboardUrl = (campaignId) => {
+  const endpoint = localStorage.getItem('braze_endpoint') || 'https://rest.iad-01.braze.com';
+  let domain = 'dashboard.braze.com';
+  
+  if (endpoint.includes('iad-01')) domain = 'dashboard-01.braze.com';
+  else if (endpoint.includes('iad-02')) domain = 'dashboard-02.braze.com';
+  else if (endpoint.includes('iad-03')) domain = 'dashboard-03.braze.com';
+  else if (endpoint.includes('iad-05')) domain = 'dashboard-05.braze.com';
+  else if (endpoint.includes('iad-06')) domain = 'dashboard-06.braze.com';
+  else if (endpoint.includes('eu')) domain = 'dashboard-eu.braze.com';
+  else if (endpoint.includes('cn')) domain = 'dashboard.braze.com.cn';
+
+  if (campaignId) {
+    return `https://${domain}/campaigns/editor/${campaignId}/details`;
+  }
+  return `https://${domain}/campaigns`;
+};
+
 export default function Catalog({ 
   onLoadCampaign,
   currentCampaignState
 }) {
   const [campaigns, setCampaigns] = useState([]);
   const [newCampaignName, setNewCampaignName] = useState('');
+  const [newCampaignId, setNewCampaignId] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [syncingId, setSyncingId] = useState(null);
   const [loadingLoadId, setLoadingLoadId] = useState(null);
+  
+  const [editingIdField, setEditingIdField] = useState(null);
+  const [tempCampaignId, setTempCampaignId] = useState('');
 
   useEffect(() => {
     const saved = localStorage.getItem('omniqa_braze_catalog');
@@ -145,6 +170,20 @@ export default function Catalog({
     }
   };
 
+  const handleSaveCampaignId = (id) => {
+    const updated = campaigns.map(c => {
+      if (c.id === id) {
+        return {
+          ...c,
+          brazeCampaignId: tempCampaignId.trim()
+        };
+      }
+      return c;
+    });
+    saveCatalog(updated);
+    setEditingIdField(null);
+  };
+
   const handleCreateFromWorkspace = (e) => {
     e.preventDefault();
     if (!newCampaignName.trim()) return;
@@ -152,6 +191,7 @@ export default function Catalog({
     const newCampaign = {
       id: Date.now().toString(),
       name: newCampaignName,
+      brazeCampaignId: newCampaignId.trim(),
       channel: 'email', // default primary
       version: 'v1.0',
       status: 'Draft',
@@ -162,6 +202,7 @@ export default function Catalog({
     const updated = [newCampaign, ...campaigns];
     saveCatalog(updated);
     setNewCampaignName('');
+    setNewCampaignId('');
     setShowAddForm(false);
   };
 
@@ -185,13 +226,34 @@ export default function Catalog({
           </p>
         </div>
         
-        <button 
-          className="btn btn-primary" 
-          onClick={() => setShowAddForm(!showAddForm)}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-        >
-          <Plus size={16} /> Save Current Workspace Template
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <a 
+            href={getBrazeDashboardUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.4rem', 
+              textDecoration: 'none',
+              borderColor: 'var(--accent-cyan)',
+              color: 'var(--accent-cyan)',
+              backgroundColor: 'rgba(6, 182, 212, 0.05)',
+              fontWeight: '600'
+            }}
+          >
+            <ExternalLink size={16} /> Open Braze Dashboard
+          </a>
+
+          <button 
+            className="btn btn-primary" 
+            onClick={() => setShowAddForm(!showAddForm)}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <Plus size={16} /> Save Current Workspace Template
+          </button>
+        </div>
       </div>
 
       {/* Save Campaign Form */}
@@ -201,19 +263,33 @@ export default function Catalog({
             <CloudLightning size={16} style={{ color: 'var(--accent-cyan)' }} />
             Save Workspace Template to Catalog Database
           </h3>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <input 
-              type="text" 
-              className="form-input" 
-              required
-              placeholder="e.g. Blizzard BOGO Fall Campaign" 
-              value={newCampaignName}
-              onChange={(e) => setNewCampaignName(e.target.value)}
-              style={{ flex: 1, minWidth: '240px' }}
-            />
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ flex: 2, minWidth: '240px', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Campaign Template Name:</label>
+              <input 
+                type="text" 
+                className="form-input" 
+                required
+                placeholder="e.g. Blizzard BOGO Fall Campaign" 
+                value={newCampaignName}
+                onChange={(e) => setNewCampaignName(e.target.value)}
+                style={{ width: '100%' }}
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Braze Campaign ID (Optional):</label>
+              <input 
+                type="text" 
+                className="form-input" 
+                placeholder="e.g. 65a2d8f9b1c0e3a4f5d6c7b8" 
+                value={newCampaignId}
+                onChange={(e) => setNewCampaignId(e.target.value)}
+                style={{ width: '100%' }}
+              />
+            </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button type="submit" className="btn btn-primary">Save Template</button>
-              <button type="button" className="btn btn-secondary" onClick={() => setShowAddForm(false)}>Cancel</button>
+              <button type="submit" className="btn btn-primary" style={{ height: '38px' }}>Save Template</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowAddForm(false)} style={{ height: '38px' }}>Cancel</button>
             </div>
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
@@ -242,38 +318,32 @@ export default function Catalog({
                   {c.channel === 'email' ? '✉️ Email' : c.channel === 'push' ? '📱 Push' : c.channel === 'sms' ? '💬 SMS' : '✨ In-App'}
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <h4 
-                    onClick={() => handleLoad(c)}
-                    style={{ 
-                      margin: 0, 
-                      fontSize: '1.05rem', 
-                      fontWeight: '700', 
-                      color: 'var(--text-primary)',
-                      cursor: 'pointer',
-                      transition: 'color 0.15s ease'
-                    }}
-                    onMouseEnter={(e) => e.target.style.color = 'var(--accent-cyan)'}
-                    onMouseLeave={(e) => e.target.style.color = 'var(--text-primary)'}
-                    title="Click to load campaign into editor workspace"
-                  >
-                    {c.name}
-                  </h4>
                   <a 
-                    href={`https://dashboard.braze.com/campaigns/editor/${c.id === '1' ? 'dq_welcome_lifecycle' : c.id === '2' ? 'blizzard_summer_boost' : 'qsr_app_download'}`}
+                    href={getBrazeDashboardUrl(c.brazeCampaignId)}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ 
+                      textDecoration: 'none',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      color: 'var(--text-muted)',
-                      textDecoration: 'none',
-                      transition: 'color 0.15s ease'
+                      gap: '0.4rem',
+                      color: 'var(--text-primary)'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-blue)'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                    title="Open in Braze Dashboard"
+                    title={c.brazeCampaignId ? "Open Campaign in Braze Dashboard" : "Go to Braze Campaign Dashboard"}
                   >
-                    <ExternalLink size={12} />
+                    <h4 
+                      style={{ 
+                        margin: 0, 
+                        fontSize: '1.05rem', 
+                        fontWeight: '700', 
+                        transition: 'color 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.target.style.color = 'var(--accent-cyan)'}
+                      onMouseLeave={(e) => e.target.style.color = 'var(--text-primary)'}
+                    >
+                      {c.name}
+                    </h4>
+                    <ExternalLink size={12} style={{ color: 'var(--text-muted)' }} />
                   </a>
                 </div>
               </div>
@@ -288,7 +358,7 @@ export default function Catalog({
               </span>
             </div>
 
-            <div style={{ display: 'flex', gap: '1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)', padding: '0.5rem 0', margin: '0.1rem 0' }}>
+            <div style={{ display: 'flex', gap: '1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)', padding: '0.5rem 0', margin: '0.1rem 0', flexWrap: 'wrap' }}>
               <div>
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Version</span>
                 <strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{c.version}</strong>
@@ -296,6 +366,72 @@ export default function Catalog({
               <div>
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Last Synced</span>
                 <strong style={{ color: 'var(--text-primary)' }}>{c.lastSynced}</strong>
+              </div>
+              <div style={{ flex: 1, minWidth: '140px' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Braze Campaign ID</span>
+                {editingIdField === c.id ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.15rem' }}>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      value={tempCampaignId}
+                      onChange={(e) => setTempCampaignId(e.target.value)}
+                      placeholder="e.g. 65a2d8f9b1c0e3a4..."
+                      style={{ 
+                        fontSize: '0.75rem', 
+                        padding: '0.1rem 0.3rem', 
+                        width: '120px',
+                        height: '24px',
+                        background: 'var(--bg-primary)',
+                        border: '1px solid var(--accent-cyan)'
+                      }}
+                      autoFocus
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => handleSaveCampaignId(c.id)}
+                      className="btn btn-primary"
+                      style={{ padding: '0.1rem 0.4rem', fontSize: '0.65rem', height: '24px', lineHeight: 1 }}
+                    >
+                      Save
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setEditingIdField(null)}
+                      className="btn btn-secondary"
+                      style={{ padding: '0.1rem 0.4rem', fontSize: '0.65rem', height: '24px', lineHeight: 1 }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }}>
+                    <strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
+                      {c.brazeCampaignId || 'None'}
+                    </strong>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingIdField(c.id);
+                        setTempCampaignId(c.brazeCampaignId || '');
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--accent-cyan)',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '2px',
+                        opacity: 0.7
+                      }}
+                      title="Edit Braze Campaign ID"
+                    >
+                      <FileEdit size={10} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -321,6 +457,31 @@ export default function Catalog({
               >
                 <FileEdit size={12} className={loadingLoadId === c.id ? 'spin' : ''} /> {loadingLoadId === c.id ? 'Loading...' : 'Load'}
               </button>
+
+              <a 
+                href={getBrazeDashboardUrl(c.brazeCampaignId)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-secondary" 
+                style={{
+                  flex: 1.2,
+                  padding: '0.45rem 0.6rem',
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  justifyContent: 'center',
+                  borderColor: 'var(--accent-cyan)',
+                  color: 'var(--accent-cyan)',
+                  backgroundColor: 'var(--bg-secondary)',
+                  cursor: 'pointer',
+                  textDecoration: 'none'
+                }}
+                title={c.brazeCampaignId ? "Open Campaign Editor in Braze" : "Open Braze Campaign Dashboard"}
+              >
+                <ExternalLink size={12} /> {c.brazeCampaignId ? 'Open Braze' : 'Braze Dash'}
+              </a>
+
               <button 
                 onClick={() => handleSync(c.id)}
                 disabled={loadingLoadId === c.id || syncingId === c.id}
