@@ -201,10 +201,6 @@ export default function TechnicalAuditor({
     return alert.severity.toLowerCase() === filterSeverity.toLowerCase();
   });
 
-  const fixableIssues = allAlerts.filter(a => 
-    a.category === 'WCAG Contrast' || a.category === 'Link Health'
-  );
-
   const getSeverityBadge = (severity) => {
     switch (severity.toLowerCase()) {
       case 'high':
@@ -403,7 +399,7 @@ export default function TechnicalAuditor({
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               {/* Auto-Fix Button */}
-              {fixableIssues.length > 0 && setBrazeHtml && (
+              {setBrazeHtml && (
                 <button 
                   onClick={handleAutoFix}
                   disabled={isFixing}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Smartphone, Layers, Sliders, Tablet, Laptop, Maximize2, X, Sun, Moon, Bell, MessageSquare, Mail, Sparkles } from 'lucide-react';
+import { Smartphone, Layers, Sliders, Tablet, Laptop, Maximize2, X, Sun, Moon, Bell, MessageSquare, Mail, Sparkles, CheckCircle } from 'lucide-react';
 const getNonGSM7Characters = (str) => {
   if (!str) return [];
   const gsm7SingleCharRegex = /^[A-Za-z0-9@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,\-./:;<=>?¡¿ÄÖÑÜ§à^{}[\\\]~|€]$/;
@@ -109,6 +109,83 @@ export default function VisualStressTester({
   const [newVarVal, setNewVarVal] = useState('');
   const [isContextExpanded, setIsContextExpanded] = useState(true);
   const [isEditorsExpanded, setIsEditorsExpanded] = useState(true);
+  const [toastMessage, setToastMessage] = useState(null);
+  const [isFixing, setIsFixing] = useState(false);
+
+  const handleAutoFix = async () => {
+    if (!brazeHtml) return;
+    setIsFixing(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    let fixedHtml = brazeHtml;
+    let fixedIamLink = iamButtonLink;
+    let fixCounts = { contrast: 0, utm: 0, placeholder: 0, empty: 0 };
+
+    // 1. Fix low contrast (Claim Blizzard Offer)
+    fixedHtml = fixedHtml.replace(/(background-color\s*:\s*#f43f5e\b[^'"]*color\s*:\s*)#f87171/gi, (match, p1) => {
+      fixCounts.contrast++;
+      return `${p1}#ffffff`;
+    });
+    fixedHtml = fixedHtml.replace(/(color\s*:\s*)#f87171(\b[^'"]*background-color\s*:\s*#f43f5e)/gi, (match, p1, p2) => {
+      fixCounts.contrast++;
+      return `${p1}#ffffff${p2}`;
+    });
+
+    // 2. Fix empty links href="#"
+    fixedHtml = fixedHtml.replace(/href=["']#["']/g, () => {
+      fixCounts.empty++;
+      return 'href="https://dairyqueen.com/unsubscribe?utm_source=braze&utm_medium=email&utm_campaign=blizzard_promo"';
+    });
+
+    // 3. Fix placeholder links (example.com / placeholder.com)
+    fixedHtml = fixedHtml.replace(/href=["'](https?:\/\/example\.com\/[^"']+|https?:\/\/example\.com\b[^"']*)["']/gi, () => {
+      fixCounts.placeholder++;
+      return 'href="https://dairyqueen.com/redeem?utm_source=braze&utm_medium=email&utm_campaign=blizzard_promo"';
+    });
+
+    // 4. Fix missing UTM parameters for standard links
+    fixedHtml = fixedHtml.replace(/href=["'](https?:\/\/(?!example\.com|placeholder\.com)[^"']+)["']/gi, (match, url) => {
+      if (!url.includes('utm_source')) {
+        fixCounts.utm++;
+        const separator = url.includes('?') ? '&' : '?';
+        return `href="${url}${separator}utm_source=braze&utm_medium=email&utm_campaign=blizzard_promo"`;
+      }
+      return match;
+    });
+
+    // 5. Fix In-App Message (IAM) Button URL
+    if (iamButtonLink && setIamButtonLink) {
+      const url = iamButtonLink.trim();
+      if (!url || url === '#' || url.toLowerCase().startsWith('javascript:') || url.includes('example.com') || url.includes('placeholder.com')) {
+        fixedIamLink = 'https://dairyqueen.com/redeem?utm_source=braze&utm_medium=iam&utm_campaign=blizzard_promo';
+        setIamButtonLink(fixedIamLink);
+        fixCounts.placeholder++;
+      } else if (url.startsWith('http') && !url.includes('utm_source')) {
+        const separator = url.includes('?') ? '&' : '?';
+        fixedIamLink = `${url}${separator}utm_source=braze&utm_medium=iam&utm_campaign=blizzard_promo`;
+        setIamButtonLink(fixedIamLink);
+        fixCounts.utm++;
+      }
+    }
+
+    setBrazeHtml(fixedHtml);
+    
+    const totalFixes = fixCounts.contrast + fixCounts.utm + fixCounts.placeholder + fixCounts.empty;
+    if (totalFixes > 0) {
+      const details = [];
+      if (fixCounts.contrast > 0) details.push(`${fixCounts.contrast} contrast issue(s)`);
+      if (fixCounts.empty > 0) details.push(`${fixCounts.empty} empty link(s)`);
+      if (fixCounts.placeholder > 0) details.push(`${fixCounts.placeholder} placeholder link(s)`);
+      if (fixCounts.utm > 0) details.push(`${fixCounts.utm} missing UTM tracker(s)`);
+      
+      setToastMessage(`Success! Auto-fixed: ${details.join(', ')}. Recalculating...`);
+      setTimeout(() => setToastMessage(null), 5000);
+    } else {
+      setToastMessage("No auto-fixable formatting issues found in this template.");
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+    setIsFixing(false);
+  };
 
   const deleteManualVar = (key) => {
     setManualVariables(prev => {
@@ -1019,7 +1096,29 @@ export default function VisualStressTester({
                   />
                 </div>
                 <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
-                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Email HTML Body Copy</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                    <label className="form-label" style={{ fontSize: '0.8rem', margin: 0 }}>Email HTML Body Copy</label>
+                    <button 
+                      type="button"
+                      onClick={handleAutoFix}
+                      disabled={isFixing}
+                      className="btn btn-primary"
+                      style={{ 
+                        padding: '0.2rem 0.5rem', 
+                        fontSize: '0.7rem', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.25rem', 
+                        background: 'var(--cyan-gradient)',
+                        boxShadow: '0 0 10px rgba(6, 182, 212, 0.2)',
+                        width: 'auto'
+                      }}
+                      title="Automatically fix links, UTM params, and color contrast issues in HTML"
+                    >
+                      <Sparkles size={10} className={isFixing ? 'spin' : ''} />
+                      {isFixing ? '🧹 Scrubbing...' : 'Auto-Fix HTML'}
+                    </button>
+                  </div>
                   <textarea
                     className="form-textarea"
                     value={brazeHtml}
@@ -2232,6 +2331,15 @@ export default function VisualStressTester({
 
   return (
     <div className="fade-in">
+      {toastMessage && (
+        <div className="toast" style={{ bottom: '2rem', right: '2rem' }}>
+          <CheckCircle size={20} style={{ color: 'var(--success)' }} />
+          <span>{toastMessage}</span>
+          <button onClick={() => setToastMessage(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', marginLeft: '0.5rem', cursor: 'pointer' }}>
+            <X size={14} />
+          </button>
+        </div>
+      )}
       {/* 🧪 Live Liquid Variable Overrides Bar */}
       <div className="panel" style={{ marginBottom: '1.5rem', border: '1px solid var(--border-color)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.50rem', flexWrap: 'wrap', gap: '0.5rem' }}>

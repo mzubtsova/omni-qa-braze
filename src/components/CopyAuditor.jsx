@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Info, Sparkles, CheckCircle, RefreshCw, Layers, Monitor, Play } from 'lucide-react';
+import { Info, Sparkles, CheckCircle, RefreshCw, Layers, Monitor, Play, X } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast } from '../utils/validators';
 
@@ -33,6 +33,94 @@ export default function CopyAuditor({
   const [editorChannel, setEditorChannel] = useState('email'); // 'email', 'push', 'sms', 'iam'
   const [isExtensionView, setIsExtensionView] = useState(false);
   const editorRef = useRef(null);
+  const [toastMessage, setToastMessage] = useState(null);
+  const [isFixing, setIsFixing] = useState(false);
+
+  const handleAutoFix = async () => {
+    if (!brazeHtml) return;
+    setIsFixing(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    let fixedHtml = brazeHtml;
+    let fixedIamLink = iamButtonLink;
+    let fixCounts = { contrast: 0, utm: 0, placeholder: 0, empty: 0 };
+
+    // 1. Fix low contrast (Claim Blizzard Offer)
+    // Replace color: #f87171 with color: #ffffff inside elements with bg #f43f5e
+    fixedHtml = fixedHtml.replace(/(background-color\s*:\s*#f43f5e\b[^'"]*color\s*:\s*)#f87171/gi, (match, p1) => {
+      fixCounts.contrast++;
+      return `${p1}#ffffff`;
+    });
+    fixedHtml = fixedHtml.replace(/(color\s*:\s*)#f87171(\b[^'"]*background-color\s*:\s*#f43f5e)/gi, (match, p1, p2) => {
+      fixCounts.contrast++;
+      return `${p1}#ffffff${p2}`;
+    });
+
+    // 2. Fix empty links href="#" inside unsubscribe or other sections
+    fixedHtml = fixedHtml.replace(/href=["']#["']/g, () => {
+      fixCounts.empty++;
+      return 'href="https://dairyqueen.com/unsubscribe?utm_source=braze&utm_medium=email&utm_campaign=blizzard_promo"';
+    });
+
+    // 3. Fix placeholder links (example.com / placeholder.com)
+    fixedHtml = fixedHtml.replace(/href=["'](https?:\/\/example\.com\/[^"']+|https?:\/\/example\.com\b[^"']*)["']/gi, () => {
+      fixCounts.placeholder++;
+      return 'href="https://dairyqueen.com/redeem?utm_source=braze&utm_medium=email&utm_campaign=blizzard_promo"';
+    });
+
+    // 4. Fix missing UTM parameters for standard links
+    fixedHtml = fixedHtml.replace(/href=["'](https?:\/\/(?!example\.com|placeholder\.com)[^"']+)["']/gi, (match, url) => {
+      if (!url.includes('utm_source')) {
+        fixCounts.utm++;
+        const separator = url.includes('?') ? '&' : '?';
+        return `href="${url}${separator}utm_source=braze&utm_medium=email&utm_campaign=blizzard_promo"`;
+      }
+      return match;
+    });
+
+    // 5. Fix In-App Message (IAM) Button URL
+    if (iamButtonLink && setIamButtonLink) {
+      const url = iamButtonLink.trim();
+      if (!url || url === '#' || url.toLowerCase().startsWith('javascript:') || url.includes('example.com') || url.includes('placeholder.com')) {
+        fixedIamLink = 'https://dairyqueen.com/redeem?utm_source=braze&utm_medium=iam&utm_campaign=blizzard_promo';
+        setIamButtonLink(fixedIamLink);
+        fixCounts.placeholder++;
+      } else if (url.startsWith('http') && !url.includes('utm_source')) {
+        const separator = url.includes('?') ? '&' : '?';
+        fixedIamLink = `${url}${separator}utm_source=braze&utm_medium=iam&utm_campaign=blizzard_promo`;
+        setIamButtonLink(fixedIamLink);
+        fixCounts.utm++;
+      }
+    }
+
+    // Save and re-run audits
+    setBrazeHtml(fixedHtml);
+    
+    // Construct summary message
+    const totalFixes = fixCounts.contrast + fixCounts.utm + fixCounts.placeholder + fixCounts.empty;
+    if (totalFixes > 0) {
+      const details = [];
+      if (fixCounts.contrast > 0) details.push(`${fixCounts.contrast} contrast issue(s)`);
+      if (fixCounts.empty > 0) details.push(`${fixCounts.empty} empty link(s)`);
+      if (fixCounts.placeholder > 0) details.push(`${fixCounts.placeholder} placeholder link(s)`);
+      if (fixCounts.utm > 0) details.push(`${fixCounts.utm} missing UTM tracker(s)`);
+      
+      setToastMessage(`Success! Auto-fixed: ${details.join(', ')}. Recalculating scores...`);
+      setTimeout(() => setToastMessage(null), 5000);
+      
+      // Re-trigger audit validation immediately with fixed HTML
+      if (onRunAudit) {
+        onRunAudit(undefined, { 
+          brazeHtml: fixedHtml,
+          iamButtonLink: fixedIamLink
+        });
+      }
+    } else {
+      setToastMessage("No auto-fixable formatting issues found in this template.");
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+    setIsFixing(false);
+  };
 
   const handleEditorDidMount = (editorInstance) => {
     editorRef.current = editorInstance;
@@ -207,6 +295,15 @@ export default function CopyAuditor({
 
   return (
     <div className="fade-in">
+      {toastMessage && (
+        <div className="toast" style={{ bottom: '2rem', right: '2rem' }}>
+          <CheckCircle size={20} style={{ color: 'var(--success)' }} />
+          <span>{toastMessage}</span>
+          <button onClick={() => setToastMessage(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', marginLeft: '0.5rem', cursor: 'pointer' }}>
+            <X size={14} />
+          </button>
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.25rem' }}>
         <button 
           onClick={() => setIsExtensionView(!isExtensionView)}
@@ -302,7 +399,50 @@ export default function CopyAuditor({
               </div>
 
               <div className="form-group" style={{ margin: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <label className="form-label" style={{ color: '#94a3b8', fontSize: '0.78rem', marginBottom: '0.5rem' }}>Compose Campaign HTML</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label className="form-label" style={{ color: '#94a3b8', fontSize: '0.78rem', margin: 0 }}>Compose Campaign HTML</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button 
+                      type="button"
+                      onClick={handleAutoFix}
+                      disabled={isFixing}
+                      className="btn btn-primary"
+                      style={{ 
+                        padding: '0.2rem 0.5rem', 
+                        fontSize: '0.7rem', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.25rem', 
+                        background: 'var(--cyan-gradient)',
+                        boxShadow: '0 0 10px rgba(6, 182, 212, 0.2)',
+                        width: 'auto'
+                      }}
+                      title="Automatically fix links, UTM params, and color contrast issues in HTML"
+                    >
+                      <Sparkles size={10} className={isFixing ? 'spin' : ''} />
+                      {isFixing ? '🧹 Scrubbing...' : 'Auto-Fix HTML'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFormatCode}
+                      className="btn btn-secondary"
+                      style={{ 
+                        padding: '0.2rem 0.5rem', 
+                        fontSize: '0.7rem', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.25rem', 
+                        width: 'auto',
+                        background: '#1e293b',
+                        border: '1px solid #334155',
+                        color: '#94a3b8'
+                      }}
+                      title="Format campaign HTML and Liquid tags"
+                    >
+                      <Sparkles size={10} /> Format Code
+                    </button>
+                  </div>
+                </div>
                 <div style={{ border: '1px solid #334155', borderRadius: '6px', overflow: 'hidden', flex: 1 }}>
                   <Editor
                     height="320px"
@@ -474,15 +614,37 @@ export default function CopyAuditor({
             <div className="form-group" style={{ margin: 0, flex: 2, display: 'flex', flexDirection: 'column', minHeight: '380px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                 <label className="form-label" style={{ margin: 0 }}>Braze Campaign HTML (Monaco Editor)</label>
-                <button
-                  type="button"
-                  onClick={handleFormatCode}
-                  className="btn btn-secondary"
-                  style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.25rem', width: 'auto' }}
-                  title="Format campaign HTML and Liquid tags"
-                >
-                  <Sparkles size={10} /> Format Code
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button 
+                      type="button"
+                      onClick={handleAutoFix}
+                      disabled={isFixing}
+                      className="btn btn-primary"
+                      style={{ 
+                        padding: '0.2rem 0.5rem', 
+                        fontSize: '0.7rem', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.25rem', 
+                        background: 'var(--cyan-gradient)',
+                        boxShadow: '0 0 10px rgba(6, 182, 212, 0.2)',
+                        width: 'auto'
+                      }}
+                      title="Automatically fix links, UTM params, and color contrast issues in HTML"
+                    >
+                      <Sparkles size={10} className={isFixing ? 'spin' : ''} />
+                      {isFixing ? '🧹 Scrubbing tags...' : 'Auto-Fix HTML'}
+                    </button>
+                  <button
+                    type="button"
+                    onClick={handleFormatCode}
+                    className="btn btn-secondary"
+                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.25rem', width: 'auto' }}
+                    title="Format campaign HTML and Liquid tags"
+                  >
+                    <Sparkles size={10} /> Format Code
+                  </button>
+                </div>
               </div>
               <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-md)', overflow: 'hidden', flex: 1 }}>
                 <Editor
