@@ -100,7 +100,26 @@ export default function VisualStressTester({
   }, null, 2));
 
   const [liquidOverrides, setLiquidOverrides] = useState({});
-  const [rightPanelTab, setRightPanelTab] = useState('figma'); // 'figma' or 'inbox'
+  const [rightPanelTab, setRightPanelTab] = useState('device'); // 'device', 'inbox', or 'figma'
+  const [manualVariables, setManualVariables] = useState({});
+  const [showAddVarForm, setShowAddVarForm] = useState(false);
+  const [newVarName, setNewVarName] = useState('');
+  const [newVarVal, setNewVarVal] = useState('');
+  const [isContextExpanded, setIsContextExpanded] = useState(true);
+  const [isEditorsExpanded, setIsEditorsExpanded] = useState(true);
+
+  const deleteManualVar = (key) => {
+    setManualVariables(prev => {
+      const updated = { ...prev };
+      delete updated[key];
+      return updated;
+    });
+    setLiquidOverrides(prev => {
+      const updated = { ...prev };
+      delete updated[key];
+      return updated;
+    });
+  };
 
   const handleUploadTranslation = (e) => {
     const file = e.target.files[0];
@@ -223,6 +242,9 @@ export default function VisualStressTester({
     const getActiveValue = (varName, fallbackVal = '') => {
       if (liquidOverrides[varName] !== undefined && liquidOverrides[varName] !== '') {
         return liquidOverrides[varName];
+      }
+      if (manualVariables[varName] !== undefined && manualVariables[varName] !== '') {
+        return manualVariables[varName];
       }
       const presets = getPresetValues(segment, selectedLanguage, customName, eventPropsJson);
       if (presets[varName] !== undefined) {
@@ -504,7 +526,7 @@ export default function VisualStressTester({
     setRenderedIamHeader(processedIamHeader);
     setRenderedIamBody(processedIamBody);
     setRenderedIamButtonText(processedIamButtonText);
-  }, [brazeHtml, subjectLine, segment, iframeTheme, pushBody, smsBody, iamHeader, iamBody, iamButtonText, customName, selectedLanguage, eventPropsJson, uploadedLanguages, liquidOverrides]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [brazeHtml, subjectLine, segment, iframeTheme, pushBody, smsBody, iamHeader, iamBody, iamButtonText, customName, selectedLanguage, eventPropsJson, uploadedLanguages, liquidOverrides, manualVariables]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getDeviceStyle = () => {
     switch (device) {
@@ -679,1089 +701,324 @@ export default function VisualStressTester({
     );
   };
 
-  return (
-    <div className="fade-in">
-      {/* 🧪 Live Liquid Variable Overrides Bar */}
-      <div className="panel" style={{ marginBottom: '1.5rem', border: '1px solid var(--border-color)' }}>
-        <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '0.50rem' }}>
-          <Sliders size={14} style={{ color: 'var(--accent-cyan)' }} />
-          Interactive Liquid Variable Overrides
-        </h4>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem', margin: '0 0 0.75rem 0', lineHeight: '1.3' }}>
-          Type custom override values for detected campaign variables below. The simulator resolves these replacements live across all channel previews:
-        </p>
+  const renderSubscriberContextCard = () => {
+    return (
+      <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)', margin: 0 }}>
+        <button
+          onClick={() => setIsContextExpanded(!isContextExpanded)}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: 'none',
+            border: 'none',
+            width: '100%',
+            padding: 0,
+            cursor: 'pointer',
+            textAlign: 'left'
+          }}
+        >
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, fontSize: '1.1rem' }}>
+            👤 Subscriber Persona & Context
+          </h3>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            {isContextExpanded ? '▼ Collapse' : '▶ Expand'}
+          </span>
+        </button>
         
-        <div style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          alignItems: 'flex-start'
-        }}>
-          {(() => {
-            const scannedVars = scanVariablesWithDefaults([
-              brazeHtml,
-              subjectLine,
-              pushBody,
-              smsBody,
-              iamHeader,
-              iamBody,
-              iamButtonText
-            ]);
-            const varKeys = Object.keys(scannedVars);
-            if (varKeys.length === 0) {
-              return (
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                  No Liquid variables detected in campaign templates.
-                </span>
-              );
-            }
-            
-            const presets = getPresetValues(segment, selectedLanguage, customName, eventPropsJson);
-            
-            return varKeys.map(key => {
-              const presetVal = presets[key] !== undefined ? presets[key] : (scannedVars[key] || '');
-              const currentVal = liquidOverrides[key] !== undefined ? liquidOverrides[key] : presetVal;
-              const isEventProp = key.startsWith('event_properties.');
-              const cleanKey = isEventProp ? key.replace('event_properties.', '') : key;
-              
-              return (
-                <div key={key} style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.2rem',
-                  minWidth: '200px',
-                  flex: '1 1 200px',
-                  maxWidth: '350px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: isEventProp ? 'var(--accent-purple)' : 'var(--accent-cyan)', fontWeight: '500' }}>
-                      {cleanKey}
-                    </span>
-                    <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.03)', padding: '0.05rem 0.25rem', borderRadius: '3px' }}>
-                      {isEventProp ? 'Event Property' : key.split('.')[0] || 'Variable'}
-                    </span>
-                  </div>
+        {isContextExpanded && (
+          <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
+            <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '1rem', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)' }}>
+              <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', marginBottom: '0.75rem', color: 'var(--text-secondary)' }}>
+                <Sliders size={14} />
+                Simulate Personalization Segment
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.85rem' }}>
+                <button 
+                  onClick={() => setSegment('default')}
+                  className={`sub-tab ${segment === 'default' ? 'active' : ''}`}
+                  style={{ width: '100%', padding: '0.5rem' }}
+                >
+                  Standard Fallback
+                </button>
+                <button 
+                  onClick={() => setSegment('long_name')}
+                  className={`sub-tab ${segment === 'long_name' ? 'active' : ''}`}
+                  style={{ width: '100%', padding: '0.5rem' }}
+                >
+                  Extreme Name Length
+                </button>
+                <button 
+                  onClick={() => setSegment('null_fallback')}
+                  className={`sub-tab ${segment === 'null_fallback' ? 'active' : ''}`}
+                  style={{ width: '100%', padding: '0.5rem' }}
+                >
+                  Null Variable (Empty)
+                </button>
+                <button 
+                  onClick={() => setSegment('gold_tier')}
+                  className={`sub-tab ${segment === 'gold_tier' ? 'active' : ''}`}
+                  style={{ width: '100%', padding: '0.5rem' }}
+                >
+                  Gold VIP Member
+                </button>
+                <button 
+                  onClick={() => setSegment('cart_loop')}
+                  className={`sub-tab ${segment === 'cart_loop' ? 'active' : ''}`}
+                  style={{ width: '100%', padding: '0.5rem', gridColumn: 'span 2' }}
+                >
+                  🛒 Abandoned Cart (Loop Logic)
+                </button>
+              </div>
+
+              {/* Searchable Language Dropdown */}
+              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.85rem' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Simulate Campaign Locale (Type to search):</label>
+                <div style={{ position: 'relative' }}>
                   <input
                     type="text"
                     className="form-input"
-                    value={currentVal}
+                    placeholder="Search language (e.g. Spanish, French, German...)"
+                    value={languageSearch}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      setLiquidOverrides(prev => ({ ...prev, [key]: val }));
-                      if (key === 'user.first_name') {
-                        setCustomName(val);
+                      setLanguageSearch(e.target.value);
+                      setDropdownOpen(true);
+                    }}
+                    onFocus={(e) => {
+                      e.target.select();
+                      setDropdownOpen(true);
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => {
+                        setDropdownOpen(false);
+                        const currentLang = languagesList.find(lang => lang.code === selectedLanguage);
+                        if (currentLang) {
+                          setLanguageSearch(currentLang.name);
+                        }
+                      }, 200);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (filteredLanguages.length > 0) {
+                          const firstMatch = filteredLanguages[0];
+                          setSelectedLanguage(firstMatch.code);
+                          setLanguageSearch(firstMatch.name);
+                          setDropdownOpen(false);
+                          e.target.blur();
+                        }
                       }
                     }}
-                    placeholder={presetVal || `Value for ${key}`}
+                    style={{ 
+                      fontSize: '0.8rem', 
+                      padding: '0.45rem 0.65rem',
+                      color: 'var(--text-primary)', 
+                      backgroundColor: 'var(--bg-primary)', 
+                      border: '1px solid var(--border-color)',
+                      width: '100%',
+                      paddingRight: '2rem'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                    onMouseDown={(e) => e.preventDefault()}
                     style={{
-                      fontSize: '0.78rem',
-                      padding: '0.35rem 0.5rem',
-                      color: 'var(--text-primary)',
-                      backgroundColor: 'var(--bg-primary)',
+                      position: 'absolute',
+                      right: '0.5rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      fontSize: '0.65rem'
+                    }}
+                  >
+                    ▼
+                  </button>
+                  
+                  {dropdownOpen && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      width: '100%',
+                      backgroundColor: 'var(--bg-secondary)',
                       border: '1px solid var(--border-color)',
                       borderRadius: 'var(--border-radius-sm)',
-                      width: '100%',
-                      boxSizing: 'border-box'
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
+                      zIndex: 200,
+                      maxHeight: '180px',
+                      overflowY: 'auto',
+                      marginTop: '0.25rem'
+                    }}>
+                      {filteredLanguages.length > 0 ? (
+                        filteredLanguages.map(lang => (
+                          <div
+                            key={lang.code}
+                            onMouseDown={() => {
+                              setSelectedLanguage(lang.code);
+                              setLanguageSearch(lang.name);
+                              setDropdownOpen(false);
+                            }}
+                            style={{
+                              padding: '0.6rem 0.8rem',
+                              cursor: 'pointer',
+                              fontSize: '0.85rem',
+                              color: selectedLanguage === lang.code ? 'var(--accent-cyan)' : 'var(--text-primary)',
+                              backgroundColor: selectedLanguage === lang.code ? 'rgba(6, 182, 212, 0.08)' : 'transparent',
+                              transition: 'background-color 0.15s ease'
+                            }}
+                          >
+                            {lang.flag} {lang.name} ({lang.code.toUpperCase()})
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ padding: '0.6rem 0.8rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          No languages found
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* Custom Locale Dictionary Uploader */}
+                <div style={{ marginTop: '0.35rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                  <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Upload Locale Dictionary (JSON):</label>
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleUploadTranslation}
+                    style={{
+                      fontSize: '0.7rem',
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      width: '100%'
                     }}
                   />
                 </div>
-              );
-            });
-          })()}
-        </div>
-      </div>
+              </div>
 
-      <div className="split-view" style={{ marginBottom: '2rem' }}>
-        
-        {/* Left Side: Controller and Phone Render */}
-        <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3>Multi-Device Rendering Simulator</h3>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <span className="api-badge connected" style={{ fontSize: '0.75rem' }}>
-                <span className="indicator" /> Active Sandbox
-              </span>
-            </div>
-          </div>
-
-          {/* Channel Select Tabs */}
-          <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
-            <button 
-              onClick={() => setActiveChannel('email')}
-              className={`sub-tab ${activeChannel === 'email' ? 'active' : ''}`}
-              style={{ flex: 1, padding: '0.4rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.75rem' }}
-            >
-              <Mail size={12} /> Email Preview
-            </button>
-            <button 
-              onClick={() => setActiveChannel('push')}
-              className={`sub-tab ${activeChannel === 'push' ? 'active' : ''}`}
-              style={{ flex: 1, padding: '0.4rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.75rem' }}
-            >
-              <Bell size={12} /> Push Preview
-            </button>
-            <button 
-              onClick={() => setActiveChannel('sms')}
-              className={`sub-tab ${activeChannel === 'sms' ? 'active' : ''}`}
-              style={{ flex: 1, padding: '0.4rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.75rem' }}
-            >
-              <MessageSquare size={12} /> SMS Preview
-            </button>
-            <button 
-              onClick={() => setActiveChannel('iam')}
-              className={`sub-tab ${activeChannel === 'iam' ? 'active' : ''}`}
-              style={{ flex: 1, padding: '0.4rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.75rem' }}
-            >
-              <Sparkles size={12} /> IAM Preview
-            </button>
-          </div>
-
-          <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '1rem', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)' }}>
-            <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', marginBottom: '0.75rem', color: 'var(--text-secondary)' }}>
-              <Sliders size={14} />
-              Simulate Personalization Segment
-            </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.85rem' }}>
-              <button 
-                onClick={() => setSegment('default')}
-                className={`sub-tab ${segment === 'default' ? 'active' : ''}`}
-                style={{ width: '100%', padding: '0.5rem' }}
-              >
-                Standard Fallback
-              </button>
-              <button 
-                onClick={() => setSegment('long_name')}
-                className={`sub-tab ${segment === 'long_name' ? 'active' : ''}`}
-                style={{ width: '100%', padding: '0.5rem' }}
-              >
-                Extreme Name Length
-              </button>
-              <button 
-                onClick={() => setSegment('null_fallback')}
-                className={`sub-tab ${segment === 'null_fallback' ? 'active' : ''}`}
-                style={{ width: '100%', padding: '0.5rem' }}
-              >
-                Null Variable (Empty)
-              </button>
-              <button 
-                onClick={() => setSegment('gold_tier')}
-                className={`sub-tab ${segment === 'gold_tier' ? 'active' : ''}`}
-                style={{ width: '100%', padding: '0.5rem' }}
-              >
-                Gold VIP Member
-              </button>
-              <button 
-                onClick={() => setSegment('cart_loop')}
-                className={`sub-tab ${segment === 'cart_loop' ? 'active' : ''}`}
-                style={{ width: '100%', padding: '0.5rem', gridColumn: 'span 2' }}
-              >
-                🛒 Abandoned Cart (Loop Logic)
-              </button>
-            </div>
-
-            {/* Searchable Language Dropdown */}
-            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.85rem' }}>
-              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Simulate Campaign Locale (Type to search):</label>
-              <div style={{ position: 'relative' }}>
+              {/* Custom Subscriber Name Input */}
+              <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Type Custom Subscriber Name (Overrides preset):</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="Search language (e.g. Spanish, French, German...)"
-                  value={languageSearch}
-                  onChange={(e) => {
-                    setLanguageSearch(e.target.value);
-                    setDropdownOpen(true);
-                  }}
-                  onFocus={(e) => {
-                    e.target.select();
-                    setDropdownOpen(true);
-                  }}
-                  onBlur={() => {
-                    setTimeout(() => {
-                      setDropdownOpen(false);
-                      const currentLang = languagesList.find(lang => lang.code === selectedLanguage);
-                      if (currentLang) {
-                        setLanguageSearch(currentLang.name);
-                      }
-                    }, 200);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      if (filteredLanguages.length > 0) {
-                        const firstMatch = filteredLanguages[0];
-                        setSelectedLanguage(firstMatch.code);
-                        setLanguageSearch(firstMatch.name);
-                        setDropdownOpen(false);
-                        e.target.blur();
-                      }
-                    }
-                  }}
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  placeholder="e.g. Marina"
                   style={{ 
                     fontSize: '0.8rem', 
-                    padding: '0.45rem 0.65rem',
+                    padding: '0.45rem 0.65rem', 
                     color: 'var(--text-primary)', 
                     backgroundColor: 'var(--bg-primary)', 
-                    border: '1px solid var(--border-color)',
-                    width: '100%',
-                    paddingRight: '2rem'
+                    border: '1px solid var(--border-color)', 
+                    borderRadius: 'var(--border-radius-sm)', 
+                    width: '100%', 
+                    boxSizing: 'border-box' 
                   }}
                 />
+              </div>
+
+              {/* Custom Event Properties JSON Textarea */}
+              <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                 <button
                   type="button"
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setShowEventProps(!showEventProps)}
                   style={{
-                    position: 'absolute',
-                    right: '0.5rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'transparent',
+                    background: 'none',
                     border: 'none',
-                    color: 'var(--text-secondary)',
+                    color: 'var(--accent-cyan)',
                     cursor: 'pointer',
-                    fontSize: '0.65rem'
+                    fontSize: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    fontWeight: '600',
+                    padding: 0,
+                    textAlign: 'left'
                   }}
                 >
-                  ▼
+                  {showEventProps ? '▼ Hide Event Properties (JSON)' : '▶ Show Event Properties (JSON)'}
                 </button>
-                
-                {dropdownOpen && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    width: '100%',
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: 'var(--border-radius-sm)',
-                    boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
-                    zIndex: 200,
-                    maxHeight: '180px',
-                    overflowY: 'auto',
-                    marginTop: '0.25rem'
-                  }}>
-                    {filteredLanguages.length > 0 ? (
-                      filteredLanguages.map(lang => (
-                        <div
-                          key={lang.code}
-                          onMouseDown={() => {
-                            setSelectedLanguage(lang.code);
-                            setLanguageSearch(lang.name);
-                            setDropdownOpen(false);
-                          }}
-                          style={{
-                            padding: '0.6rem 0.8rem',
-                            cursor: 'pointer',
-                            fontSize: '0.85rem',
-                            color: selectedLanguage === lang.code ? 'var(--accent-cyan)' : 'var(--text-primary)',
-                            backgroundColor: selectedLanguage === lang.code ? 'rgba(6, 182, 212, 0.08)' : 'transparent',
-                            transition: 'background-color 0.15s ease'
-                          }}
-                        >
-                          {lang.flag} {lang.name} ({lang.code.toUpperCase()})
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ padding: '0.6rem 0.8rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                        No languages found
-                      </div>
-                    )}
+                {showEventProps && (
+                  <div>
+                    <textarea
+                      value={eventPropsJson}
+                      onChange={(e) => setEventPropsJson(e.target.value)}
+                      placeholder='{"purchase_amount": 125.00}'
+                      rows={4}
+                      style={{
+                        fontSize: '0.75rem',
+                        fontFamily: 'monospace',
+                        padding: '0.45rem 0.65rem',
+                        color: 'var(--text-primary)',
+                        backgroundColor: 'var(--bg-primary)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--border-radius-sm)',
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        resize: 'vertical',
+                        marginTop: '0.25rem'
+                      }}
+                    />
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                      Access in copy: <code>{"{{ event_properties.prop_name }}"}</code>
+                    </div>
                   </div>
                 )}
               </div>
-              {/* Custom Locale Dictionary Uploader */}
-              <div style={{ marginTop: '0.35rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Upload Locale Dictionary (JSON):</label>
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleUploadTranslation}
-                  style={{
-                    fontSize: '0.7rem',
-                    color: 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    width: '100%'
-                  }}
-                />
-              </div>
             </div>
-
-            {/* Custom Name Override Input */}
-            <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-              <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600' }}>Type Custom Subscriber Name (Overrides preset):</label>
-              <input
-                type="text"
-                className="form-input"
-                value={customName}
-                onChange={(e) => setCustomName(e.target.value)}
-                placeholder="e.g. Marina"
-                style={{ 
-                  fontSize: '0.8rem', 
-                  padding: '0.45rem 0.65rem', 
-                  color: 'var(--text-primary)', 
-                  backgroundColor: 'var(--bg-primary)', 
-                  border: '1px solid var(--border-color)', 
-                  borderRadius: 'var(--border-radius-sm)', 
-                  width: '100%', 
-                  boxSizing: 'border-box' 
-                }}
-              />
-            </div>
-
-            {/* Custom Event Properties JSON Textarea */}
-            <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-              <button
-                type="button"
-                onClick={() => setShowEventProps(!showEventProps)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--accent-cyan)',
-                  cursor: 'pointer',
-                  fontSize: '0.75rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  fontWeight: '600',
-                  padding: 0,
-                  textAlign: 'left'
-                }}
-              >
-                {showEventProps ? '▼ Hide Event Properties (JSON)' : '▶ Show Event Properties (JSON)'}
-              </button>
-              {showEventProps && (
-                <div>
-                  <textarea
-                    value={eventPropsJson}
-                    onChange={(e) => setEventPropsJson(e.target.value)}
-                    placeholder='{"purchase_amount": 125.00}'
-                    rows={4}
-                    style={{
-                      fontSize: '0.75rem',
-                      fontFamily: 'monospace',
-                      padding: '0.45rem 0.65rem',
-                      color: 'var(--text-primary)',
-                      backgroundColor: 'var(--bg-primary)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: 'var(--border-radius-sm)',
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      resize: 'vertical',
-                      marginTop: '0.25rem'
-                    }}
-                  />
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                    Access in copy: <code>{"{{ event_properties.prop_name }}"}</code>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Variables editor moved to top-level bar */}
           </div>
+        )}
+      </div>
+    );
+  };
 
-
-          {/* Device Mockup with Preset Controllers */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
+  const renderChannelCopyEditorsCard = () => {
+    return (
+      <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)', margin: 0 }}>
+        <button
+          onClick={() => setIsEditorsExpanded(!isEditorsExpanded)}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: 'none',
+            border: 'none',
+            width: '100%',
+            padding: 0,
+            cursor: 'pointer',
+            textAlign: 'left'
+          }}
+        >
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, fontSize: '1.1rem' }}>
+            ✍️ Channel Copy Editors ({activeChannel.toUpperCase()})
+          </h3>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            {isEditorsExpanded ? '▼ Collapse' : '▶ Expand'}
+          </span>
+        </button>
+        
+        {isEditorsExpanded && (
+          <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
             
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
-              {/* Device Selector Buttons */}
-              <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
-                <button 
-                  onClick={() => setDevice('iphone')}
-                  className={`sub-tab ${device === 'iphone' ? 'active' : ''}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
-                >
-                  <Smartphone size={12} /> iPhone
-                </button>
-                <button 
-                  onClick={() => setDevice('android')}
-                  className={`sub-tab ${device === 'android' ? 'active' : ''}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
-                >
-                  <Smartphone size={12} /> Android
-                </button>
-                <button 
-                  onClick={() => setDevice('tablet')}
-                  className={`sub-tab ${device === 'tablet' ? 'active' : ''}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
-                >
-                  <Tablet size={12} /> Tablet
-                </button>
-                {activeChannel !== 'push' && (
-                  <button 
-                    onClick={() => setDevice('laptop')}
-                    className={`sub-tab ${device === 'laptop' ? 'active' : ''}`}
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
-                  >
-                    <Laptop size={12} /> Laptop
-                  </button>
-                )}
+            {activeChannel === 'email' && (
+              <div style={{
+                padding: '1rem',
+                backgroundColor: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--border-radius-md)',
+                fontSize: '0.8rem',
+                color: 'var(--text-secondary)',
+                lineHeight: '1.4'
+              }}>
+                📧 Email template copy and subject line are managed in the main <strong>Copy Editor</strong> tab. Use the right-hand panel simulator to preview live personalization rendering.
               </div>
+            )}
 
-              {/* Email Mode Theme Toggle */}
-              <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
-                <button 
-                  onClick={() => setIframeTheme('light')}
-                  className={`sub-tab ${iframeTheme === 'light' ? 'active' : ''}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
-                  title="Simulate email client light mode"
-                >
-                  <Sun size={12} /> Light
-                </button>
-                <button 
-                  onClick={() => setIframeTheme('dark')}
-                  className={`sub-tab ${iframeTheme === 'dark' ? 'active' : ''}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
-                  title="Simulate email client dark mode inversion"
-                >
-                  <Moon size={12} /> Dark
-                </button>
-              </div>
-            </div>
-
-            <div className="phone-wrapper" style={{ padding: '0.5rem 0', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={getDeviceStyle()}>
-                {device === 'iphone' && <div className="phone-notch"></div>}
-                {device === 'android' && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '6px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: '#1f2937',
-                    zIndex: 10
-                  }} />
-                )}
-                
-                <div className="phone-screen" style={{ 
-                  paddingTop: (device === 'laptop' || activeChannel !== 'email') ? '0' : '1.5rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  background: activeChannel === 'push' 
-                    ? 'linear-gradient(135deg, #4c1d95 0%, #1e1b4b 100%)' // Lockscreen wallpaper
-                    : (activeChannel === 'sms' 
-                      ? (iframeTheme === 'dark' ? '#121824' : '#ffffff') 
-                      : 'transparent'),
-                  transition: 'background 0.25s ease'
-                }}>
-                  {activeChannel === 'email' && (
-                    <>
-                      {device !== 'laptop' && (
-                        <div style={{ 
-                          padding: '0.5rem 0.75rem', 
-                          borderBottom: iframeTheme === 'dark' ? '1px solid #374151' : '1px solid #e5e7eb', 
-                          backgroundColor: iframeTheme === 'dark' ? '#1f2937' : '#f9fafb', 
-                          fontSize: '0.7rem', 
-                          color: iframeTheme === 'dark' ? '#9ca3af' : '#6b7280', 
-                          display: 'flex', 
-                          flexDirection: 'column' 
-                        }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>From: <strong style={{ color: iframeTheme === 'dark' ? '#f3f4f6' : '#374151' }}>Dairy Queen</strong></span>
-                            <span>12:00 PM</span>
-                          </div>
-                          <span style={{ marginTop: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            Subject: <strong style={{ color: iframeTheme === 'dark' ? '#ffffff' : '#111827' }}>{renderedSubject}</strong>
-                          </span>
-                        </div>
-                      )}
-                      {renderedHtml ? (
-                        <iframe 
-                          title="Braze Live Email Render" 
-                          srcDoc={renderedHtml}
-                          sandbox="allow-same-origin"
-                          style={{ width: '100%', height: '100%', border: 'none' }}
-                        />
-                      ) : (
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontSize: '0.85rem' }}>
-                          No HTML code loaded.
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {activeChannel === 'push' && (
-                    !pushFullScreen ? (
-                      /* Home Screen / Not Full Screen Banner */
-                      <div style={{
-                        flex: 1,
-                        padding: '1rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'flex-end',
-                        paddingBottom: '2.5rem',
-                        position: 'relative',
-                        height: '100%',
-                        boxSizing: 'border-box',
-                        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', // Home Screen Wallpaper
-                      }}>
-                        {/* Mock Floating Banner Notification at top */}
-                        <div style={{
-                          position: 'absolute',
-                          top: '1rem',
-                          left: '0.75rem',
-                          right: '0.75rem',
-                          zIndex: 10,
-                        }}>
-                          {pushOS === 'ios' ? (
-                            /* iOS Banner */
-                            <div style={{
-                              backgroundColor: 'rgba(255, 255, 255, 0.88)',
-                              backdropFilter: 'blur(20px)',
-                              WebkitBackdropFilter: 'blur(20px)',
-                              borderRadius: '16px',
-                              padding: '0.75rem 1rem',
-                              boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
-                              border: '1px solid rgba(255, 255, 255, 0.4)',
-                              textAlign: 'left',
-                              color: '#111827'
-                            }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', opacity: 0.7, marginBottom: '0.25rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                  <span style={{ background: '#f43f5e', width: '12px', height: '12px', borderRadius: '3px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '8px', fontWeight: '800' }}>DQ</span>
-                                  <span style={{ fontWeight: '600', color: '#374151' }}>DAIRY QUEEN</span>
-                                </div>
-                                <span>now</span>
-                              </div>
-                              <div style={{ fontSize: '0.8rem', fontWeight: '700' }}>{renderedSubject}</div>
-                              <div style={{ fontSize: '0.75rem', color: '#1f2937', lineHeight: '1.3' }}>{renderedPushBody}</div>
-                            </div>
-                          ) : (
-                            /* Android Banner */
-                            <div style={{
-                              backgroundColor: '#1f2937',
-                              borderRadius: '8px',
-                              padding: '0.75rem 1rem',
-                              boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
-                              border: '1px solid #374151',
-                              textAlign: 'left',
-                              color: '#f9fafb'
-                            }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: '#9ca3af', marginBottom: '0.25rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                  <span style={{ background: 'var(--accent-blue)', width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block' }} />
-                                  <span>Dairy Queen Rewards</span>
-                                </div>
-                                <span>now</span>
-                              </div>
-                              <div style={{ fontSize: '0.8rem', fontWeight: '700' }}>{renderedSubject}</div>
-                              <div style={{ fontSize: '0.75rem', color: '#d1d5db', lineHeight: '1.3' }}>{renderedPushBody}</div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* App Icons Grid */}
-                        <div style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(4, 1fr)',
-                          gap: '1.2rem 0.5rem',
-                          width: '100%',
-                          opacity: 0.85
-                        }}>
-                          {[
-                            { label: 'Mail', color: '#3b82f6' },
-                            { label: 'Safari', color: '#10b981' },
-                            { label: 'Photos', color: '#f59e0b' },
-                            { label: 'Maps', color: '#ef4444' },
-                            { label: 'Settings', color: '#6b7280' },
-                            { label: 'Weather', color: '#06b6d4' },
-                            { label: 'Notes', color: '#eab308' },
-                            { label: 'App Store', color: '#2563eb' }
-                          ].map((app, i) => (
-                            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-                              <div style={{
-                                width: '32px',
-                                height: '32px',
-                                borderRadius: '8px',
-                                backgroundColor: app.color,
-                                boxShadow: '0 4px 6px rgba(0,0,0,0.2)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#ffffff',
-                                fontSize: '0.65rem',
-                                fontWeight: '700'
-                              }}>
-                                {app.label.substring(0, 1)}
-                              </div>
-                              <span style={{ fontSize: '0.55rem', color: '#ffffff', textShadow: '0 1px 2px rgba(0,0,0,0.8)', fontWeight: '500' }}>
-                                {app.label}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      /* Full Screen Lockscreen View */
-                      <div style={{ 
-                        flex: 1, 
-                        padding: '1.25rem', 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        alignItems: 'center',
-                        justifyContent: 'flex-start',
-                        gap: '1.5rem',
-                        height: '100%',
-                        boxSizing: 'border-box',
-                        color: '#ffffff',
-                        position: 'relative'
-                      }}>
-                        {/* iOS Lockscreen Top Time Display */}
-                        {pushOS === 'ios' && (
-                          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.15rem', marginTop: '1.5rem', opacity: 0.9 }}>
-                            <span style={{ fontSize: '0.7rem', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '1px' }}>Friday, June 5</span>
-                            <span style={{ fontSize: '2.25rem', fontWeight: '300', fontFamily: 'var(--font-sans)', letterSpacing: '-0.5px' }}>12:00</span>
-                          </div>
-                        )}
-
-                        {/* Mock Notification Card */}
-                        {pushOS === 'ios' ? (
-                          /* iOS Notification Card */
-                          <div style={{
-                            width: '100%',
-                            backgroundColor: 'rgba(255, 255, 255, 0.18)',
-                            backdropFilter: 'blur(20px)',
-                            WebkitBackdropFilter: 'blur(20px)',
-                            borderRadius: '16px',
-                            padding: '0.75rem 1rem',
-                            boxSizing: 'border-box',
-                            boxShadow: '0 4px 30px rgba(0, 0, 0, 0.2)',
-                            border: '1px solid rgba(255, 255, 255, 0.15)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.25rem',
-                            textAlign: 'left'
-                          }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', opacity: 0.7, marginBottom: '0.2rem' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                <span style={{ background: 'var(--accent-cyan)', width: '12px', height: '12px', borderRadius: '3px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontSize: '8px', fontWeight: '800' }}>DQ</span>
-                                <span style={{ fontWeight: '600' }}>DAIRY QUEEN</span>
-                              </div>
-                              <span>now</span>
-                            </div>
-                            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#ffffff' }}>{renderedSubject}</div>
-                            <div style={{ fontSize: '0.75rem', color: '#e0e7ff', lineHeight: '1.3' }}>{renderedPushBody}</div>
-                            
-                            {/* Rich Push Image */}
-                            <img 
-                              src="blizzard_push_banner.png" 
-                              alt="Push Campaign Banner" 
-                              style={{
-                                width: '100%',
-                                height: '80px',
-                                objectFit: 'cover',
-                                borderRadius: '8px',
-                                marginTop: '0.5rem',
-                                border: '1px solid rgba(255, 255, 255, 0.1)'
-                              }}
-                            />
-                          </div>
-                        ) : (
-                          /* Android Notification Card */
-                          <div style={{
-                            width: '100%',
-                            backgroundColor: '#1f2937',
-                            borderRadius: '8px',
-                            padding: '0.75rem 1rem',
-                            boxSizing: 'border-box',
-                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
-                            border: '1px solid #374151',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.2rem',
-                            textAlign: 'left',
-                            marginTop: '2.5rem'
-                          }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: '#9ca3af', marginBottom: '0.2rem' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                <span style={{ background: 'var(--accent-blue)', width: '10px', height: '10px', borderRadius: '50%', display: 'inline-block' }} />
-                                <span>Dairy Queen Rewards</span>
-                              </div>
-                              <span>12:00 PM</span>
-                            </div>
-                            <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#f9fafb' }}>{renderedSubject}</div>
-                            <div style={{ fontSize: '0.75rem', color: '#d1d5db', lineHeight: '1.3' }}>{renderedPushBody}</div>
-                            
-                            {/* Rich Push Image */}
-                            <img 
-                              src="blizzard_push_banner.png" 
-                              alt="Push Campaign Banner" 
-                              style={{
-                                width: '100%',
-                                height: '80px',
-                                objectFit: 'cover',
-                                borderRadius: '8px',
-                                marginTop: '0.5rem',
-                                border: '1px solid rgba(255, 255, 255, 0.1)'
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )
-                  )}
-
-                  {activeChannel === 'sms' && (
-                    <div style={{
-                      flex: 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      height: '100%',
-                      boxSizing: 'border-box'
-                    }}>
-                      {/* SMS Contact Header */}
-                      <div style={{
-                        padding: '0.5rem 0.75rem',
-                        borderBottom: iframeTheme === 'dark' ? '1px solid #374151' : '1px solid #e5e7eb',
-                        backgroundColor: iframeTheme === 'dark' ? '#1f2937' : '#f9fafb',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        color: iframeTheme === 'dark' ? '#f3f4f6' : '#111827'
-                      }}>
-                        <div style={{
-                          width: '24px',
-                          height: '24px',
-                          borderRadius: '50%',
-                          backgroundColor: 'var(--accent-blue)',
-                          color: '#ffffff',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '0.65rem',
-                          fontWeight: '700'
-                        }}>
-                          DQ
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: '600' }}>Dairy Queen Promo</span>
-                          <span style={{ fontSize: '0.55rem', color: iframeTheme === 'dark' ? '#94a3b8' : '#64748b' }}>+1 (833) 247-3367</span>
-                        </div>
-                      </div>
-
-                      {/* SMS Chat Stream */}
-                      <div style={{
-                        flex: 1,
-                        padding: '1rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'flex-start',
-                        gap: '1rem',
-                        overflowY: 'auto'
-                      }}>
-                        <div style={{
-                          alignSelf: 'center',
-                          fontSize: '0.6rem',
-                          color: iframeTheme === 'dark' ? '#94a3b8' : '#64748b',
-                          backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '10px'
-                        }}>
-                          Text Message &bull; Today 12:00 PM
-                        </div>
-
-                        {/* Incoming Text Bubble */}
-                        <div style={{
-                          alignSelf: 'flex-start',
-                          maxWidth: '85%',
-                          backgroundColor: iframeTheme === 'dark' ? '#26262b' : '#e9e9eb',
-                          color: iframeTheme === 'dark' ? '#f3f4f6' : '#000000',
-                          padding: '0.65rem 0.85rem',
-                          borderRadius: '16px 16px 16px 4px',
-                          fontSize: '0.75rem',
-                          lineHeight: '1.4',
-                          textAlign: 'left',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
-                        }}>
-                          {renderedSmsBody}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {activeChannel === 'iam' && (
-                    <div style={{
-                      flex: 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      height: '100%',
-                      boxSizing: 'border-box',
-                      position: 'relative',
-                      background: iframeTheme === 'dark' 
-                        ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' 
-                        : 'linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%)',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      padding: '1.25rem'
-                    }}>
-                      {/* Mock App Interface Background */}
-                      <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', fontSize: '0.65rem', color: iframeTheme === 'dark' ? '#94a3b8' : '#475569', fontWeight: '600' }}>
-                        Dairy Queen App
-                      </div>
-
-                      {/* Modal Style IAM Preview */}
-                      {iamStyle === 'modal' && (
-                        <div style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          backgroundColor: 'rgba(0,0,0,0.6)',
-                          zIndex: 20,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: '1.25rem',
-                          animation: 'fadeIn 0.2s ease'
-                        }}>
-                          <div style={{
-                            backgroundColor: iframeTheme === 'dark' ? '#1f2937' : '#ffffff',
-                            color: iframeTheme === 'dark' ? '#ffffff' : '#111827',
-                            borderRadius: '12px',
-                            width: '100%',
-                            maxWidth: '240px',
-                            boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-                            padding: '1.25rem',
-                            position: 'relative',
-                            textAlign: 'center',
-                            border: iframeTheme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '0.5rem'
-                          }}>
-                            {/* Close icon */}
-                            <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', opacity: 0.6, cursor: 'pointer' }}>
-                              <X size={12} />
-                            </div>
-
-                            {/* Campaign icon */}
-                            <div style={{
-                              width: '32px',
-                              height: '32px',
-                              borderRadius: '8px',
-                              backgroundColor: '#f43f5e',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: '#fff',
-                              fontSize: '0.8rem',
-                              fontWeight: '800',
-                              marginBottom: '0.25rem'
-                            }}>
-                              DQ
-                            </div>
-
-                            <h4 style={{ fontSize: '0.85rem', fontWeight: '700', margin: 0, color: iframeTheme === 'dark' ? '#ffffff' : '#111827' }}>{renderedIamHeader}</h4>
-                            <p style={{ fontSize: '0.75rem', color: iframeTheme === 'dark' ? '#cbd5e1' : '#374151', lineHeight: '1.3', margin: 0 }}>
-                              {renderedIamBody}
-                            </p>
-                            
-                            <a 
-                              href={iamButtonLink} 
-                              target="_blank" 
-                              rel="noreferrer"
-                              style={{
-                                display: 'block',
-                                width: '100%',
-                                backgroundColor: '#f43f5e',
-                                color: '#ffffff',
-                                textAlign: 'center',
-                                padding: '0.45rem',
-                                borderRadius: '6px',
-                                fontSize: '0.75rem',
-                                fontWeight: '700',
-                                textDecoration: 'none',
-                                marginTop: '0.5rem'
-                              }}
-                            >
-                              {renderedIamButtonText}
-                            </a>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Slideup Style IAM Preview */}
-                      {iamStyle === 'slideup' && (
-                        <div style={{
-                          position: 'absolute',
-                          bottom: '1rem',
-                          left: '0.75rem',
-                          right: '0.75rem',
-                          backgroundColor: iframeTheme === 'dark' ? '#1f2937' : '#ffffff',
-                          color: iframeTheme === 'dark' ? '#ffffff' : '#111827',
-                          borderRadius: '10px',
-                          boxShadow: '0 8px 25px rgba(0,0,0,0.4)',
-                          padding: '0.75rem 1rem',
-                          border: iframeTheme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
-                          zIndex: 20,
-                          textAlign: 'left',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.75rem',
-                          animation: 'slideUp 0.3s ease'
-                        }}>
-                          <div style={{
-                            width: '24px',
-                            height: '24px',
-                            borderRadius: '6px',
-                            backgroundColor: '#f43f5e',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#fff',
-                            fontSize: '0.65rem',
-                            fontWeight: '800',
-                            flexShrink: 0
-                          }}>
-                            DQ
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '0.75rem', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: iframeTheme === 'dark' ? '#ffffff' : '#111827' }}>{renderedIamHeader}</div>
-                            <div style={{ fontSize: '0.65rem', color: iframeTheme === 'dark' ? '#cbd5e1' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{renderedIamBody}</div>
-                          </div>
-                          <a 
-                            href={iamButtonLink} 
-                            target="_blank" 
-                            rel="noreferrer"
-                            style={{
-                              backgroundColor: '#f43f5e',
-                              color: '#ffffff',
-                              padding: '0.3rem 0.6rem',
-                              borderRadius: '4px',
-                              fontSize: '0.65rem',
-                              fontWeight: '700',
-                              textDecoration: 'none',
-                              flexShrink: 0
-                            }}
-                          >
-                            {renderedIamButtonText}
-                          </a>
-                        </div>
-                      )}
-
-                      {/* Fullscreen Style IAM Preview */}
-                      {iamStyle === 'fullscreen' && (
-                        <div style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          backgroundColor: iframeTheme === 'dark' ? '#0f172a' : '#f8fafc',
-                          color: iframeTheme === 'dark' ? '#ffffff' : '#111827',
-                          zIndex: 20,
-                          padding: '2rem 1.25rem',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          gap: '1rem',
-                          textAlign: 'center',
-                          animation: 'fadeIn 0.25s ease'
-                        }}>
-                          <div style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', opacity: 0.7, cursor: 'pointer' }}>
-                            <X size={14} />
-                          </div>
-
-                          {/* Hero Mascot Icon */}
-                          <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '10px',
-                            backgroundColor: '#f43f5e',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#fff',
-                            fontSize: '1.1rem',
-                            fontWeight: '800',
-                            boxShadow: '0 8px 16px rgba(244,63,94,0.3)'
-                          }}>
-                            DQ
-                          </div>
-
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <h3 style={{ fontSize: '1rem', fontWeight: '800', margin: 0, color: iframeTheme === 'dark' ? '#ffffff' : '#111827' }}>{renderedIamHeader}</h3>
-                            <p style={{ fontSize: '0.75rem', color: iframeTheme === 'dark' ? '#cbd5e1' : '#374151', lineHeight: '1.4', margin: 0 }}>
-                              {renderedIamBody}
-                            </p>
-                          </div>
-
-                          <a 
-                             href={iamButtonLink} 
-                             target="_blank" 
-                             rel="noreferrer"
-                            style={{
-                              display: 'block',
-                              width: '100%',
-                              maxWidth: '180px',
-                              backgroundColor: '#f43f5e',
-                              color: '#ffffff',
-                              textAlign: 'center',
-                              padding: '0.5rem',
-                              borderRadius: '6px',
-                              fontSize: '0.75rem',
-                              fontWeight: '700',
-                              textDecoration: 'none',
-                              boxShadow: '0 4px 12px rgba(244,63,94,0.4)',
-                              marginTop: '0.75rem'
-                            }}
-                          >
-                            {renderedIamButtonText}
-                          </a>
-                          
-                          <span style={{ fontSize: '0.65rem', color: iframeTheme === 'dark' ? '#94a3b8' : '#64748b', cursor: 'pointer' }}>
-                            Maybe Later
-                          </span>
-                        </div>
-                      )}
-
-                      {/* App Mock Home UI (Decorative behind popup/slideup) */}
-                      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', opacity: (iamStyle === 'fullscreen') ? 0 : 0.35, pointerEvents: 'none' }}>
-                        <div style={{ height: '32px', backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: '6px' }} />
-                        <div style={{ height: '80px', backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: '8px' }} />
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                          <div style={{ height: '60px', backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: '6px' }} />
-                          <div style={{ height: '60px', backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: '6px' }} />
-                        </div>
-                        <div style={{ height: '40px', backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: '6px' }} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {device === 'laptop' && (
-                <div className="laptop-base" style={{ 
-                  height: '10px', 
-                  background: '#374151', 
-                  width: '90%', 
-                  maxWidth: '580px',
-                  borderRadius: '0 0 8px 8px',
-                  borderBottom: '4px solid #1f2937',
-                  boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
-                  zIndex: 5
-                }} />
-              )}
-
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => setShowIframeFullscreen(true)}
-                style={{ marginTop: '1.25rem', padding: '0.4rem 0.8rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', width: 'auto' }}
-              >
-                <Maximize2 size={12} /> Fullscreen Live Render
-              </button>
-            </div>
-
-            {/* Dynamic Copy Input fields below Device Simulator based on active Channel */}
             {activeChannel === 'push' && (
-              <div style={{ width: '100%', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
                   <label className="form-label" style={{ fontSize: '0.8rem' }}>Push Notification Body Copy</label>
                   <textarea
@@ -1788,7 +1045,6 @@ export default function VisualStressTester({
                     🤖 Android UI Frame
                   </button>
                 </div>
-                {/* Push preview style toggle */}
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
                   <button 
                     onClick={() => setPushFullScreen(true)}
@@ -1809,7 +1065,7 @@ export default function VisualStressTester({
             )}
 
             {activeChannel === 'sms' && (
-              <div style={{ width: '100%', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
                   <label className="form-label" style={{ fontSize: '0.8rem' }}>SMS Message Body Copy</label>
                   <textarea
@@ -1825,7 +1081,7 @@ export default function VisualStressTester({
             )}
 
             {activeChannel === 'iam' && (
-              <div style={{ width: '100%', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
                   <label className="form-label" style={{ fontSize: '0.8rem' }}>IAM Header Title</label>
                   <input
@@ -1847,7 +1103,7 @@ export default function VisualStressTester({
                     style={{ minHeight: '60px', fontSize: '0.85rem', padding: '0.5rem', fontFamily: 'var(--font-sans)', color: 'var(--text-primary)' }}
                   />
                 </div>
-                <div className="settings-grid">
+                <div className="settings-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                   <div className="form-group" style={{ margin: 0, display: 'flex', flexDirection: 'column' }}>
                     <label className="form-label" style={{ fontSize: '0.8rem' }}>Button Text</label>
                     <input
@@ -1898,301 +1154,1262 @@ export default function VisualStressTester({
                 </div>
               </div>
             )}
+            
+          </div>
+        )}
+      </div>
+    );
+  };
 
+  const renderDeviceSimulator = () => {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Multi-Device Rendering Simulator</h3>
+          <span className="api-badge connected" style={{ fontSize: '0.75rem' }}>
+            <span className="indicator" /> Active Sandbox
+          </span>
+        </div>
+
+        {/* Channel Select Tabs */}
+        <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
+          <button 
+            onClick={() => setActiveChannel('email')}
+            className={`sub-tab ${activeChannel === 'email' ? 'active' : ''}`}
+            style={{ flex: 1, padding: '0.4rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.75rem' }}
+          >
+            <Mail size={12} /> Email Preview
+          </button>
+          <button 
+            onClick={() => setActiveChannel('push')}
+            className={`sub-tab ${activeChannel === 'push' ? 'active' : ''}`}
+            style={{ flex: 1, padding: '0.4rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.75rem' }}
+          >
+            <Bell size={12} /> Push Preview
+          </button>
+          <button 
+            onClick={() => setActiveChannel('sms')}
+            className={`sub-tab ${activeChannel === 'sms' ? 'active' : ''}`}
+            style={{ flex: 1, padding: '0.4rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.75rem' }}
+          >
+            <MessageSquare size={12} /> SMS Preview
+          </button>
+          <button 
+            onClick={() => setActiveChannel('iam')}
+            className={`sub-tab ${activeChannel === 'iam' ? 'active' : ''}`}
+            style={{ flex: 1, padding: '0.4rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.75rem' }}
+          >
+            <Sparkles size={12} /> IAM Preview
+          </button>
+        </div>
+
+        {/* Simulator Frame Controls */}
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
+          {/* Device Selector Buttons */}
+          <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
+            <button 
+              onClick={() => setDevice('iphone')}
+              className={`sub-tab ${device === 'iphone' ? 'active' : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+            >
+              <Smartphone size={12} /> iPhone
+            </button>
+            <button 
+              onClick={() => setDevice('android')}
+              className={`sub-tab ${device === 'android' ? 'active' : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+            >
+              <Smartphone size={12} /> Android
+            </button>
+            <button 
+              onClick={() => setDevice('tablet')}
+              className={`sub-tab ${device === 'tablet' ? 'active' : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+            >
+              <Tablet size={12} /> Tablet
+            </button>
+            {activeChannel !== 'push' && (
+              <button 
+                onClick={() => setDevice('laptop')}
+                className={`sub-tab ${device === 'laptop' ? 'active' : ''}`}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+              >
+                <Laptop size={12} /> Laptop
+              </button>
+            )}
+          </div>
+
+          {/* Email Mode Theme Toggle */}
+          <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
+            <button 
+              onClick={() => setIframeTheme('light')}
+              className={`sub-tab ${iframeTheme === 'light' ? 'active' : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+              title="Simulate email client light mode"
+            >
+              <Sun size={12} /> Light
+            </button>
+            <button 
+              onClick={() => setIframeTheme('dark')}
+              className={`sub-tab ${iframeTheme === 'dark' ? 'active' : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+              title="Simulate email client dark mode inversion"
+            >
+              <Moon size={12} /> Dark
+            </button>
           </div>
         </div>
 
+        {/* The Frame */}
+        <div className="phone-wrapper" style={{ padding: '0.5rem 0', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={getDeviceStyle()}>
+            {device === 'iphone' && <div className="phone-notch"></div>}
+            {device === 'android' && (
+              <div style={{
+                position: 'absolute',
+                top: '6px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: '#1f2937',
+                zIndex: 10
+              }} />
+            )}
+            
+            <div className="phone-screen" style={{ 
+              paddingTop: (device === 'laptop' || activeChannel !== 'email') ? '0' : '1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              background: activeChannel === 'push' 
+                ? 'linear-gradient(135deg, #4c1d95 0%, #1e1b4b 100%)' // Lockscreen wallpaper
+                : (activeChannel === 'sms' 
+                  ? (iframeTheme === 'dark' ? '#121824' : '#ffffff') 
+                  : 'transparent'),
+              transition: 'background 0.25s ease'
+            }}>
+              {activeChannel === 'email' && (
+                <>
+                  {device !== 'laptop' && (
+                    <div style={{ 
+                      padding: '0.5rem 0.75rem', 
+                      borderBottom: iframeTheme === 'dark' ? '1px solid #374151' : '1px solid #e5e7eb', 
+                      backgroundColor: iframeTheme === 'dark' ? '#1f2937' : '#f9fafb', 
+                      fontSize: '0.7rem', 
+                      color: iframeTheme === 'dark' ? '#9ca3af' : '#6b7280', 
+                      display: 'flex', 
+                      flexDirection: 'column' 
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>From: <strong style={{ color: iframeTheme === 'dark' ? '#f3f4f6' : '#374151' }}>Dairy Queen</strong></span>
+                        <span>12:00 PM</span>
+                      </div>
+                      <span style={{ marginTop: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        Subject: <strong style={{ color: iframeTheme === 'dark' ? '#ffffff' : '#111827' }}>{renderedSubject}</strong>
+                      </span>
+                    </div>
+                  )}
+                  {renderedHtml ? (
+                    <iframe 
+                      title="Braze Live Email Render" 
+                      srcDoc={renderedHtml}
+                      sandbox="allow-same-origin"
+                      style={{ width: '100%', height: '100%', border: 'none' }}
+                    />
+                  ) : (
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontSize: '0.85rem' }}>
+                      No HTML code loaded.
+                    </div>
+                  )}
+                </>
+              )}
 
-        {/* Right Side: Figma Design Reference or Subject Inbox Previews */}
-        <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
-              <button
-                onClick={() => setRightPanelTab('figma')}
-                className={`sub-tab ${rightPanelTab === 'figma' ? 'active' : ''}`}
-                style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', border: 'none', cursor: 'pointer' }}
-              >
-                📐 Figma Spec
-              </button>
-              <button
-                onClick={() => setRightPanelTab('inbox')}
-                className={`sub-tab ${rightPanelTab === 'inbox' ? 'active' : ''}`}
-                style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', border: 'none', cursor: 'pointer' }}
-              >
-                📥 Inbox Previews
-              </button>
+              {activeChannel === 'push' && (
+                !pushFullScreen ? (
+                  /* Home Screen / Not Full Screen Banner */
+                  <div style={{
+                    flex: 1,
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-end',
+                    paddingBottom: '2.5rem',
+                    position: 'relative',
+                    height: '100%',
+                    boxSizing: 'border-box',
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', // Home Screen Wallpaper
+                  }}>
+                    {/* Mock Floating Banner Notification at top */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '1rem',
+                      left: '0.75rem',
+                      right: '0.75rem',
+                      zIndex: 10,
+                    }}>
+                      {pushOS === 'ios' ? (
+                        /* iOS Banner */
+                        <div style={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.88)',
+                          backdropFilter: 'blur(20px)',
+                          WebkitBackdropFilter: 'blur(20px)',
+                          borderRadius: '16px',
+                          padding: '0.75rem 1rem',
+                          boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+                          border: '1px solid rgba(255, 255, 255, 0.4)',
+                          textAlign: 'left',
+                          color: '#111827'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', opacity: 0.7, marginBottom: '0.25rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <span style={{ background: '#f43f5e', width: '12px', height: '12px', borderRadius: '3px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '8px', fontWeight: '800' }}>DQ</span>
+                              <span style={{ fontWeight: '600', color: '#374151' }}>DAIRY QUEEN</span>
+                            </div>
+                            <span>now</span>
+                          </div>
+                          <div style={{ fontSize: '0.8rem', fontWeight: '700' }}>{renderedSubject}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#1f2937', lineHeight: '1.3' }}>{renderedPushBody}</div>
+                        </div>
+                      ) : (
+                        /* Android Banner */
+                        <div style={{
+                          backgroundColor: '#1f2937',
+                          borderRadius: '8px',
+                          padding: '0.75rem 1rem',
+                          boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
+                          border: '1px solid #374151',
+                          textAlign: 'left',
+                          color: '#f9fafb'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: '#9ca3af', marginBottom: '0.25rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <span style={{ background: 'var(--accent-blue)', width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block' }} />
+                              <span>Dairy Queen Rewards</span>
+                            </div>
+                            <span>now</span>
+                          </div>
+                          <div style={{ fontSize: '0.8rem', fontWeight: '700' }}>{renderedSubject}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#d1d5db', lineHeight: '1.3' }}>{renderedPushBody}</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* App Icons Grid */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(4, 1fr)',
+                      gap: '1.2rem 0.5rem',
+                      width: '100%',
+                      opacity: 0.85
+                    }}>
+                      {[
+                        { label: 'Mail', color: '#3b82f6' },
+                        { label: 'Safari', color: '#10b981' },
+                        { label: 'Photos', color: '#f59e0b' },
+                        { label: 'Maps', color: '#ef4444' },
+                        { label: 'Settings', color: '#6b7280' },
+                        { label: 'Weather', color: '#06b6d4' },
+                        { label: 'Notes', color: '#eab308' },
+                        { label: 'App Store', color: '#2563eb' }
+                      ].map((app, i) => (
+                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '8px',
+                            backgroundColor: app.color,
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#ffffff',
+                            fontSize: '0.65rem',
+                            fontWeight: '700'
+                          }}>
+                            {app.label.substring(0, 1)}
+                          </div>
+                          <span style={{ fontSize: '0.55rem', color: '#ffffff', textShadow: '0 1px 2px rgba(0,0,0,0.8)', fontWeight: '500' }}>
+                            {app.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  /* Full Screen Lockscreen View */
+                  <div style={{ 
+                    flex: 1, 
+                    padding: '1.25rem', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    justifyContent: 'flex-start',
+                    gap: '1.5rem',
+                    height: '100%',
+                    boxSizing: 'border-box',
+                    color: '#ffffff',
+                    position: 'relative'
+                  }}>
+                    {/* iOS Lockscreen Top Time Display */}
+                    {pushOS === 'ios' && (
+                      <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.15rem', marginTop: '1.5rem', opacity: 0.9 }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '1px' }}>Friday, June 5</span>
+                        <span style={{ fontSize: '2.25rem', fontWeight: '300', fontFamily: 'var(--font-sans)', letterSpacing: '-0.5px' }}>12:00</span>
+                      </div>
+                    )}
+
+                    {/* Mock Notification Card */}
+                    {pushOS === 'ios' ? (
+                      /* iOS Notification Card */
+                      <div style={{
+                        width: '100%',
+                        backgroundColor: 'rgba(255, 255, 255, 0.18)',
+                        backdropFilter: 'blur(20px)',
+                        WebkitBackdropFilter: 'blur(20px)',
+                        borderRadius: '16px',
+                        padding: '0.75rem 1rem',
+                        boxSizing: 'border-box',
+                        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.25rem',
+                        textAlign: 'left'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', opacity: 0.7, marginBottom: '0.2rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <span style={{ background: 'var(--accent-cyan)', width: '12px', height: '12px', borderRadius: '3px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontSize: '8px', fontWeight: '800' }}>DQ</span>
+                            <span style={{ fontWeight: '600' }}>DAIRY QUEEN</span>
+                          </div>
+                          <span>now</span>
+                        </div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#ffffff' }}>{renderedSubject}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#e0e7ff', lineHeight: '1.3' }}>{renderedPushBody}</div>
+                        
+                        {/* Rich Push Image */}
+                        <img 
+                          src="blizzard_push_banner.png" 
+                          alt="Push Campaign Banner" 
+                          style={{
+                            width: '100%',
+                            height: '80px',
+                            objectFit: 'cover',
+                            borderRadius: '8px',
+                            marginTop: '0.5rem',
+                            border: '1px solid rgba(255, 255, 255, 0.1)'
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      /* Android Notification Card */
+                      <div style={{
+                        width: '100%',
+                        backgroundColor: '#1f2937',
+                        borderRadius: '8px',
+                        padding: '0.75rem 1rem',
+                        boxSizing: 'border-box',
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+                        border: '1px solid #374151',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.2rem',
+                        textAlign: 'left',
+                        marginTop: '2.5rem'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: '#9ca3af', marginBottom: '0.2rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <span style={{ background: 'var(--accent-blue)', width: '10px', height: '10px', borderRadius: '50%', display: 'inline-block' }} />
+                            <span>Dairy Queen Rewards</span>
+                          </div>
+                          <span>12:00 PM</span>
+                        </div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#f9fafb' }}>{renderedSubject}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#d1d5db', lineHeight: '1.3' }}>{renderedPushBody}</div>
+                        
+                        {/* Rich Push Image */}
+                        <img 
+                          src="blizzard_push_banner.png" 
+                          alt="Push Campaign Banner" 
+                          style={{
+                            width: '100%',
+                            height: '80px',
+                            objectFit: 'cover',
+                            borderRadius: '8px',
+                            marginTop: '0.5rem',
+                            border: '1px solid rgba(255, 255, 255, 0.1)'
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )
+              )}
+
+              {activeChannel === 'sms' && (
+                <div style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
+                  boxSizing: 'border-box'
+                }}>
+                  {/* SMS Contact Header */}
+                  <div style={{
+                    padding: '0.5rem 0.75rem',
+                    borderBottom: iframeTheme === 'dark' ? '1px solid #374151' : '1px solid #e5e7eb',
+                    backgroundColor: iframeTheme === 'dark' ? '#1f2937' : '#f9fafb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    color: iframeTheme === 'dark' ? '#f3f4f6' : '#111827'
+                  }}>
+                    <div style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--accent-blue)',
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.65rem',
+                      fontWeight: '700'
+                    }}>
+                      DQ
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '600' }}>Dairy Queen Promo</span>
+                      <span style={{ fontSize: '0.55rem', color: iframeTheme === 'dark' ? '#94a3b8' : '#64748b' }}>+1 (833) 247-3367</span>
+                    </div>
+                  </div>
+
+                  {/* SMS Chat Stream */}
+                  <div style={{
+                    flex: 1,
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-start',
+                    gap: '1rem',
+                    overflowY: 'auto'
+                  }}>
+                    <div style={{
+                      alignSelf: 'center',
+                      fontSize: '0.6rem',
+                      color: iframeTheme === 'dark' ? '#94a3b8' : '#64748b',
+                      backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                      padding: '0.2rem 0.5rem',
+                      borderRadius: '10px'
+                    }}>
+                      Text Message &bull; Today 12:00 PM
+                    </div>
+
+                    {/* Incoming Text Bubble */}
+                    <div style={{
+                      alignSelf: 'flex-start',
+                      maxWidth: '85%',
+                      backgroundColor: iframeTheme === 'dark' ? '#26262b' : '#e9e9eb',
+                      color: iframeTheme === 'dark' ? '#f3f4f6' : '#000000',
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: '16px 16px 16px 4px',
+                      fontSize: '0.75rem',
+                      lineHeight: '1.4',
+                      textAlign: 'left',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+                    }}>
+                      {renderedSmsBody}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeChannel === 'iam' && (
+                <div style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
+                  boxSizing: 'border-box',
+                  position: 'relative',
+                  background: iframeTheme === 'dark' 
+                    ? 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' 
+                    : 'linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%)',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  padding: '1.25rem'
+                }}>
+                  {/* Mock App Interface Background */}
+                  <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', fontSize: '0.65rem', color: iframeTheme === 'dark' ? '#94a3b8' : '#475569', fontWeight: '600' }}>
+                    Dairy Queen App
+                  </div>
+
+                  {/* Modal Style IAM Preview */}
+                  {iamStyle === 'modal' && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: 'rgba(0,0,0,0.6)',
+                      zIndex: 20,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '1.25rem',
+                      animation: 'fadeIn 0.2s ease'
+                    }}>
+                      <div style={{
+                        backgroundColor: iframeTheme === 'dark' ? '#1f2937' : '#ffffff',
+                        color: iframeTheme === 'dark' ? '#ffffff' : '#111827',
+                        borderRadius: '12px',
+                        width: '100%',
+                        maxWidth: '240px',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                        padding: '1.25rem',
+                        position: 'relative',
+                        textAlign: 'center',
+                        border: iframeTheme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}>
+                        {/* Close icon */}
+                        <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', opacity: 0.6, cursor: 'pointer' }}>
+                          <X size={12} />
+                        </div>
+
+                        {/* Campaign icon */}
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '8px',
+                          backgroundColor: '#f43f5e',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#fff',
+                          fontSize: '0.8rem',
+                          fontWeight: '800',
+                          marginBottom: '0.25rem'
+                        }}>
+                          DQ
+                        </div>
+
+                        <h4 style={{ fontSize: '0.85rem', fontWeight: '700', margin: 0, color: iframeTheme === 'dark' ? '#ffffff' : '#111827' }}>{renderedIamHeader}</h4>
+                        <p style={{ fontSize: '0.75rem', color: iframeTheme === 'dark' ? '#cbd5e1' : '#374151', lineHeight: '1.3', margin: 0 }}>
+                          {renderedIamBody}
+                        </p>
+                        
+                        <a 
+                          href={iamButtonLink} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            backgroundColor: '#f43f5e',
+                            color: '#ffffff',
+                            textAlign: 'center',
+                            padding: '0.45rem',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: '700',
+                            textDecoration: 'none',
+                            marginTop: '0.5rem'
+                          }}
+                        >
+                          {renderedIamButtonText}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Slideup Style IAM Preview */}
+                  {iamStyle === 'slideup' && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '1rem',
+                      left: '0.75rem',
+                      right: '0.75rem',
+                      backgroundColor: iframeTheme === 'dark' ? '#1f2937' : '#ffffff',
+                      color: iframeTheme === 'dark' ? '#ffffff' : '#111827',
+                      borderRadius: '10px',
+                      boxShadow: '0 8px 25px rgba(0,0,0,0.4)',
+                      padding: '0.75rem 1rem',
+                      border: iframeTheme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                      zIndex: 20,
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      animation: 'slideUp 0.3s ease'
+                    }}>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '6px',
+                        backgroundColor: '#f43f5e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        fontSize: '0.65rem',
+                        fontWeight: '800',
+                        flexShrink: 0
+                      }}>
+                        DQ
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: iframeTheme === 'dark' ? '#ffffff' : '#111827' }}>{renderedIamHeader}</div>
+                        <div style={{ fontSize: '0.65rem', color: iframeTheme === 'dark' ? '#cbd5e1' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{renderedIamBody}</div>
+                      </div>
+                      <a 
+                        href={iamButtonLink} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        style={{
+                          backgroundColor: '#f43f5e',
+                          color: '#ffffff',
+                          padding: '0.3rem 0.6rem',
+                          borderRadius: '4px',
+                          fontSize: '0.65rem',
+                          fontWeight: '700',
+                          textDecoration: 'none',
+                          flexShrink: 0
+                        }}
+                      >
+                        {renderedIamButtonText}
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Fullscreen Style IAM Preview */}
+                  {iamStyle === 'fullscreen' && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: iframeTheme === 'dark' ? '#0f172a' : '#f8fafc',
+                      color: iframeTheme === 'dark' ? '#ffffff' : '#111827',
+                      zIndex: 20,
+                      padding: '2rem 1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: '1rem',
+                      textAlign: 'center',
+                      animation: 'fadeIn 0.25s ease'
+                    }}>
+                      <div style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', opacity: 0.7, cursor: 'pointer' }}>
+                        <X size={14} />
+                      </div>
+
+                      {/* Hero Mascot Icon */}
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        backgroundColor: '#f43f5e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        fontSize: '1.1rem',
+                        fontWeight: '800',
+                        boxShadow: '0 8px 16px rgba(244,63,94,0.3)'
+                      }}>
+                        DQ
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: '800', margin: 0, color: iframeTheme === 'dark' ? '#ffffff' : '#111827' }}>{renderedIamHeader}</h3>
+                        <p style={{ fontSize: '0.75rem', color: iframeTheme === 'dark' ? '#cbd5e1' : '#374151', lineHeight: '1.4', margin: 0 }}>
+                          {renderedIamBody}
+                        </p>
+                      </div>
+
+                      <a 
+                        href={iamButtonLink} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          maxWidth: '180px',
+                          backgroundColor: '#f43f5e',
+                          color: '#ffffff',
+                          textAlign: 'center',
+                          padding: '0.5rem',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          fontWeight: '700',
+                          textDecoration: 'none',
+                          boxShadow: '0 4px 12px rgba(244,63,94,0.4)',
+                          marginTop: '0.75rem'
+                        }}
+                      >
+                        {renderedIamButtonText}
+                      </a>
+                      
+                      <span style={{ fontSize: '0.65rem', color: iframeTheme === 'dark' ? '#94a3b8' : '#64748b', cursor: 'pointer' }}>
+                        Maybe Later
+                      </span>
+                    </div>
+                  )}
+
+                  {/* App Mock Home UI */}
+                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', opacity: (iamStyle === 'fullscreen') ? 0 : 0.35, pointerEvents: 'none' }}>
+                    <div style={{ height: '32px', backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: '6px' }} />
+                    <div style={{ height: '80px', backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: '8px' }} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div style={{ height: '60px', backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: '6px' }} />
+                      <div style={{ height: '60px', backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: '6px' }} />
+                    </div>
+                    <div style={{ height: '40px', backgroundColor: iframeTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderRadius: '6px' }} />
+                  </div>
+                </div>
+              )}
             </div>
-            {rightPanelTab === 'figma' ? (
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <Layers size={14} /> Layer Outlines
+          </div>
+          
+          {device === 'laptop' && (
+            <div className="laptop-base" style={{ 
+              height: '10px', 
+              background: '#374151', 
+              width: '90%', 
+              maxWidth: '580px',
+              borderRadius: '0 0 8px 8px',
+              borderBottom: '4px solid #1f2937',
+              boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
+              zIndex: 5
+            }} />
+          )}
+
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => setShowIframeFullscreen(true)}
+            style={{ marginTop: '1.25rem', padding: '0.4rem 0.8rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem', width: 'auto' }}
+          >
+            <Maximize2 size={12} /> Fullscreen Live Render
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderInboxPreviews = () => {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0, lineHeight: '1.4' }}>
+          Inspect subject line rendering and character truncation warning threshold flags across different mail apps:
+        </p>
+        
+        {/* Gmail Desktop */}
+        <div 
+          onClick={() => {
+            setActiveChannel('email');
+            setRightPanelTab('device');
+          }}
+          style={{
+            backgroundColor: iframeTheme === 'dark' ? '#182235' : '#f8fafc',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--border-radius-md)',
+            padding: '1rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-cyan)'}
+          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem' }}>
+            <span style={{ fontWeight: '600', color: 'var(--text-muted)' }}>GMAIL (DESKTOP) &bull; Max ~60 Chars</span>
+            {renderedSubject.length > 60 ? (
+              <span style={{ color: 'var(--warning)', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
+                Truncated (-${renderedSubject.length - 60} chars)
               </span>
             ) : (
-              <span className="api-badge simulated" style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}>
-                Subject QA
+              <span style={{ color: 'var(--success)', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
+                Fits
+              </span>
+            )}
+          </div>
+          
+          <div className="gmail-preview-container" style={{
+            backgroundColor: iframeTheme === 'dark' ? '#090d16' : '#ffffff',
+            color: iframeTheme === 'dark' ? '#f1f5f9' : '#1e293b'
+          }}>
+            <div className="gmail-preview-indicators">
+              <input type="checkbox" readOnly checked={false} style={{ opacity: 0.4, cursor: 'pointer' }} />
+              <span style={{ color: '#fbbf24', fontSize: '0.95rem', cursor: 'pointer' }}>☆</span>
+            </div>
+            <div className="gmail-preview-meta">
+              <strong className="gmail-preview-sender" style={{ color: iframeTheme === 'dark' ? '#ffffff' : '#000000' }}>
+                Dairy Queen
+              </strong>
+              <span className="gmail-preview-date-mobile">12:00 PM</span>
+            </div>
+            <div className="gmail-preview-body">
+              <span className="gmail-preview-subject" style={{ color: iframeTheme === 'dark' ? '#ffffff' : '#000000', marginRight: '0.35rem' }}>
+                {renderedSubject}
+              </span>
+              <span className="gmail-preview-snippet">
+                - We loaded a special reward into your account to say thanks...
+              </span>
+            </div>
+            <span className="gmail-preview-date-desktop">12:00 PM</span>
+          </div>
+        </div>
+
+        {/* Apple Mail iOS */}
+        <div 
+          onClick={() => {
+            setActiveChannel('email');
+            setRightPanelTab('device');
+          }}
+          style={{
+            backgroundColor: iframeTheme === 'dark' ? '#182235' : '#f8fafc',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--border-radius-md)',
+            padding: '1rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-cyan)'}
+          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem' }}>
+            <span style={{ fontWeight: '600', color: 'var(--text-muted)' }}>APPLE MAIL (iOS) &bull; Max ~41 Chars</span>
+            {renderedSubject.length > 41 ? (
+              <span style={{ color: 'var(--warning)', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
+                Truncated (-${renderedSubject.length - 41} chars)
+              </span>
+            ) : (
+              <span style={{ color: 'var(--success)', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
+                Fits
               </span>
             )}
           </div>
 
-          {rightPanelTab === 'figma' ? (
-            <>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                This panel represents the pixel-perfect design reference as drawn in Figma. Click the mockup below to zoom full screen.
-              </p>
-
-              <div 
-                onClick={() => setShowFigmaFullscreen(true)}
-                style={{ 
-                  flex: 1, 
-                  border: '2px dashed var(--border-color)', 
-                  borderRadius: 'var(--border-radius-md)', 
-                  backgroundColor: figmaDashBg,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '2rem',
-                  textAlign: 'center',
-                  cursor: 'zoom-in',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-cyan)'; e.currentTarget.style.backgroundColor = figmaOverlayBg; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.backgroundColor = figmaDashBg; }}
-              >
-                {/* Beautiful SVG graphic mimicking Figma Vector Node UI */}
-                <svg width="150" height="200" viewBox="0 0 180 240" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '1.5rem', filter: 'drop-shadow(0 10px 20px rgba(6, 182, 212, 0.15))' }}>
-                  <rect x="10" y="10" width="160" height="220" rx="16" fill={figmaBg} stroke={figmaStroke} strokeWidth="2" />
-                  <line x1="25" y1="35" x2="155" y2="35" stroke={figmaLineColor} strokeWidth="2" strokeDasharray="4 4" />
-                  <path d="M90 60 C80 60, 75 75, 90 90 C105 75, 100 60, 90 60 Z" fill="var(--accent-blue)" />
-                  <path d="M80 90 H100 L95 110 H85 Z" fill="var(--accent-cyan)" />
-                  <rect x="35" y="125" width="110" height="12" rx="4" fill={figmaRectColor1} />
-                  <rect x="50" y="145" width="80" height="8" rx="4" fill={figmaRectColor2} />
-                  <rect x="25" y="165" width="130" height="40" rx="6" fill="rgba(6, 182, 212, 0.05)" stroke="var(--accent-cyan)" strokeWidth="1" strokeDasharray="3 3" />
-                  <rect x="40" y="177" width="100" height="8" rx="4" fill="var(--accent-cyan)" fillOpacity="0.4" />
-                  <rect x="55" y="191" width="70" height="6" rx="3" fill="var(--accent-blue)" fillOpacity="0.6" />
-                </svg>
-
-                <h4 style={{ color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Figma Frame: Campaign Mockup</h4>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', maxWidth: '300px' }}>
-                  Reference node <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)' }}>#4329:104</code> (DQ Blizzard Campaign Mock).
-                </p>
+          <div style={{
+            padding: '0.75rem',
+            backgroundColor: iframeTheme === 'dark' ? '#090d16' : '#ffffff',
+            border: '1px solid rgba(255,255,255,0.05)',
+            borderRadius: '6px',
+            fontSize: '0.85rem',
+            display: 'flex',
+            gap: '0.5rem',
+            position: 'relative'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#007aff' }} />
+            </div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <strong style={{ color: iframeTheme === 'dark' ? '#ffffff' : '#000000', fontSize: '0.85rem' }}>Dairy Queen</strong>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>12:00 PM 〉</span>
               </div>
-
-              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Figma Viewport Spec:</span>
-                  <span style={{ fontFamily: 'var(--font-mono)' }}>375px × 812px</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Visual Health Check:</span>
-                  <span style={{ color: 'var(--success)' }}>Passed (Aspect Match)</span>
-                </div>
+              <div style={{ 
+                fontWeight: '700', 
+                color: iframeTheme === 'dark' ? '#f1f5f9' : '#1e293b',
+                fontSize: '0.8rem',
+                lineHeight: '1.3'
+              }}>
+                {renderedSubject}
               </div>
-            </>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0, lineHeight: '1.4' }}>
-                Inspect subject line rendering and character truncation warning threshold flags across different mail apps:
-              </p>
-              
-              {/* Gmail Desktop */}
-              <div 
-                onClick={() => {
-                  setActiveChannel('email');
-                  const target = document.querySelector('.phone-wrapper');
-                  if (target) target.scrollIntoView({ behavior: 'smooth' });
-                }}
-                style={{
-                  backgroundColor: iframeTheme === 'dark' ? '#182235' : '#f8fafc',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: 'var(--border-radius-md)',
-                  padding: '1rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-cyan)'}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem' }}>
-                  <span style={{ fontWeight: '600', color: 'var(--text-muted)' }}>GMAIL (DESKTOP) &bull; Max ~60 Chars</span>
-                  {renderedSubject.length > 60 ? (
-                    <span style={{ color: 'var(--warning)', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
-                      Truncated (-{renderedSubject.length - 60} chars)
-                    </span>
-                  ) : (
-                    <span style={{ color: 'var(--success)', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
-                      Fits
-                    </span>
-                  )}
-                </div>
-                
-                <div className="gmail-preview-container" style={{
-                  backgroundColor: iframeTheme === 'dark' ? '#090d16' : '#ffffff',
-                  color: iframeTheme === 'dark' ? '#f1f5f9' : '#1e293b'
-                }}>
-                  <div className="gmail-preview-indicators">
-                    <input type="checkbox" readOnly checked={false} style={{ opacity: 0.4, cursor: 'pointer' }} />
-                    <span style={{ color: '#fbbf24', fontSize: '0.95rem', cursor: 'pointer' }}>☆</span>
-                  </div>
-                  <div className="gmail-preview-meta">
-                    <strong className="gmail-preview-sender" style={{ color: iframeTheme === 'dark' ? '#ffffff' : '#000000' }}>
-                      Dairy Queen
-                    </strong>
-                    <span className="gmail-preview-date-mobile">12:00 PM</span>
-                  </div>
-                  <div className="gmail-preview-body">
-                    <span className="gmail-preview-subject" style={{ color: iframeTheme === 'dark' ? '#ffffff' : '#000000', marginRight: '0.35rem' }}>
-                      {renderedSubject}
-                    </span>
-                    <span className="gmail-preview-snippet">
-                      - We loaded a special reward into your account to say thanks...
-                    </span>
-                  </div>
-                  <span className="gmail-preview-date-desktop">12:00 PM</span>
-                </div>
-              </div>
-
-              {/* Apple Mail iOS */}
-              <div 
-                onClick={() => {
-                  setActiveChannel('email');
-                  const target = document.querySelector('.phone-wrapper');
-                  if (target) target.scrollIntoView({ behavior: 'smooth' });
-                }}
-                style={{
-                  backgroundColor: iframeTheme === 'dark' ? '#182235' : '#f8fafc',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: 'var(--border-radius-md)',
-                  padding: '1rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-cyan)'}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem' }}>
-                  <span style={{ fontWeight: '600', color: 'var(--text-muted)' }}>APPLE MAIL (iOS) &bull; Max ~41 Chars</span>
-                  {renderedSubject.length > 41 ? (
-                    <span style={{ color: 'var(--warning)', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
-                      Truncated (-{renderedSubject.length - 41} chars)
-                    </span>
-                  ) : (
-                    <span style={{ color: 'var(--success)', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
-                      Fits
-                    </span>
-                  )}
-                </div>
-
-                <div style={{
-                  padding: '0.75rem',
-                  backgroundColor: iframeTheme === 'dark' ? '#090d16' : '#ffffff',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                  borderRadius: '6px',
-                  fontSize: '0.85rem',
-                  display: 'flex',
-                  gap: '0.5rem',
-                  position: 'relative'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#007aff' }} />
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                      <strong style={{ color: iframeTheme === 'dark' ? '#ffffff' : '#000000', fontSize: '0.85rem' }}>Dairy Queen</strong>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>12:00 PM 〉</span>
-                    </div>
-                    <div style={{ 
-                      fontWeight: '700', 
-                      color: iframeTheme === 'dark' ? '#f1f5f9' : '#1e293b',
-                      fontSize: '0.8rem',
-                      lineHeight: '1.3'
-                    }}>
-                      {renderedSubject}
-                    </div>
-                    <div style={{ 
-                      fontSize: '0.75rem', 
-                      color: 'var(--text-muted)',
-                      lineHeight: '1.25',
-                      height: '2.4rem',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical'
-                    }}>
-                      We loaded a special reward into your account to say thanks for being an app member. Claim Blizzard Offer...
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Outlook Web */}
-              <div 
-                onClick={() => {
-                  setActiveChannel('email');
-                  const target = document.querySelector('.phone-wrapper');
-                  if (target) target.scrollIntoView({ behavior: 'smooth' });
-                }}
-                style={{
-                  backgroundColor: iframeTheme === 'dark' ? '#182235' : '#f8fafc',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: 'var(--border-radius-md)',
-                  padding: '1rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-cyan)'}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem' }}>
-                  <span style={{ fontWeight: '600', color: 'var(--text-muted)' }}>OUTLOOK (WEB) &bull; Max ~70 Chars</span>
-                  {renderedSubject.length > 70 ? (
-                    <span style={{ color: 'var(--warning)', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
-                      Truncated (-{renderedSubject.length - 70} chars)
-                    </span>
-                  ) : (
-                    <span style={{ color: 'var(--success)', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
-                      Fits
-                    </span>
-                  )}
-                </div>
-
-                <div className="outlook-preview-container" style={{
-                  backgroundColor: iframeTheme === 'dark' ? '#090d16' : '#ffffff'
-                }}>
-                  <div className="outlook-preview-avatar">
-                    DQ
-                  </div>
-                  
-                  <div className="outlook-preview-body">
-                    <div className="outlook-preview-header">
-                      <strong className="outlook-preview-sender">Dairy Queen</strong>
-                      <span className="outlook-preview-date">12:00 PM</span>
-                    </div>
-                    <div className="outlook-preview-subject" style={{ 
-                      color: iframeTheme === 'dark' ? '#ffffff' : '#323130'
-                    }}>
-                      {renderedSubject}
-                    </div>
-                    <div className="outlook-preview-snippet">
-                      We loaded a special reward into your account to say thanks...
-                    </div>
-                  </div>
-                </div>
+              <div style={{ 
+                fontSize: '0.75rem', 
+                color: 'var(--text-muted)',
+                lineHeight: '1.25',
+                height: '2.4rem',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical'
+              }}>
+                We loaded a special reward into your account to say thanks for being an app member. Claim Blizzard Offer...
               </div>
             </div>
-          )}
-
+          </div>
         </div>
 
+        {/* Outlook Web */}
+        <div 
+          onClick={() => {
+            setActiveChannel('email');
+            setRightPanelTab('device');
+          }}
+          style={{
+            backgroundColor: iframeTheme === 'dark' ? '#182235' : '#f8fafc',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--border-radius-md)',
+            padding: '1rem',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-cyan)'}
+          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem' }}>
+            <span style={{ fontWeight: '600', color: 'var(--text-muted)' }}>OUTLOOK (WEB) &bull; Max ~70 Chars</span>
+            {renderedSubject.length > 70 ? (
+              <span style={{ color: 'var(--warning)', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
+                Truncated (-${renderedSubject.length - 70} chars)
+              </span>
+            ) : (
+              <span style={{ color: 'var(--success)', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '600' }}>
+                Fits
+              </span>
+            )}
+          </div>
+
+          <div className="outlook-preview-container" style={{
+            backgroundColor: iframeTheme === 'dark' ? '#090d16' : '#ffffff'
+          }}>
+            <div className="outlook-preview-avatar">
+              DQ
+            </div>
+            
+            <div className="outlook-preview-body">
+              <div className="outlook-preview-header">
+                <strong className="outlook-preview-sender">Dairy Queen</strong>
+                <span className="outlook-preview-date">12:00 PM</span>
+              </div>
+              <div className="outlook-preview-subject" style={{ 
+                color: iframeTheme === 'dark' ? '#ffffff' : '#323130'
+              }}>
+                {renderedSubject}
+              </div>
+              <div className="outlook-preview-snippet">
+                We loaded a special reward into your account to say thanks...
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderFigmaSpec = () => {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+          This panel represents the pixel-perfect design reference as drawn in Figma. Click the mockup below to zoom full screen.
+        </p>
+
+        <div 
+          onClick={() => setShowFigmaFullscreen(true)}
+          style={{ 
+            flex: 1, 
+            border: '2px dashed var(--border-color)', 
+            borderRadius: 'var(--border-radius-md)', 
+            backgroundColor: figmaDashBg,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
+            textAlign: 'center',
+            cursor: 'zoom-in',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-cyan)'; e.currentTarget.style.backgroundColor = figmaOverlayBg; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.backgroundColor = figmaDashBg; }}
+        >
+          {/* Beautiful SVG graphic mimicking Figma Vector Node UI */}
+          <svg width="150" height="200" viewBox="0 0 180 240" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '1.5rem', filter: 'drop-shadow(0 10px 20px rgba(6, 182, 212, 0.15))' }}>
+            <rect x="10" y="10" width="160" height="220" rx="16" fill={figmaBg} stroke={figmaStroke} strokeWidth="2" />
+            <line x1="25" y1="35" x2="155" y2="35" stroke={figmaLineColor} strokeWidth="2" strokeDasharray="4 4" />
+            <path d="M90 60 C80 60, 75 75, 90 90 C105 75, 100 60, 90 60 Z" fill="var(--accent-blue)" />
+            <path d="M80 90 H100 L95 110 H85 Z" fill="var(--accent-cyan)" />
+            <rect x="35" y="125" width="110" height="12" rx="4" fill={figmaRectColor1} />
+            <rect x="50" y="145" width="80" height="8" rx="4" fill={figmaRectColor2} />
+            <rect x="25" y="165" width="130" height="40" rx="6" fill="rgba(6, 182, 212, 0.05)" stroke="var(--accent-cyan)" strokeWidth="1" strokeDasharray="3 3" />
+            <rect x="40" y="177" width="100" height="8" rx="4" fill="var(--accent-cyan)" fillOpacity="0.4" />
+            <rect x="55" y="191" width="70" height="6" rx="3" fill="var(--accent-blue)" fillOpacity="0.6" />
+          </svg>
+
+          <h4 style={{ color: 'var(--text-primary)', marginBottom: '0.25rem' }}>Figma Frame: Campaign Mockup</h4>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', maxWidth: '300px' }}>
+            Reference node <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)' }}>#4329:104</code> (DQ Blizzard Campaign Mock).
+          </p>
+        </div>
+
+        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: 'var(--text-secondary)' }}>Figma Viewport Spec:</span>
+            <span style={{ fontFamily: 'var(--font-mono)' }}>375px × 812px</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: 'var(--text-secondary)' }}>Visual Health Check:</span>
+            <span style={{ color: 'var(--success)' }}>Passed (Aspect Match)</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderRightPanelPreviews = () => {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.25rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.25rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
+            <button
+              onClick={() => setRightPanelTab('device')}
+              className={`sub-tab ${rightPanelTab === 'device' ? 'active' : ''}`}
+              style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+            >
+              <Smartphone size={12} /> 📱 Device Simulator
+            </button>
+            <button
+              onClick={() => setRightPanelTab('inbox')}
+              className={`sub-tab ${rightPanelTab === 'inbox' ? 'active' : ''}`}
+              style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+            >
+              <Mail size={12} /> 📥 Client Inbox Previews
+            </button>
+            <button
+              onClick={() => setRightPanelTab('figma')}
+              className={`sub-tab ${rightPanelTab === 'figma' ? 'active' : ''}`}
+              style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+            >
+              <Layers size={12} /> 📐 Figma Spec
+            </button>
+          </div>
+          {rightPanelTab === 'device' ? (
+            <span className="api-badge connected" style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}>
+              Simulated Device
+            </span>
+          ) : rightPanelTab === 'figma' ? (
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <Layers size={14} /> Layer Outlines
+            </span>
+          ) : (
+            <span className="api-badge simulated" style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}>
+              Subject QA
+            </span>
+          )}
+        </div>
+
+        {rightPanelTab === 'device' && renderDeviceSimulator()}
+        {rightPanelTab === 'inbox' && renderInboxPreviews()}
+        {rightPanelTab === 'figma' && renderFigmaSpec()}
+      </div>
+    );
+  };
+
+  return (
+    <div className="fade-in">
+      {/* 🧪 Live Liquid Variable Overrides Bar */}
+      <div className="panel" style={{ marginBottom: '1.5rem', border: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.50rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', margin: 0 }}>
+            <Sliders size={14} style={{ color: 'var(--accent-cyan)' }} />
+            Interactive Liquid Variable Overrides
+          </h4>
+          <button
+            onClick={() => setShowAddVarForm(!showAddVarForm)}
+            className="btn btn-secondary"
+            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', width: 'auto' }}
+          >
+            {showAddVarForm ? 'Cancel' : '+ Add Variable'}
+          </button>
+        </div>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem', margin: '0 0 0.75rem 0', lineHeight: '1.3' }}>
+          Type custom override values for detected campaign variables below. The simulator resolves these replacements live across all channel previews:
+        </p>
+
+        {showAddVarForm && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (newVarName.trim()) {
+                const cleanName = newVarName.trim();
+                setManualVariables(prev => ({ ...prev, [cleanName]: newVarVal }));
+                setLiquidOverrides(prev => ({ ...prev, [cleanName]: newVarVal }));
+                setNewVarName('');
+                setNewVarVal('');
+                setShowAddVarForm(false);
+              }
+            }}
+            style={{
+              display: 'flex',
+              gap: '0.5rem',
+              alignItems: 'center',
+              backgroundColor: 'var(--bg-tertiary)',
+              padding: '0.75rem',
+              borderRadius: 'var(--border-radius-sm)',
+              border: '1px solid var(--border-color)',
+              marginBottom: '1rem',
+              flexWrap: 'wrap'
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: '150px', flex: '1 1 150px' }}>
+              <label style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Variable Name (e.g. user.points)</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="user.points"
+                value={newVarName}
+                onChange={(e) => setNewVarName(e.target.value)}
+                style={{ fontSize: '0.75rem', padding: '0.35rem 0.5rem', width: '100%' }}
+                required
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: '150px', flex: '1 1 150px' }}>
+              <label style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Initial Value</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="500"
+                value={newVarVal}
+                onChange={(e) => setNewVarVal(e.target.value)}
+                style={{ fontSize: '0.75rem', padding: '0.35rem 0.5rem', width: '100%' }}
+              />
+            </div>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={{ padding: '0.45rem 0.75rem', fontSize: '0.75rem', alignSelf: 'flex-end', height: 'auto', width: 'auto' }}
+            >
+              Add
+            </button>
+          </form>
+        )}
+        
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          alignItems: 'flex-start'
+        }}>
+          {(() => {
+            const scannedVars = scanVariablesWithDefaults([
+              brazeHtml,
+              subjectLine,
+              pushBody,
+              smsBody,
+              iamHeader,
+              iamBody,
+              iamButtonText
+            ]);
+            const allVarKeys = Array.from(new Set([...Object.keys(scannedVars), ...Object.keys(manualVariables)]));
+            if (allVarKeys.length === 0) {
+              return (
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  No Liquid variables detected in campaign templates. Click {"+ Add Variable"} to add custom overrides.
+                </span>
+              );
+            }
+            
+            const presets = getPresetValues(segment, selectedLanguage, customName, eventPropsJson);
+            
+            return allVarKeys.map(key => {
+              const isManual = manualVariables[key] !== undefined;
+              const presetVal = presets[key] !== undefined ? presets[key] : (scannedVars[key] || '');
+              const currentVal = liquidOverrides[key] !== undefined ? liquidOverrides[key] : (isManual ? manualVariables[key] : presetVal);
+              const isEventProp = key.startsWith('event_properties.');
+              const cleanKey = isEventProp ? key.replace('event_properties.', '') : key;
+              
+              return (
+                <div key={key} style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.2rem',
+                  minWidth: '200px',
+                  flex: '1 1 200px',
+                  maxWidth: '350px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: isManual ? 'var(--accent-purple)' : (isEventProp ? 'var(--accent-purple)' : 'var(--accent-cyan)'), fontWeight: '500' }}>
+                      {cleanKey}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.03)', padding: '0.05rem 0.25rem', borderRadius: '3px' }}>
+                        {isManual ? 'Manual' : (isEventProp ? 'Event Prop' : key.split('.')[0] || 'Variable')}
+                      </span>
+                      {isManual && (
+                        <button
+                          type="button"
+                          onClick={() => deleteManualVar(key)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--error)',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '0 0.1rem',
+                            lineHeight: 1
+                          }}
+                          title="Delete manual variable"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={currentVal}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setLiquidOverrides(prev => ({ ...prev, [key]: val }));
+                      if (isManual) {
+                        setManualVariables(prev => ({ ...prev, [key]: val }));
+                      }
+                      if (key === 'user.first_name') {
+                        setCustomName(val);
+                      }
+                    }}
+                    placeholder={presetVal || `Value for ${key}`}
+                    style={{
+                      fontSize: '0.78rem',
+                      padding: '0.35rem 0.5rem',
+                      color: 'var(--text-primary)',
+                      backgroundColor: 'var(--bg-primary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 'var(--border-radius-sm)',
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              );
+            });
+          })()}
+        </div>
+      </div>
+
+      <div className="split-view" style={{ marginBottom: '2rem' }}>
+        {/* Left Side: Setup Controls */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {renderSubscriberContextCard()}
+          {renderChannelCopyEditorsCard()}
+        </div>
+
+        {/* Right Side: Previews */}
+        <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid var(--border-color)' }}>
+          {renderRightPanelPreviews()}
+        </div>
       </div>
 
       {/* FIGMA FULLSCREEN OVERLAY MODAL */}
