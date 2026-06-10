@@ -9,88 +9,54 @@ OmniQA is a unified, real-time diagnostic dashboard designed for CRM engineering
 ## 🛠️ System Architecture & Data Flow
 
 ```mermaid
-flowchart TB
+flowchart TD
     %% Styling Definitions
-    classDef react fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
-    classDef engine fill:#0f172a,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
-    classDef external fill:#1e1b4b,stroke:#c084fc,stroke-width:2px,color:#f8fafc;
-    classDef data fill:#061712,stroke:#34d399,stroke-width:2px,color:#f8fafc;
+    classDef source fill:#1e293b,stroke:#475569,stroke-width:2px,color:#f8fafc;
+    classDef core fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef validator fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
+    classDef api fill:#311042,stroke:#c084fc,stroke-width:2px,color:#f8fafc;
+    classDef output fill:#061712,stroke:#34d399,stroke-width:2px,color:#f8fafc;
 
-    %% Input & Sources Layer
-    subgraph Inputs ["📂 INPUT & SOURCES LAYER"]
-        direction LR
-        Figma["🎨 Figma Design API"]
-        BrazePayload["✉️ Coded Campaign HTML/CSS"]
-        LocalCatalog["🗂️ Campaign Catalog Workspace"]
-    end
-
-    %% Processing & Logic Engine
-    subgraph Core ["⚡ OMNIQA CORE DIAGNOSTIC ENGINES"]
-        direction TB
-        Diagnostics["📊 Diagnostics Console (App.jsx)"]
-        CopyAuditor["🔍 Copy Sync Engine (CopyAuditor.jsx)"]
-        StressTester["📱 Visual Stress-Tester (VisualStressTester.jsx)"]
-        TechAuditor["🛠️ Technical Auditor (TechnicalAuditor.jsx)"]
-        ABPredictor["📈 A/B Copy Predictor (AbEvaluator.jsx)"]
-    end
-
-    %% Local Validators & Parsing
-    subgraph Validators ["🛡️ LOCAL VALIDATORS & PARSERS"]
-        direction LR
-        LiquidParser["🧠 AST-less Liquid Parser"]
-        UTMCrawler["🔗 Link & UTM Crawler"]
-        WcagAuditor["👁️ WCAG Contrast Checker"]
-        AutoFix["🪄 HTML Contrast Auto-Fixer"]
-    end
-
-    %% External APIs & Integrations
-    subgraph Services ["☁️ EXTERNAL SERVICES & APIS"]
-        direction LR
-        GeminiAPI["🤖 Google Gemini API"]
-        BrazeREST["🔥 Braze REST API"]
-    end
-
-    %% Output & Actions
-    subgraph Outputs ["📤 OUTPUT & REPORTING LAYER"]
-        direction TB
-        PDFExport["📄 Visual QA PDF Scorecards"]
-        ReportEmail["📧 HTML Diagnostics Report Email"]
-        ActiveSync["🔄 Sync Back to Workspace / Braze"]
-    end
-
-    %% Connections
-    Inputs --> Core
+    %% Nodes
+    Figma["🎨 Figma Mockup API"]:::source
+    Payload["✉️ Coded Campaign HTML/CSS"]:::source
+    Catalog["🗂️ Campaign Catalog Workspace"]:::source
     
-    %% Figma to Copy Auditor
-    Figma -->|1. Text Node Extraction| CopyAuditor
-    BrazePayload -->|2. Template HTML & Metadata| CopyAuditor
+    App["📊 OmniQA Diagnostics Console"]:::core
     
-    %% Catalog connects to Diagnostics
-    LocalCatalog -->|Load/Save Campaign Context| Diagnostics
+    subgraph LocalValidators ["🛡️ LOCAL CODE VALIDATORS"]
+        Liquid["🧠 AST-less Liquid Parser"]
+        Links["🔗 Link & UTM Crawler"]
+        WCAG["👁️ WCAG Contrast Checker"]
+    end
+    class LocalValidators,Liquid,Links,WCAG validator;
     
-    %% Core calls Local Validators
-    StressTester -->|Run Template Personalization| LiquidParser
-    TechAuditor -->|Scan HTML Elements| UTMCrawler
-    TechAuditor -->|Verify Accessibility| WcagAuditor
-    TechAuditor -->|Trigger Repair| AutoFix
+    subgraph ExternalServices ["🤖 EXTERNAL SERVICES & APIS"]
+        Gemini["💬 Gemini copy/spell Sync Auditor"]
+        Braze["🔥 Braze REST Campaign API"]
+    end
+    class ExternalServices,Gemini,Braze api;
     
-    %% Core calls Gemini
-    CopyAuditor -->|Request Spell/Price Audits| GeminiAPI
-    ABPredictor -->|Request Engagement Scores| GeminiAPI
+    PDFExport["📄 Visual QA PDF Scorecard"]:::output
+    ReportEmail["📧 HTML Diagnostics Report Email"]:::output
+    AutoFix["🪄 One-Click HTML Auto-Fixer"]:::output
     
-    %% Output Actions
-    Diagnostics -->|Consolidated Issues Badge Counts| Outputs
-    AutoFix -->|Modify HTML Tags| ActiveSync
-    ActiveSync -->|Sync to Production| BrazeREST
-    Diagnostics --> PDFExport
-    Diagnostics --> ReportEmail
-
-    %% Apply Styles
-    class Figma,BrazePayload,LocalCatalog react;
-    class Diagnostics,CopyAuditor,StressTester,TechAuditor,ABPredictor react;
-    class LiquidParser,UTMCrawler,WcagAuditor,AutoFix engine;
-    class GeminiAPI,BrazeREST external;
-    class PDFExport,ReportEmail,ActiveSync data;
+    %% Flow Connections
+    Figma -->|Extract Text| App
+    Payload -->|Import Code| App
+    Catalog -->|Load Draft| App
+    
+    App <-->|Syntax Auditing| Liquid
+    App <-->|Link Verification| Links
+    App <-->|A11y Validation| WCAG
+    
+    App <-->|AI Spell & Price Checks| Gemini
+    
+    App -->|Generate Scorecard| PDFExport
+    App -->|Generate Email| ReportEmail
+    App -->|Trigger Repair| AutoFix
+    
+    AutoFix -->|Sync Corrected Template| Braze
 ```
 
 ### Component Breakdown & Data Flow
