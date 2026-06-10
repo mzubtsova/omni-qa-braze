@@ -9,44 +9,114 @@ OmniQA is a unified, real-time diagnostic dashboard designed for CRM engineering
 ## 🛠️ System Architecture & Data Flow
 
 ```mermaid
-graph TD
-    A[Figma Mockup] -->|API Node Extraction| B(OmniQA Sync Engine)
-    C[Braze Campaign Payloads<br/>Email HTML / SMS / Push / IAM] -->|Liquid & Copy Payload| B
+flowchart TB
+    %% Styling Definitions
+    classDef react fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef engine fill:#0f172a,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
+    classDef external fill:#1e1b4b,stroke:#c084fc,stroke-width:2px,color:#f8fafc;
+    classDef data fill:#061712,stroke:#34d399,stroke-width:2px,color:#f8fafc;
+
+    %% Input & Sources Layer
+    subgraph Inputs ["📂 INPUT & SOURCES LAYER"]
+        direction LR
+        Figma["🎨 Figma Design API"]
+        BrazePayload["✉️ Coded Campaign HTML/CSS"]
+        LocalCatalog["🗂️ Campaign Catalog Workspace"]
+    end
+
+    %% Processing & Logic Engine
+    subgraph Core ["⚡ OMNIQA CORE DIAGNOSTIC ENGINES"]
+        direction TB
+        Diagnostics["📊 Diagnostics Console (App.jsx)"]
+        CopyAuditor["🔍 Copy Sync Engine (CopyAuditor.jsx)"]
+        StressTester["📱 Visual Stress-Tester (VisualStressTester.jsx)"]
+        TechAuditor["🛠️ Technical Auditor (TechnicalAuditor.jsx)"]
+        ABPredictor["📈 A/B Copy Predictor (AbEvaluator.jsx)"]
+    end
+
+    %% Local Validators & Parsing
+    subgraph Validators ["🛡️ LOCAL VALIDATORS & PARSERS"]
+        direction LR
+        LiquidParser["🧠 AST-less Liquid Parser"]
+        UTMCrawler["🔗 Link & UTM Crawler"]
+        WcagAuditor["👁️ WCAG Contrast Checker"]
+        AutoFix["🪄 HTML Contrast Auto-Fixer"]
+    end
+
+    %% External APIs & Integrations
+    subgraph Services ["☁️ EXTERNAL SERVICES & APIS"]
+        direction LR
+        GeminiAPI["🤖 Google Gemini API"]
+        BrazeREST["🔥 Braze REST API"]
+    end
+
+    %% Output & Actions
+    subgraph Outputs ["📤 OUTPUT & REPORTING LAYER"]
+        direction TB
+        PDFExport["📄 Visual QA PDF Scorecards"]
+        ReportEmail["📧 HTML Diagnostics Report Email"]
+        ActiveSync["🔄 Sync Back to Workspace / Braze"]
+    end
+
+    %% Connections
+    Inputs --> Core
     
-    B --> D[Copy Sync Auditor]
-    B --> E[Multi-Channel Visual Stress-Tester]
-    B --> F[Technical Health Auditor]
-    B --> N[A/B Copy Compare Engine]
+    %% Figma to Copy Auditor
+    Figma -->|1. Text Node Extraction| CopyAuditor
+    BrazePayload -->|2. Template HTML & Metadata| CopyAuditor
     
-    D -->|AI Typos & Price Audits| G[Gemini API]
-    E -->|Personalization Expander| H[Device Simulator Frame<br/>Email, Push, SMS, IAM]
-    F -->|Liquid AST Parser| I[Syntax Warning logs]
-    F -->|Link UTM Crawler| J[Link Health logs]
-    F -->|CSS Color contrast ratio| K[WCAG Contrast alerts]
-    N -->|Local AI Engagement Heuristics| O[Variant Open/CTR Scores]
+    %% Catalog connects to Diagnostics
+    LocalCatalog -->|Load/Save Campaign Context| Diagnostics
     
-    G --> L[QA Score Dashboard]
-    H --> L
-    I --> L
-    J --> L
-    K --> L
-    O --> L
-    L --> M[Dynamic Campaign Reports]
-    N -->|Sync Back Chosen Variant| C
+    %% Core calls Local Validators
+    StressTester -->|Run Template Personalization| LiquidParser
+    TechAuditor -->|Scan HTML Elements| UTMCrawler
+    TechAuditor -->|Verify Accessibility| WcagAuditor
+    TechAuditor -->|Trigger Repair| AutoFix
+    
+    %% Core calls Gemini
+    CopyAuditor -->|Request Spell/Price Audits| GeminiAPI
+    ABPredictor -->|Request Engagement Scores| GeminiAPI
+    
+    %% Output Actions
+    Diagnostics -->|Consolidated Issues Badge Counts| Outputs
+    AutoFix -->|Modify HTML Tags| ActiveSync
+    ActiveSync -->|Sync to Production| BrazeREST
+    Diagnostics --> PDFExport
+    Diagnostics --> ReportEmail
+
+    %% Apply Styles
+    class Figma,BrazePayload,LocalCatalog react;
+    class Diagnostics,CopyAuditor,StressTester,TechAuditor,ABPredictor react;
+    class LiquidParser,UTMCrawler,WcagAuditor,AutoFix engine;
+    class GeminiAPI,BrazeREST external;
+    class PDFExport,ReportEmail,ActiveSync data;
 ```
+
+### Component Breakdown & Data Flow
+1.  **Input Sources**: Campaign contexts are pulled from **Figma frames** (extracting copy blocks) and **Braze/HTML files** (fetching code assets).
+2.  **OmniQA Core Controller (`App.jsx`)**: Orchestrates data state and passes values to dedicated subcomponents.
+3.  **Local Validators**: Processes code syntax, contrast calculations, and URL routing locally in the browser to ensure instantaneous feedback.
+4.  **External Copilot Services**: Integrates with **Google Gemini API** (using JSON Schema schemas for predictable formatting) to score brand sentiment and audit syntax.
+5.  **Output Layer**: Allows campaign developers to directly export report summaries, print PDF scorecards, or sync the corrected code back to the active campaign in Braze.
 
 ---
 
 ## 🚀 Key Features
 
-### 1. Unified Master Diagnostics & Copy sync
+### 1. Unified Master Diagnostics & Copy Sync
 *   **Figma Layer Cross-Checking**: Compares text nodes extracted from Figma designs directly with Braze HTML templates and subject lines.
 *   **Fuzzy Text-Diff Matcher**: Dynamically tokenizes and scans plain text inside HTML tags to match lines of Figma design copy on the fly.
 *   **Monaco HTML Code Editor**: Embeds a rich, syntax-highlighted editor with line numbers, code folding, word wrap, and automatic layout resizing that compiles state changes in real time.
 *   **Master Diagnostics Hub**: Consolidates all Figma copy discrepancies, WCAG contrast alerts, UTM link crawler checks, Liquid logic errors, and spam triggers under a unified tabbed filter bar with live numeric counter badges.
 
 ### 2. Multi-Device & Multi-Channel Visual Stress-Tester
-*   **Personalized Custom Name Typing**: Features an interactive text input allowing developers to type custom subscriber names, instantly resolving personalization tags (`{{ user.first_name }}`) across all channel previews.
+*   **Interactive Liquid Overrides**: Scans and detects dynamic Liquid template variables (`{{ user.first_name }}`, `{{ tier }}`) and renders text inputs for real-time customer profile updates.
+*   **Custom Dynamic Variables (`+` / `×`)**: Allows developers to manually define, add (`+`), or delete (`×`) custom key-value variables to test edge cases outside default database parameters.
+*   **Unified Multi-Tab Previews**: Allows campaign managers to instantly toggle the preview pane between:
+    *   `📱 Device Simulator`: Renders simulated device frames (iPhone, Android, Tablet, Laptop) across channels.
+    *   `📥 Client Inbox Previews`: Simulates subject line rendering and truncation lengths across Gmail Desktop, Apple Mail iOS, and Outlook Web.
+    *   `📐 Figma Specification`: Displays Figma outline SVG blueprints side-by-side with code.
 *   **Simulated Push Notifications**: Toggles between **Locked Phone (Full Screen)** (displays lockscreen wallpaper, clock/calendar overlay, and rich push notification cards containing the Blizzard campaign banner image) and **Unlocked Phone (App Banner)** (overlays a floating push banner over an active app grid home screen). Laptop preview is automatically hidden in push mode.
 *   **In-App Message (IAM) Layout Simulator**: Renders center modals, slide-up banners, and full-screen takeovers directly inside the simulated device with editable headers, body text, dynamic action buttons, and redirect link validators.
 *   **SMS Preview & Billing Segment Auditor**: Renders message bubbles in a text chat interface, scans for non-GSM-7 unicode inputs (emojis or smart quotes), calculates text lengths, and warns developers when copy exceeds character limits and triggers multi-segment billing costs.
@@ -62,6 +132,10 @@ graph TD
 *   **Standalone Side-by-Side Evaluator**: Compares subject lines, body copy snippets, CTA button texts, and CTA links for two variants (Baseline vs Challenger) in a dedicated tab.
 *   **Local AI Predictive Model**: Predicts open rates, click-through rates (CTR), and overall grades based on character lengths, emojis, capitalization rules, urgency triggers, CTA verbs, and UTM configurations.
 *   **Active Workspace Application**: Automatically updates the active workspace campaign (including direct parsing and updating of your template's HTML anchor elements) with your winning variant parameters.
+
+### 5. Braze Campaign Catalog & Workspace Manager
+*   **Dynamic Campaign Catalog**: Tracks campaign drafts, versions, status, and synchronization state.
+*   **Cluster-Mapped Workspace Links**: Maps REST API endpoints (e.g. `rest.iad-01`, `rest.iad-03`, `rest.eu`) to direct, clickable URLs pointing straight to your campaign configuration inside the Braze dashboard console.
 
 ---
 
