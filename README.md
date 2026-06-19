@@ -65,21 +65,29 @@ flowchart TD
 ### Component Breakdown & Data Flow
 1.  **Input Sources**: Campaign contexts come from pasted/imported HTML, campaign catalog entries, and Figma file IDs or URLs.
 2.  **OmniQA Core Controller (`App.jsx`)**: Orchestrates data state and passes values to dedicated dashboard, preview, validator, and reporting views.
-3.  **Local Validators**: Processes Liquid syntax, URL/UTM patterns, contrast checks, image risks, and preview states locally for instant feedback.
-4.  **Secure Server Routes**: Calls `/api/gemini`, `/api/figma-layers`, and `/api/health` so Gemini and Figma secrets stay in Vercel environment variables instead of browser storage.
-5.  **Output Layer**: Supports launch-readiness summaries, print/PDF reports, HTML repair helpers, and Braze dashboard deep links. Braze REST write-back is reserved for a later production phase.
+3.  **Launch Workspace**: Converts campaign context into reusable intake notes, campaign-type templates, QA checklists, Liquid profile simulation, link/UTM review, report export, and local QA history.
+4.  **Local Validators**: Processes Liquid syntax, URL/UTM patterns, contrast checks, image risks, and preview states locally for instant feedback.
+5.  **Secure Server Routes**: Calls `/api/gemini`, `/api/figma-layers`, and `/api/health` so Gemini and Figma secrets stay in Vercel environment variables instead of browser storage.
+6.  **Output Layer**: Supports launch-readiness summaries, print/PDF reports, HTML repair helpers, saved local QA runs, and Braze dashboard deep links. Braze REST write-back is reserved for a later production phase.
 
 ---
 
 ## 🚀 Key Features
 
-### 1. Unified Master Diagnostics & Copy Sync
+### 1. Launch Workspace & Campaign Intake
+*   **Structured Campaign Intake**: Captures campaign name, type, launch date, audience/segment, offer logic, expected variables, and reviewer notes.
+*   **Reusable QA Templates**: Applies campaign-type checklists and starter channel copy for birthday, onboarding, promotional loyalty, and winback workflows.
+*   **Liquid Profile Simulator**: Renders subject, push, SMS, and IAM copy against sample customer profiles to expose missing attributes and fallback behavior.
+*   **Link & UTM Review**: Collects links from email HTML, IAM, SMS, and push copy so teams can quickly spot missing tracking parameters.
+*   **Launch Report & QA History**: Produces a launch-readiness summary, supports print/PDF export, and stores recent QA runs locally for repeat review.
+
+### 2. Unified Master Diagnostics & Copy Sync
 *   **Figma Layer Cross-Checking**: Compares text nodes extracted from Figma designs directly with Braze HTML templates and subject lines.
 *   **Fuzzy Text-Diff Matcher**: Dynamically tokenizes and scans plain text inside HTML tags to match lines of Figma design copy on the fly.
 *   **Monaco HTML Code Editor**: Embeds a rich, syntax-highlighted editor with line numbers, code folding, word wrap, and automatic layout resizing that compiles state changes in real time.
 *   **Master Diagnostics Hub**: Consolidates all Figma copy discrepancies, WCAG contrast alerts, UTM link crawler checks, Liquid logic errors, and spam triggers under a unified tabbed filter bar with live numeric counter badges.
 
-### 2. Multi-Device & Multi-Channel Visual Stress-Tester
+### 3. Multi-Device & Multi-Channel Visual Stress-Tester
 *   **Interactive Liquid Overrides**: Scans and detects dynamic Liquid template variables (`{{ user.first_name }}`, `{{ tier }}`) and renders text inputs for real-time customer profile updates.
 *   **Custom Dynamic Variables (`+` / `×`)**: Allows developers to manually define, add (`+`), or delete (`×`) custom key-value variables to test edge cases outside default database parameters.
 *   **Unified Multi-Tab Previews**: Allows campaign managers to instantly toggle the preview pane between:
@@ -91,18 +99,18 @@ flowchart TD
 *   **SMS Preview & Billing Segment Auditor**: Renders message bubbles in a text chat interface, scans for non-GSM-7 unicode inputs (emojis or smart quotes), calculates text lengths, and warns developers when copy exceeds character limits and triggers multi-segment billing costs.
 *   **Email Client Dark Mode Inversion**: Injects dynamic overrides into the email iframe context to invert styles, guaranteeing text legibility in simulated dark mobile environments.
 
-### 3. Technical Health & Reporting Engine
+### 4. Technical Health & Reporting Engine
 *   **Liquid Logic Delimiter Checker**: Scans logic control flows (`{% if %}` and `{{ ... }}`) for nesting depth errors, missing delimiters, or orphaned statements.
 *   **UTM Link Crawler**: Crawls all anchor links to detect dead hrefs, placeholder domains, and missing marketing UTM analytics keys.
 *   **HTML Contrast Auto-Fixer**: Features a one-click repair engine that automatically adjusts violating button contrasts, resolves empty placeholder links, and appends missing UTM trackers.
 *   **Staging PDF & Email Dispatcher**: Dispatches live email report drafts with detailed bulleted campaign issues lists and exports print-ready visual QA scorecards.
 
-### 4. A/B Copy Compare & Predictive CTR Engine
+### 5. A/B Copy Compare & Predictive CTR Engine
 *   **Standalone Side-by-Side Evaluator**: Compares subject lines, body copy snippets, CTA button texts, and CTA links for two variants (Baseline vs Challenger) in a dedicated tab.
 *   **Local AI Predictive Model**: Predicts open rates, click-through rates (CTR), and overall grades based on character lengths, emojis, capitalization rules, urgency triggers, CTA verbs, and UTM configurations.
 *   **Active Workspace Application**: Automatically updates the active workspace campaign (including direct parsing and updating of your template's HTML anchor elements) with your winning variant parameters.
 
-### 5. Braze Campaign Catalog & Workspace Manager
+### 6. Braze Campaign Catalog & Workspace Manager
 *   **Dynamic Campaign Catalog**: Tracks campaign drafts, versions, status, and synchronization state.
 *   **Cluster-Mapped Workspace Links**: Maps REST API endpoints (e.g. `rest.iad-01`, `rest.iad-03`, `rest.eu`) to direct, clickable URLs pointing straight to your campaign configuration inside the Braze dashboard console.
 
@@ -156,5 +164,5 @@ Live mode currently supports:
 
 Reserved for a later production phase:
 *   Braze REST read/write sync.
-*   Authenticated user accounts and saved audit history.
+*   Authenticated user accounts and server-side audit history.
 *   Server-side PDF/report storage and email delivery.

@@ -9,7 +9,8 @@ import {
   Sun,
   Moon,
   Database,
-  Scale
+  Scale,
+  ClipboardCheck
 } from 'lucide-react';
 
 import Overview from './components/Overview';
@@ -19,6 +20,7 @@ import TechnicalAuditor from './components/TechnicalAuditor';
 import Settings from './components/Settings';
 import Catalog from './components/Catalog';
 import AbEvaluator from './components/AbEvaluator';
+import LaunchWorkspace from './components/LaunchWorkspace';
 
 import { auditFigmaAndBrazeCopy, auditSpamAndDeliverability, predictCampaignEngagement } from './services/gemini';
 import { fetchFigmaTextLayers } from './services/figma';
@@ -93,8 +95,13 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+const VALID_TABS = ['overview', 'workspace', 'copy', 'visuals', 'technical', 'ab_evaluator', 'catalog', 'settings'];
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => {
+    const hashTab = window.location.hash.replace('#', '');
+    return VALID_TABS.includes(hashTab) ? hashTab : 'overview';
+  });
   const [isAuditing, setIsAuditing] = useState(false);
   const [useMockMode, setUseMockMode] = useState(true);
   
@@ -109,6 +116,12 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('omniqa_theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (window.location.hash.replace('#', '') !== activeTab) {
+      window.history.replaceState(null, '', `#${activeTab}`);
+    }
+  }, [activeTab]);
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
@@ -481,6 +494,14 @@ export default function App() {
           </button>
           
           <button 
+            className={`sidebar-item ${activeTab === 'workspace' ? 'active' : ''}`}
+            onClick={() => setActiveTab('workspace')}
+          >
+            <ClipboardCheck size={18} />
+            <span>Launch Workspace</span>
+          </button>
+
+          <button 
             className={`sidebar-item ${activeTab === 'copy' ? 'active' : ''}`}
             onClick={() => setActiveTab('copy')}
           >
@@ -554,6 +575,7 @@ export default function App() {
           <div>
             <h1>
               {activeTab === 'overview' && 'Campaign QA Overview'}
+              {activeTab === 'workspace' && 'Launch Workspace'}
               {activeTab === 'copy' && 'Copy & Typography Auditor'}
               {activeTab === 'visuals' && 'Visual Layout & Variable Stress-Tester'}
               {activeTab === 'technical' && 'Liquid & Link Health Reports'}
@@ -563,6 +585,7 @@ export default function App() {
             </h1>
             <p className="header-title-desc">
               {activeTab === 'overview' && 'Unified diagnostic dashboard for your multi-channel CRM campaigns.'}
+              {activeTab === 'workspace' && 'Turn campaign details into a reusable QA checklist, simulator, report, and review history.'}
               {activeTab === 'copy' && 'Ensure content syncs between creative designs and CRM code layers.'}
               {activeTab === 'visuals' && 'Test rendering logic against long names, edge-case user profiles, and tiers.'}
               {activeTab === 'technical' && 'Validates liquid syntax, UTM tracking parameters, color contrast, and deliverability.'}
@@ -623,6 +646,37 @@ export default function App() {
             isPredicting={isPredicting}
             predictionResults={predictionResults}
             setFilterSeverity={setFilterSeverity}
+          />
+        )}
+
+        {activeTab === 'workspace' && (
+          <LaunchWorkspace
+            campaignState={{
+              subjectLine,
+              brazeHtml,
+              pushBody,
+              smsBody,
+              iamHeader,
+              iamBody,
+              iamButtonText,
+              iamButtonLink
+            }}
+            setCampaignState={(nextState) => {
+              if (nextState.subjectLine !== undefined) setSubjectLine(nextState.subjectLine);
+              if (nextState.brazeHtml !== undefined) setBrazeHtml(nextState.brazeHtml);
+              if (nextState.pushBody !== undefined) setPushBody(nextState.pushBody);
+              if (nextState.smsBody !== undefined) setSmsBody(nextState.smsBody);
+              if (nextState.iamHeader !== undefined) setIamHeader(nextState.iamHeader);
+              if (nextState.iamBody !== undefined) setIamBody(nextState.iamBody);
+              if (nextState.iamButtonText !== undefined) setIamButtonText(nextState.iamButtonText);
+              if (nextState.iamButtonLink !== undefined) setIamButtonLink(nextState.iamButtonLink);
+            }}
+            scores={scores}
+            issuesCount={issuesCount}
+            copyAuditResults={copyAuditResults}
+            spamAuditResults={spamAuditResults}
+            predictionResults={predictionResults}
+            onRunAudit={() => runAudit(useMockMode)}
           />
         )}
 
