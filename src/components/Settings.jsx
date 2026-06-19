@@ -20,10 +20,10 @@ export default function Settings({ onSave }) {
 
   useEffect(() => {
     // Load credentials from localStorage
-    const savedGemini = localStorage.getItem('gemini_api_key') || '';
-    const savedFigmaToken = localStorage.getItem('figma_token') || '';
+    const savedGemini = '';
+    const savedFigmaToken = '';
     const savedFigmaFile = localStorage.getItem('figma_file_id') || '';
-    const savedBrazeKey = localStorage.getItem('braze_api_key') || '';
+    const savedBrazeKey = '';
     const savedBrazeEnd = localStorage.getItem('braze_endpoint') || 'https://rest.iad-01.braze.com';
     const savedMock = localStorage.getItem('omniqa_use_mock') !== 'false'; // default to true
 
@@ -47,10 +47,7 @@ export default function Settings({ onSave }) {
 
   const handleSave = (e) => {
     e.preventDefault();
-    localStorage.setItem('gemini_api_key', settings.geminiApiKey);
-    localStorage.setItem('figma_token', settings.figmaToken);
     localStorage.setItem('figma_file_id', settings.figmaFileId);
-    localStorage.setItem('braze_api_key', settings.brazeApiKey);
     localStorage.setItem('braze_endpoint', settings.brazeEndpoint);
     localStorage.setItem('omniqa_use_mock', settings.useMockData ? 'true' : 'false');
     
@@ -61,9 +58,20 @@ export default function Settings({ onSave }) {
     setTimeout(() => setSavedStatus(false), 3000);
   };
 
-  const runDiagnostics = () => {
+  const runDiagnostics = async () => {
     setIsDiagnosing(true);
     setDiagnosticLogs([]);
+    let health = null;
+
+    try {
+      const response = await fetch('/api/health');
+      health = await response.json();
+      if (!response.ok) {
+        throw new Error(health.error || 'Health route failed.');
+      }
+    } catch (error) {
+      health = { error: error.message };
+    }
     
     const logs = [];
     const addLog = (text, type = 'info') => {
@@ -81,26 +89,24 @@ export default function Settings({ onSave }) {
     }, 800);
 
     setTimeout(() => {
-      if (!settings.useMockData && !settings.figmaToken) {
-        addLog(`Figma API Error 401 Unauthorized: Personal access token is empty. Staging fallback mock data will be used.`, 'error');
+      if (!settings.useMockData && !health.figmaConfigured) {
+        addLog(`Figma server token missing: configure FIGMA_ACCESS_TOKEN in Vercel environment variables.`, 'error');
       } else if (settings.useMockData) {
         addLog(`Figma Sandbox handshake: OK (responded in 45ms)`, 'success');
       } else {
-        addLog(`Figma API responded in 186ms. Handshake successful.`, 'success');
+        addLog(`Figma server proxy configured. Text extraction can run through /api/figma-layers.`, 'success');
       }
     }, 1600);
 
     setTimeout(() => {
-      addLog(`Testing connection to Braze endpoint accessibility (${settings.brazeEndpoint})...`, 'ping');
+      addLog(`Checking Braze dashboard endpoint routing (${settings.brazeEndpoint})...`, 'ping');
     }, 2400);
 
     setTimeout(() => {
-      if (!settings.useMockData && !settings.brazeApiKey) {
-        addLog(`Braze API Error 403 Forbidden: Mismatched API key signature or network request blocked. Ensure the API key has 'campaigns.list' and 'templates.email.create' scopes.`, 'error');
-      } else if (settings.useMockData) {
+      if (settings.useMockData) {
         addLog(`Braze Sandbox endpoint handshake: OK (rest.iad-01.braze.com responded in 68ms)`, 'success');
       } else {
-        addLog(`Braze REST API responded with status 200 (Success).`, 'success');
+        addLog(`Braze endpoint saved for catalog deep links. REST read/write sync is reserved for the next integration phase.`, 'info');
       }
     }, 3200);
 
@@ -109,21 +115,21 @@ export default function Settings({ onSave }) {
     }, 4000);
 
     setTimeout(() => {
-      if (!settings.useMockData && !settings.geminiApiKey) {
-        addLog(`Gemini API Error 503 Service Unavailable: API key is empty. AI CTR Predictor will fail to query live models.`, 'error');
+      if (!settings.useMockData && !health.geminiConfigured) {
+        addLog(`Gemini server key missing: configure GEMINI_API_KEY in Vercel environment variables.`, 'error');
       } else if (settings.useMockData) {
         addLog(`Gemini platform connection verified: OK (api.google.dev responded in 92ms)`, 'success');
       } else {
-        addLog(`Gemini model query authenticated successfully. AI engines active.`, 'success');
+        addLog(`Gemini server proxy configured with ${health.geminiModel}. AI engines can run through /api/gemini.`, 'success');
       }
     }, 4800);
 
     setTimeout(() => {
-      const hasErrors = !settings.useMockData && (!settings.figmaToken || !settings.brazeApiKey || !settings.geminiApiKey);
+      const hasErrors = !settings.useMockData && (!health.figmaConfigured || !health.geminiConfigured);
       if (hasErrors) {
-        addLog(`Diagnostics complete: Critical handshake failures detected. External APIs are offline. Check credentials validity and try again.`, 'error');
+        addLog(`Diagnostics complete: server configuration is incomplete. Add missing Vercel environment variables and redeploy.`, 'error');
       } else {
-        addLog(`All 3 external API handshakes completed successfully! Connection state verified.`, 'success');
+        addLog(`Diagnostics complete: live AI and Figma routes are ready.`, 'success');
       }
       setIsDiagnosing(false);
     }, 5500);
@@ -137,7 +143,7 @@ export default function Settings({ onSave }) {
           OmniQA Configuration Panel
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
-          Manage your Figma design tokens, Braze endpoints, and Gemini AI credentials. Keys are saved securely in your browser&apos;s local storage and never sent to external servers.
+          Manage sandbox mode, Figma file routing, and Braze dashboard endpoints. Gemini and Figma secrets are read from Vercel environment variables, not stored in the browser.
         </p>
 
         {savedStatus && (
@@ -215,10 +221,10 @@ export default function Settings({ onSave }) {
                 placeholder="AI platform credentials..."
                 value={settings.geminiApiKey}
                 onChange={handleChange}
-                disabled={settings.useMockData}
+                disabled
               />
               <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.35rem' }}>
-                Shares credentials with other apps in the workspace. Used to run AI copy-sync checks and deliverability scoring.
+                Configure this as GEMINI_API_KEY in Vercel. The browser never stores or sends this secret directly.
               </p>
             </div>
 
@@ -242,10 +248,10 @@ export default function Settings({ onSave }) {
                   id="figmaToken"
                   name="figmaToken"
                   className="form-input"
-                  placeholder="figd_..."
+                  placeholder="Configured as FIGMA_ACCESS_TOKEN in Vercel"
                   value={settings.figmaToken}
                   onChange={handleChange}
-                  disabled={settings.useMockData}
+                  disabled
                 />
               </div>
 
@@ -286,10 +292,10 @@ export default function Settings({ onSave }) {
                   id="brazeApiKey"
                   name="brazeApiKey"
                   className="form-input"
-                  placeholder="Bearer api_..."
+                  placeholder="Future server-side Braze integration"
                   value={settings.brazeApiKey}
                   onChange={handleChange}
-                  disabled={settings.useMockData}
+                  disabled
                 />
               </div>
 

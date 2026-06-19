@@ -133,11 +133,25 @@ By default, the app initializes in **Sandbox Demo mode**. This allows you to exp
 4.  Open `http://localhost:5176` (or the port Vite allocates) in your browser.
 
 ### Live Production Configuration
-To link your real environment:
-1.  Go to the **Settings** panel in the sidebar.
-2.  Toggle off **Use Sandbox Simulation / Demo Mode**.
-3.  Add your credentials:
-    *   **Gemini API Key** (for active copywriting checks).
-    *   **Figma Personal Access Token** and **File ID**.
-    *   **Braze REST Endpoint** and **API Key**.
-4.  Click **Save Configuration** to sync instantly.
+OmniQA now supports a secure live-mode MVP through Vercel Serverless Functions. Browser users do **not** paste long-lived API secrets into the app; the frontend calls internal routes and the routes read environment variables on the server.
+
+1.  In Vercel, add these environment variables:
+    *   `GEMINI_API_KEY` - required for live AI copy, spam, and engagement audits.
+    *   `FIGMA_ACCESS_TOKEN` - required for live Figma text-layer extraction.
+    *   `GEMINI_MODEL` - optional, defaults to `gemini-1.5-flash`.
+2.  Redeploy the project after saving environment variables.
+3.  Go to the **Settings** panel in OmniQA.
+4.  Toggle off **Use Sandbox Simulation / Demo Mode**.
+5.  Add a Figma file ID or URL and save the configuration.
+6.  Use **Run Diagnostics Handshake** to confirm the server routes are configured.
+
+Live mode currently supports:
+*   Server-side Gemini copy, deliverability, and engagement analysis through `/api/gemini`.
+*   Server-side Figma text extraction through `/api/figma-layers`.
+*   Local Liquid, link, image, UTM, and WCAG-style validators in the browser.
+*   Braze dashboard deep-linking from the campaign catalog.
+
+Reserved for a later production phase:
+*   Braze REST read/write sync.
+*   Authenticated user accounts and saved audit history.
+*   Server-side PDF/report storage and email delivery.

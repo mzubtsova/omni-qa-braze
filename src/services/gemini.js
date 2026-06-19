@@ -2,94 +2,23 @@
  * Service client for Gemini API integrations in OmniQA for Braze.
  */
 
-const MODEL_NAME = 'gemini-3.5-flash';
-
-function cleanAndParseJSON(text) {
-  try {
-    let cleanText = text.trim();
-    if (cleanText.startsWith('```json')) {
-      cleanText = cleanText.substring(7);
-    } else if (cleanText.startsWith('```')) {
-      cleanText = cleanText.substring(3);
-    }
-    if (cleanText.endsWith('```')) {
-      cleanText = cleanText.substring(0, cleanText.length - 3);
-    }
-    return JSON.parse(cleanText.trim());
-  } catch (e) {
-    console.error("Failed to parse JSON response:", text, e);
-    throw new Error("Invalid JSON format in model output.");
-  }
-}
-
 async function callGemini(prompt, apiKey, systemInstruction = '') {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
-  
-  const requestBody = {
-    contents: [
-      {
-        parts: [{ text: prompt }]
-      }
-    ],
-    generationConfig: {
-      temperature: 0.7,
-      responseMimeType: "application/json"
-    }
-  };
-
-  if (systemInstruction) {
-    requestBody.systemInstruction = {
-      parts: [{ text: systemInstruction }]
-    };
+  if (apiKey) {
+    console.warn('Browser-provided Gemini keys are no longer used. Configure GEMINI_API_KEY on the server instead.');
   }
 
-  const maxRetries = 3;
-  let delay = 1500;
+  const response = await fetch('/api/gemini', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, systemInstruction })
+  });
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errMsg = errorData.error?.message || `HTTP error! status: ${response.status}`;
-        
-        const isRetryable = response.status === 503 || 
-                            response.status === 429 || 
-                            errMsg.toLowerCase().includes('demand') || 
-                            errMsg.toLowerCase().includes('overloaded') ||
-                            errMsg.toLowerCase().includes('resource_exhausted') ||
-                            errMsg.toLowerCase().includes('capacity');
-
-        if (isRetryable && attempt < maxRetries) {
-          console.warn(`Gemini API attempt ${attempt} failed: "${errMsg}". Retrying in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          delay *= 2.5;
-          continue;
-        }
-        throw new Error(errMsg);
-      }
-
-      const data = await response.json();
-      const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!textResponse) {
-        throw new Error("No response text received from Gemini.");
-      }
-
-      return cleanAndParseJSON(textResponse);
-    } catch (error) {
-      if (attempt === maxRetries) throw error;
-      console.warn(`Gemini API attempt ${attempt} threw: "${error.message}". Retrying in ${delay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
-      delay *= 2.5;
-    }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || `Gemini request failed with status ${response.status}.`);
   }
+
+  return data.result;
 }
 
 /**

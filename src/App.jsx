@@ -154,7 +154,7 @@ export default function App() {
   const handleSyncFigma = async () => {
     setFigmaSyncLoading(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    const token = useMockMode ? null : localStorage.getItem('figma_token');
+    const token = useMockMode ? null : 'server';
     const fileId = useMockMode ? null : localStorage.getItem('figma_file_id');
     try {
       const layers = await fetchFigmaTextLayers(fileId, token);
@@ -170,7 +170,7 @@ export default function App() {
   const handlePredictEngagement = async () => {
     setIsPredicting(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    const apiKey = useMockMode ? null : localStorage.getItem('gemini_api_key');
+    const apiKey = useMockMode ? null : 'server';
     const bodyText = brazeHtml.replace(/<[^>]*>/g, ' ');
     try {
       const res = await predictCampaignEngagement({
@@ -240,7 +240,7 @@ export default function App() {
     }
     
     const isMock = mockOverride !== undefined ? mockOverride : useMockMode;
-    const apiKey = isMock ? null : localStorage.getItem('gemini_api_key');
+    const apiKey = isMock ? null : 'server';
 
     const currentHtml = customData.brazeHtml !== undefined ? customData.brazeHtml : brazeHtml;
     const currentSubject = customData.subjectLine !== undefined ? customData.subjectLine : subjectLine;
