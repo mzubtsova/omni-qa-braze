@@ -19,7 +19,7 @@ export default function Settings({ onSave }) {
   });
 
   useEffect(() => {
-    // Load credentials from localStorage
+    // Load non-secret workspace preferences from localStorage.
     const savedGemini = '';
     const savedFigmaToken = '';
     const savedFigmaFile = localStorage.getItem('figma_file_id') || '';

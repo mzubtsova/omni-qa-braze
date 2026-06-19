@@ -14,11 +14,11 @@ flowchart TD
     classDef source fill:#1e293b,stroke:#475569,stroke-width:2px,color:#f8fafc;
     classDef core fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
     classDef validator fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
-    classDef api fill:#311042,stroke:#c084fc,stroke-width:2px,color:#f8fafc;
+    classDef server fill:#311042,stroke:#c084fc,stroke-width:2px,color:#f8fafc;
     classDef output fill:#061712,stroke:#34d399,stroke-width:2px,color:#f8fafc;
 
     %% Nodes
-    Figma["🎨 Figma Mockup API"]:::source
+    Figma["🎨 Figma File ID / URL"]:::source
     Payload["✉️ Coded Campaign HTML/CSS"]:::source
     Catalog["🗂️ Campaign Catalog Workspace"]:::source
     
@@ -31,18 +31,20 @@ flowchart TD
     end
     class LocalValidators,Liquid,Links,WCAG validator;
     
-    subgraph ExternalServices ["🤖 EXTERNAL SERVICES & APIS"]
-        Gemini["💬 Gemini copy/spell Sync Auditor"]
-        Braze["🔥 Braze REST Campaign API"]
+    subgraph ServerRoutes ["🔐 VERCEL SERVERLESS API ROUTES"]
+        GeminiRoute["/api/gemini"]
+        FigmaRoute["/api/figma-layers"]
+        HealthRoute["/api/health"]
     end
-    class ExternalServices,Gemini,Braze api;
+    class ServerRoutes,GeminiRoute,FigmaRoute,HealthRoute server;
     
     PDFExport["📄 Visual QA PDF Scorecard"]:::output
     ReportEmail["📧 HTML Diagnostics Report Email"]:::output
     AutoFix["🪄 One-Click HTML Auto-Fixer"]:::output
+    BrazeLinks["🔥 Braze Dashboard Deep Links"]:::output
     
     %% Flow Connections
-    Figma -->|Extract Text| App
+    Figma -->|File reference| App
     Payload -->|Import Code| App
     Catalog -->|Load Draft| App
     
@@ -50,21 +52,22 @@ flowchart TD
     App <-->|Link Verification| Links
     App <-->|A11y Validation| WCAG
     
-    App <-->|AI Spell & Price Checks| Gemini
+    App <-->|AI copy, spam & forecast requests| GeminiRoute
+    App <-->|Text layer extraction| FigmaRoute
+    App <-->|Environment readiness| HealthRoute
     
     App -->|Generate Scorecard| PDFExport
     App -->|Generate Email| ReportEmail
     App -->|Trigger Repair| AutoFix
-    
-    AutoFix -->|Sync Corrected Template| Braze
+    Catalog -->|Open campaign workspace| BrazeLinks
 ```
 
 ### Component Breakdown & Data Flow
-1.  **Input Sources**: Campaign contexts are pulled from **Figma frames** (extracting copy blocks) and **Braze/HTML files** (fetching code assets).
-2.  **OmniQA Core Controller (`App.jsx`)**: Orchestrates data state and passes values to dedicated subcomponents.
-3.  **Local Validators**: Processes code syntax, contrast calculations, and URL routing locally in the browser to ensure instantaneous feedback.
-4.  **External Copilot Services**: Integrates with **Google Gemini API** (using JSON Schema schemas for predictable formatting) to score brand sentiment and audit syntax.
-5.  **Output Layer**: Allows campaign developers to directly export report summaries, print PDF scorecards, or sync the corrected code back to the active campaign in Braze.
+1.  **Input Sources**: Campaign contexts come from pasted/imported HTML, campaign catalog entries, and Figma file IDs or URLs.
+2.  **OmniQA Core Controller (`App.jsx`)**: Orchestrates data state and passes values to dedicated dashboard, preview, validator, and reporting views.
+3.  **Local Validators**: Processes Liquid syntax, URL/UTM patterns, contrast checks, image risks, and preview states locally for instant feedback.
+4.  **Secure Server Routes**: Calls `/api/gemini`, `/api/figma-layers`, and `/api/health` so Gemini and Figma secrets stay in Vercel environment variables instead of browser storage.
+5.  **Output Layer**: Supports launch-readiness summaries, print/PDF reports, HTML repair helpers, and Braze dashboard deep links. Braze REST write-back is reserved for a later production phase.
 
 ---
 
