@@ -8,6 +8,7 @@ import {
 
 const STORAGE_KEY = 'omniqa_launch_workspace';
 const HISTORY_KEY = 'omniqa_qa_history';
+const CHECKLIST_KEY = 'omniqa_launch_checklist';
 
 const campaignTemplates = {
   birthday: {
@@ -123,6 +124,30 @@ const profilePresets = {
   }
 };
 
+function createId() {
+  return crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function normalizeChecklist(items = []) {
+  return items.map(item => {
+    if (typeof item === 'string') {
+      return {
+        id: createId(),
+        text: item,
+        done: false,
+        comment: ''
+      };
+    }
+
+    return {
+      id: item.id || createId(),
+      text: item.text || '',
+      done: Boolean(item.done),
+      comment: item.comment || ''
+    };
+  });
+}
+
 function loadJson(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
@@ -208,7 +233,6 @@ export default function LaunchWorkspace({
   campaignState,
   setCampaignState,
   scores,
-  issuesCount,
   copyAuditResults,
   spamAuditResults,
   predictionResults,
@@ -221,11 +245,16 @@ export default function LaunchWorkspace({
     audience: 'Eligible loyalty audience',
     offerLogic: 'Send personalized content based on user attributes and channel eligibility.',
     expectedVariables: 'user.first_name, favorite_category, points_balance',
+    customCampaignType: '',
     notes: ''
   }));
   const [activeProfileKey, setActiveProfileKey] = useState('loyalFood');
   const [history, setHistory] = useState(() => loadJson(HISTORY_KEY, []));
-  const [checklist, setChecklist] = useState(() => campaignTemplates[workspace.campaignType]?.checklist || []);
+  const [checklist, setChecklist] = useState(() => normalizeChecklist(
+    loadJson(CHECKLIST_KEY, campaignTemplates[workspace.campaignType]?.checklist || [])
+  ));
+  const [newCheckpoint, setNewCheckpoint] = useState('');
+  const [openCommentIds, setOpenCommentIds] = useState([]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
@@ -234,6 +263,10 @@ export default function LaunchWorkspace({
   useEffect(() => {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   }, [history]);
+
+  useEffect(() => {
+    localStorage.setItem(CHECKLIST_KEY, JSON.stringify(checklist));
+  }, [checklist]);
 
   const issueSummary = useMemo(
     () => summarizeIssues(campaignState),
@@ -251,6 +284,10 @@ export default function LaunchWorkspace({
   }), [activeProfile, campaignState]);
 
   const links = useMemo(() => collectLinks(campaignState), [campaignState]);
+  const activeTemplate = campaignTemplates[workspace.campaignType];
+  const campaignTypeLabel = activeTemplate?.label || workspace.customCampaignType || 'Custom Campaign';
+  const channelPlan = activeTemplate?.channelPlan || 'Manual campaign type. Add the channels, checks, and launch notes that fit this build.';
+  const checklistDone = checklist.filter(item => item.done).length;
 
   const riskLabel = scores.overall >= 90 ? 'Launch ready' : scores.overall >= 75 ? 'Needs light review' : 'Needs fixes before launch';
   const reportFindings = [
@@ -261,7 +298,9 @@ export default function LaunchWorkspace({
   ];
 
   const applyTemplate = () => {
-    const template = campaignTemplates[workspace.campaignType];
+    const template = activeTemplate;
+    if (!template) return;
+
     setCampaignState({
       subjectLine: template.subjectLine,
       pushBody: template.pushBody,
@@ -271,18 +310,48 @@ export default function LaunchWorkspace({
       iamButtonText: template.iamButtonText,
       iamButtonLink: template.iamButtonLink
     });
-    setChecklist(template.checklist);
+    setChecklist(normalizeChecklist(template.checklist));
+  };
+
+  const updateChecklistItem = (id, updates) => {
+    setChecklist(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+  };
+
+  const addCheckpoint = () => {
+    const text = newCheckpoint.trim();
+    if (!text) return;
+
+    setChecklist(prev => [
+      ...prev,
+      {
+        id: createId(),
+        text,
+        done: false,
+        comment: ''
+      }
+    ]);
+    setNewCheckpoint('');
+  };
+
+  const removeCheckpoint = (id) => {
+    setChecklist(prev => prev.filter(item => item.id !== id));
+    setOpenCommentIds(prev => prev.filter(openId => openId !== id));
+  };
+
+  const toggleComment = (id) => {
+    setOpenCommentIds(prev => prev.includes(id) ? prev.filter(openId => openId !== id) : [...prev, id]);
   };
 
   const saveQaRun = () => {
     const entry = {
       id: crypto.randomUUID(),
       name: workspace.campaignName || 'Untitled campaign',
-      type: campaignTemplates[workspace.campaignType].label,
+      type: campaignTypeLabel,
       date: new Date().toISOString(),
       status: riskLabel,
       score: scores.overall,
       issues: issueSummary.total,
+      checklist: `${checklistDone}/${checklist.length}`,
       notes: workspace.notes
     };
     setHistory(prev => [entry, ...prev].slice(0, 12));
@@ -294,25 +363,24 @@ export default function LaunchWorkspace({
 
   return (
     <div className="launch-workspace">
-      <section className="panel launch-hero">
+      <section className="launch-summary">
         <div>
-          <p className="eyebrow">Campaign Intake</p>
+          <p className="eyebrow">Launch Workspace</p>
           <h2>{workspace.campaignName}</h2>
           <p>
-            Build a structured QA packet from campaign context, templates, Liquid variables,
-            link checks, launch risk, and saved review history.
+            One place to prep a campaign for review: setup, checklist, personalization preview, links, and final notes.
           </p>
         </div>
-        <div className="launch-score-card">
-          <span>{scores.overall}</span>
-          <strong>{riskLabel}</strong>
-          <small>{issuesCount.high} high / {issuesCount.medium} medium / {issuesCount.low} low</small>
+        <div className="launch-status-strip" aria-label="Launch status">
+          <strong>{scores.overall}/100</strong>
+          <span>{riskLabel}</span>
+          <small>{checklistDone}/{checklist.length} checklist complete</small>
         </div>
       </section>
 
       <section className="launch-grid">
         <div className="panel">
-          <h3>1. Intake</h3>
+          <h3>Campaign Setup</h3>
           <div className="form-group">
             <label className="form-label">Campaign name</label>
             <input className="form-input" value={workspace.campaignName} onChange={e => setWorkspace({ ...workspace, campaignName: e.target.value })} />
@@ -323,8 +391,20 @@ export default function LaunchWorkspace({
               {Object.entries(campaignTemplates).map(([key, template]) => (
                 <option key={key} value={key}>{template.label}</option>
               ))}
+              <option value="custom">Custom / Manual Type</option>
             </select>
           </div>
+          {workspace.campaignType === 'custom' && (
+            <div className="form-group">
+              <label className="form-label">Manual campaign type</label>
+              <input
+                className="form-input"
+                value={workspace.customCampaignType}
+                onChange={e => setWorkspace({ ...workspace, customCampaignType: e.target.value })}
+                placeholder="Example: Loyalty header refresh, footer update, triggered webhook"
+              />
+            </div>
+          )}
           <div className="form-group">
             <label className="form-label">Launch date</label>
             <input className="form-input" type="date" value={workspace.launchDate} onChange={e => setWorkspace({ ...workspace, launchDate: e.target.value })} />
@@ -333,69 +413,121 @@ export default function LaunchWorkspace({
             <label className="form-label">Audience / segment</label>
             <textarea className="form-textarea" value={workspace.audience} onChange={e => setWorkspace({ ...workspace, audience: e.target.value })} />
           </div>
-        </div>
-
-        <div className="panel">
-          <h3>2. Template Checklist</h3>
-          <p className="muted-copy">{campaignTemplates[workspace.campaignType].channelPlan}</p>
-          <button className="btn btn-primary" onClick={applyTemplate}>Apply Template Copy</button>
-          <div className="qa-checklist">
-            {checklist.map((item, index) => (
-              <label key={item} className="qa-check">
-                <input type="checkbox" />
-                <span>{index + 1}. {item}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="panel">
-          <h3>3. Offer Logic</h3>
           <div className="form-group">
             <label className="form-label">Offer / journey logic</label>
             <textarea className="form-textarea" value={workspace.offerLogic} onChange={e => setWorkspace({ ...workspace, offerLogic: e.target.value })} />
           </div>
           <div className="form-group">
-            <label className="form-label">Expected variables</label>
+            <label className="form-label">Expected personalization fields</label>
             <input className="form-input" value={workspace.expectedVariables} onChange={e => setWorkspace({ ...workspace, expectedVariables: e.target.value })} />
           </div>
-          <button className="btn btn-secondary" onClick={() => onRunAudit()}>Run Full QA</button>
+          <div className="button-row">
+            <button className="btn btn-primary" onClick={applyTemplate} disabled={!activeTemplate}>Apply Template Copy</button>
+            <button className="btn btn-secondary" onClick={() => onRunAudit()}>Run Full QA</button>
+          </div>
         </div>
 
-        <div className="panel">
-          <h3>4. Link & UTM Scan</h3>
-          <div className="link-table">
-            {links.length === 0 ? (
-              <p className="muted-copy">No links detected yet.</p>
-            ) : links.map((link, index) => (
-              <div className="link-row" key={`${link.url}-${index}`}>
-                <span>{link.channel}</span>
-                <code>{link.url}</code>
-                <strong className={link.url.includes('utm_') ? 'ok' : 'warn'}>{link.url.includes('utm_') ? 'UTM' : 'No UTM'}</strong>
+        <div className="panel checklist-panel">
+          <div className="panel-topline">
+            <div>
+              <h3>Review Checklist</h3>
+              <p className="muted-copy">{channelPlan}</p>
+            </div>
+            <span className="checklist-count">{checklistDone}/{checklist.length}</span>
+          </div>
+          <div className="qa-checklist">
+            {checklist.map((item, index) => (
+              <div key={item.id} className="qa-check-card">
+                <div className="qa-check-row">
+                  <input
+                    type="checkbox"
+                    checked={item.done}
+                    onChange={e => updateChecklistItem(item.id, { done: e.target.checked })}
+                    aria-label={`Mark checkpoint ${index + 1} complete`}
+                  />
+                  <textarea
+                    className="form-textarea checkpoint-input"
+                    rows="2"
+                    value={item.text}
+                    onChange={e => updateChecklistItem(item.id, { text: e.target.value })}
+                    aria-label={`Checkpoint ${index + 1}`}
+                  />
+                  <button className="mini-button" type="button" onClick={() => toggleComment(item.id)}>
+                    {item.comment ? 'Edit Note' : 'Note'}
+                  </button>
+                  <button className="icon-button" type="button" onClick={() => removeCheckpoint(item.id)} aria-label={`Remove checkpoint ${index + 1}`}>
+                    ×
+                  </button>
+                </div>
+                {(openCommentIds.includes(item.id) || item.comment) && (
+                  <textarea
+                    className="form-textarea checkpoint-comment"
+                    value={item.comment}
+                    onChange={e => updateChecklistItem(item.id, { comment: e.target.value })}
+                    placeholder="Add a QA note, blocker, owner, or follow-up..."
+                    aria-label={`Comment for checkpoint ${index + 1}`}
+                  />
+                )}
               </div>
             ))}
+            <div className="qa-add-row">
+              <input
+                className="form-input"
+                value={newCheckpoint}
+                onChange={e => setNewCheckpoint(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCheckpoint();
+                  }
+                }}
+                placeholder="Add a new checkpoint"
+              />
+              <button className="btn btn-secondary" type="button" onClick={addCheckpoint}>Add</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="panel wide-panel workspace-review-panel">
+          <div>
+            <h3>Personalization Preview</h3>
+            <p className="muted-copy">
+              Pick a sample profile to see how dynamic fields and fallbacks render before launch.
+            </p>
+            <div className="profile-tabs compact-tabs">
+              {Object.entries(profilePresets).map(([key, profile]) => (
+                <button key={key} className={`btn ${activeProfileKey === key ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveProfileKey(key)}>
+                  {profile.label}
+                </button>
+              ))}
+            </div>
+            <div className="preview-grid">
+              <div><strong>Subject</strong><p>{renderedPreview.subject}</p></div>
+              <div><strong>Push</strong><p>{renderedPreview.push}</p></div>
+              <div><strong>SMS</strong><p>{renderedPreview.sms}</p></div>
+              <div><strong>IAM</strong><p>{renderedPreview.iamHeader}: {renderedPreview.iamBody}</p></div>
+            </div>
+          </div>
+
+          <div>
+            <h3>Links</h3>
+            <p className="muted-copy">Quick scan for missing tracking before deeper technical review.</p>
+            <div className="link-table">
+              {links.length === 0 ? (
+                <p className="muted-copy">No links detected yet.</p>
+              ) : links.map((link, index) => (
+                <div className="link-row" key={`${link.url}-${index}`}>
+                  <span>{link.channel}</span>
+                  <code>{link.url}</code>
+                  <strong className={link.url.includes('utm_') ? 'ok' : 'warn'}>{link.url.includes('utm_') ? 'UTM' : 'No UTM'}</strong>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
         <div className="panel wide-panel">
-          <h3>5. Liquid Simulator</h3>
-          <div className="profile-tabs">
-            {Object.entries(profilePresets).map(([key, profile]) => (
-              <button key={key} className={`btn ${activeProfileKey === key ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveProfileKey(key)}>
-                {profile.label}
-              </button>
-            ))}
-          </div>
-          <div className="preview-grid">
-            <div><strong>Subject</strong><p>{renderedPreview.subject}</p></div>
-            <div><strong>Push</strong><p>{renderedPreview.push}</p></div>
-            <div><strong>SMS</strong><p>{renderedPreview.sms}</p></div>
-            <div><strong>IAM</strong><p>{renderedPreview.iamHeader}: {renderedPreview.iamBody}</p></div>
-          </div>
-        </div>
-
-        <div className="panel wide-panel">
-          <h3>6. Launch Readiness Report</h3>
+          <h3>Report Notes</h3>
           <div className="report-grid">
             <div>
               <p className="report-status">{riskLabel}</p>
@@ -413,25 +545,25 @@ export default function LaunchWorkspace({
             <button className="btn btn-primary" onClick={saveQaRun}>Save QA Run</button>
             <button className="btn btn-secondary" onClick={exportReport}>Export / Print Report</button>
           </div>
-        </div>
 
-        <div className="panel wide-panel">
-          <h3>7. QA History</h3>
-          <div className="history-list">
-            {history.length === 0 ? (
-              <p className="muted-copy">No saved QA runs yet. Save a run to start building your campaign review history.</p>
-            ) : history.map(entry => (
-              <div className="history-row" key={entry.id}>
-                <div>
-                  <strong>{entry.name}</strong>
-                  <span>{entry.type} • {new Date(entry.date).toLocaleString()}</span>
+          <div className="history-compact">
+            <h4>Recent QA Runs</h4>
+            <div className="history-list">
+              {history.length === 0 ? (
+                <p className="muted-copy">No saved runs yet.</p>
+              ) : history.slice(0, 4).map(entry => (
+                <div className="history-row" key={entry.id}>
+                  <div>
+                    <strong>{entry.name}</strong>
+                    <span>{entry.type} • {new Date(entry.date).toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <strong>{entry.score}/100</strong>
+                    <span>{entry.status} • {entry.checklist || '0/0'} checklist</span>
+                  </div>
                 </div>
-                <div>
-                  <strong>{entry.score}/100</strong>
-                  <span>{entry.status} • {entry.issues} issue(s)</span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>

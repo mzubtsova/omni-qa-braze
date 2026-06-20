@@ -585,7 +585,7 @@ export default function App() {
             </h1>
             <p className="header-title-desc">
               {activeTab === 'overview' && 'Unified diagnostic dashboard for your multi-channel CRM campaigns.'}
-              {activeTab === 'workspace' && 'Turn campaign details into a reusable QA checklist, simulator, report, and review history.'}
+              {activeTab === 'workspace' && 'Turn campaign details into a practical launch checklist, preview, report, and review history.'}
               {activeTab === 'copy' && 'Ensure content syncs between creative designs and CRM code layers.'}
               {activeTab === 'visuals' && 'Test rendering logic against long names, edge-case user profiles, and tiers.'}
               {activeTab === 'technical' && 'Validates liquid syntax, UTM tracking parameters, color contrast, and deliverability.'}

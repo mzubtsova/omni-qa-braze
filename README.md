@@ -65,7 +65,7 @@ flowchart TD
 ### Component Breakdown & Data Flow
 1.  **Input Sources**: Campaign contexts come from pasted/imported HTML, campaign catalog entries, and Figma file IDs or URLs.
 2.  **OmniQA Core Controller (`App.jsx`)**: Orchestrates data state and passes values to dedicated dashboard, preview, validator, and reporting views.
-3.  **Launch Workspace**: Converts campaign context into reusable intake notes, campaign-type templates, QA checklists, Liquid profile simulation, link/UTM review, report export, and local QA history.
+3.  **Launch Workspace**: Converts campaign context into reusable intake notes, editable QA checklists, reviewer comments, campaign-type templates, personalization previews, link/UTM review, report export, and local QA history.
 4.  **Local Validators**: Processes Liquid syntax, URL/UTM patterns, contrast checks, image risks, and preview states locally for instant feedback.
 5.  **Secure Server Routes**: Calls `/api/gemini`, `/api/figma-layers`, and `/api/health` so Gemini and Figma secrets stay in Vercel environment variables instead of browser storage.
 6.  **Output Layer**: Supports launch-readiness summaries, print/PDF reports, HTML repair helpers, saved local QA runs, and Braze dashboard deep links. Braze REST write-back is reserved for a later production phase.
@@ -76,8 +76,9 @@ flowchart TD
 
 ### 1. Launch Workspace & Campaign Intake
 *   **Structured Campaign Intake**: Captures campaign name, type, launch date, audience/segment, offer logic, expected variables, and reviewer notes.
-*   **Reusable QA Templates**: Applies campaign-type checklists and starter channel copy for birthday, onboarding, promotional loyalty, and winback workflows.
-*   **Liquid Profile Simulator**: Renders subject, push, SMS, and IAM copy against sample customer profiles to expose missing attributes and fallback behavior.
+*   **Reusable QA Templates**: Applies campaign-type checklists and starter channel copy for birthday, onboarding, promotional loyalty, and winback workflows, while still supporting manual campaign types.
+*   **Editable Review Checklist**: Lets reviewers add, remove, complete, and comment on checkpoints for campaign-specific launch review.
+*   **Personalization Preview**: Renders subject, push, SMS, and IAM copy against sample customer profiles to expose missing attributes and fallback behavior.
 *   **Link & UTM Review**: Collects links from email HTML, IAM, SMS, and push copy so teams can quickly spot missing tracking parameters.
 *   **Launch Report & QA History**: Produces a launch-readiness summary, supports print/PDF export, and stores recent QA runs locally for repeat review.
 
