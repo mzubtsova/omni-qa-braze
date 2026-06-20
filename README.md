@@ -64,8 +64,8 @@ flowchart TD
 
 ### Component Breakdown & Data Flow
 1.  **Input Sources**: Campaign contexts come from pasted/imported HTML, campaign catalog entries, and Figma file IDs or URLs.
-2.  **OmniQA Core Controller (`App.jsx`)**: Orchestrates data state and passes values to dedicated dashboard, preview, validator, and reporting views.
-3.  **Launch Workspace**: Converts campaign context into reusable intake notes, editable QA checklists, reviewer comments, campaign-type templates, personalization previews, link/UTM review, report export, and local QA history.
+2.  **OmniQA Core Controller (`App.jsx`)**: Orchestrates shared campaign data across Overview, Campaign, Checklist, QA Review, Library, and Settings.
+3.  **Campaign Workspace**: Converts campaign context into reusable intake notes, editable campaign types, campaign templates, personalization previews, and link review.
 4.  **Local Validators**: Processes Liquid syntax, URL/UTM patterns, contrast checks, image risks, and preview states locally for instant feedback.
 5.  **Secure Server Routes**: Calls `/api/gemini`, `/api/figma-layers`, and `/api/health` so Gemini and Figma secrets stay in Vercel environment variables instead of browser storage.
 6.  **Output Layer**: Supports launch-readiness review, editable checklist notes, HTML repair helpers, and Braze dashboard deep links. Braze REST write-back is reserved for a later production phase.
@@ -74,44 +74,32 @@ flowchart TD
 
 ## 🚀 Key Features
 
-### 1. Launch Workspace & Campaign Intake
-*   **Structured Campaign Intake**: Captures campaign name, type, launch date, audience/segment, offer logic, expected variables, and reviewer notes.
-*   **Reusable QA Templates**: Applies campaign-type checklists and starter channel copy for birthday, onboarding, promotional loyalty, and winback workflows, while still supporting manual campaign types.
-*   **Editable Review Checklist**: Lets reviewers add, remove, complete, and comment on checkpoints for campaign-specific launch review.
-*   **Personalization Preview**: Renders subject, push, SMS, and IAM copy against sample customer profiles to expose missing attributes and fallback behavior.
-*   **Link & UTM Review**: Collects links from email HTML, IAM, SMS, and push copy so teams can quickly spot missing tracking parameters.
-*   **Simplified Navigation**: Keeps the live app focused on Launch Workspace, QA Review, Campaign Library, and Settings instead of exposing every diagnostic as a separate top-level tab.
+### 1. Overview & Reporting
+*   **Campaign Health Overview**: Shows campaign scores, issue severity, channel readiness, and engagement forecast in one starting view.
+*   **Email Report Draft**: Opens a prefilled email with the current QA summary and issue list.
+*   **PDF Export**: Uses the browser print flow to save or print a campaign QA report.
 
-### 2. Unified Master Diagnostics & Copy Sync
+### 2. Campaign Workspace
+*   **Structured Campaign Intake**: Captures campaign name, type, launch date, audience/segment, offer logic, expected variables, and reviewer notes.
+*   **Editable Campaign Types**: Keeps built-in templates while allowing reviewers to add, select, and remove custom campaign types.
+*   **Reusable Templates**: Applies starter channel copy for birthday, onboarding, promotional loyalty, and winback workflows.
+*   **Personalization Preview**: Substitutes sample profile values into subject, push, SMS, and IAM copy so reviewers can test populated values and missing-data fallbacks before launch. It is a practical preview, not a full Braze Liquid runtime.
+*   **Link & UTM Review**: Collects links from email HTML, IAM, SMS, and push copy so teams can quickly spot missing tracking parameters.
+
+### 3. Separate Review Checklist
+*   **Editable Checkpoints**: Lets reviewers add, remove, reorder through edits, and complete campaign-specific checks.
+*   **Checkpoint Notes**: Stores a note, blocker, owner, or follow-up directly with each checkpoint.
+*   **Shared Campaign State**: Uses the same saved campaign and template data as the Campaign Workspace without duplicating the checklist there.
+
+### 4. Focused QA Review
 *   **Figma Layer Cross-Checking**: Compares text nodes extracted from Figma designs directly with Braze HTML templates and subject lines.
 *   **Fuzzy Text-Diff Matcher**: Dynamically tokenizes and scans plain text inside HTML tags to match lines of Figma design copy on the fly.
 *   **Monaco HTML Code Editor**: Embeds a rich, syntax-highlighted editor with line numbers, code folding, word wrap, and automatic layout resizing that compiles state changes in real time.
-*   **Focused QA Review**: Groups campaign health, copy alignment, and technical checks into one review area instead of scattering them across separate screens.
-
-### 3. Multi-Device & Multi-Channel Visual Stress-Tester
-*   **Interactive Liquid Overrides**: Scans and detects dynamic Liquid template variables (`{{ user.first_name }}`, `{{ tier }}`) and renders text inputs for real-time customer profile updates.
-*   **Custom Dynamic Variables (`+` / `×`)**: Allows developers to manually define, add (`+`), or delete (`×`) custom key-value variables to test edge cases outside default database parameters.
-*   **Unified Multi-Tab Previews**: Allows campaign managers to instantly toggle the preview pane between:
-    *   `📱 Device Simulator`: Renders simulated device frames (iPhone, Android, Tablet, Laptop) across channels.
-    *   `📥 Client Inbox Previews`: Simulates subject line rendering and truncation lengths across Gmail Desktop, Apple Mail iOS, and Outlook Web.
-    *   `📐 Figma Specification`: Displays Figma outline SVG blueprints side-by-side with code.
-*   **Simulated Push Notifications**: Toggles between **Locked Phone (Full Screen)** (displays lockscreen wallpaper, clock/calendar overlay, and rich push notification cards containing the Blizzard campaign banner image) and **Unlocked Phone (App Banner)** (overlays a floating push banner over an active app grid home screen). Laptop preview is automatically hidden in push mode.
-*   **In-App Message (IAM) Layout Simulator**: Renders center modals, slide-up banners, and full-screen takeovers directly inside the simulated device with editable headers, body text, dynamic action buttons, and redirect link validators.
-*   **SMS Preview & Billing Segment Auditor**: Renders message bubbles in a text chat interface, scans for non-GSM-7 unicode inputs (emojis or smart quotes), calculates text lengths, and warns developers when copy exceeds character limits and triggers multi-segment billing costs.
-*   **Email Client Dark Mode Inversion**: Injects dynamic overrides into the email iframe context to invert styles, guaranteeing text legibility in simulated dark mobile environments.
-
-### 4. Technical Health & Reporting Engine
 *   **Liquid Logic Delimiter Checker**: Scans logic control flows (`{% if %}` and `{{ ... }}`) for nesting depth errors, missing delimiters, or orphaned statements.
 *   **UTM Link Crawler**: Crawls all anchor links to detect dead hrefs, placeholder domains, and missing marketing UTM analytics keys.
 *   **HTML Contrast Auto-Fixer**: Features a one-click repair engine that automatically adjusts violating button contrasts, resolves empty placeholder links, and appends missing UTM trackers.
-*   **Staging PDF & Email Dispatcher**: Dispatches live email report drafts with detailed bulleted campaign issues lists and exports print-ready visual QA scorecards.
 
-### 5. A/B Copy Compare & Predictive CTR Engine
-*   **Standalone Side-by-Side Evaluator**: Compares subject lines, body copy snippets, CTA button texts, and CTA links for two variants (Baseline vs Challenger) in a dedicated tab.
-*   **Local AI Predictive Model**: Predicts open rates, click-through rates (CTR), and overall grades based on character lengths, emojis, capitalization rules, urgency triggers, CTA verbs, and UTM configurations.
-*   **Active Workspace Application**: Automatically updates the active workspace campaign (including direct parsing and updating of your template's HTML anchor elements) with your winning variant parameters.
-
-### 6. Braze Campaign Catalog & Workspace Manager
+### 5. Campaign Library
 *   **Dynamic Campaign Catalog**: Tracks campaign drafts, versions, status, and synchronization state.
 *   **Cluster-Mapped Workspace Links**: Maps REST API endpoints (e.g. `rest.iad-01`, `rest.iad-03`, `rest.eu`) to direct, clickable URLs pointing straight to your campaign configuration inside the Braze dashboard console.
 
@@ -120,7 +108,7 @@ flowchart TD
 ## 💻 Tech Stack & Design
 
 *   **Core**: React, Vite, and CSS variables.
-*   **Theme**: Premium dark cyber-navy palette with glassmorphism overlays and glowing circular gauge metrics.
+*   **Theme**: Compact dark interface with clear hierarchy, restrained status color, and responsive navigation.
 *   **Typography**: Outfitted with *Outfit* for modern SaaS headers and *JetBrains Mono* for responsive code blocks.
 
 ---

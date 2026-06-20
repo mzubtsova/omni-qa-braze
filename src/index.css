@@ -557,6 +557,35 @@ h1, h2, h3, h4, h5, h6 {
   align-self: start;
 }
 
+.checklist-focus-panel {
+  width: min(980px, 100%);
+  margin: 0 auto;
+}
+
+.campaign-setup-panel {
+  grid-column: 1 / -1;
+  width: min(900px, 100%);
+  margin: 0 auto;
+}
+
+.campaign-type-select-row,
+.campaign-type-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.campaign-type-add-row {
+  margin-top: 0.65rem;
+}
+
+.compact-action {
+  min-height: 42px;
+  padding: 0.6rem 0.8rem;
+  white-space: nowrap;
+}
+
 .panel-topline {
   display: flex;
   justify-content: space-between;
@@ -1355,12 +1384,34 @@ h1, h2, h3, h4, h5, h6 {
   .link-row,
   .history-row,
   .qa-check-row,
-  .qa-add-row {
+  .qa-add-row,
+  .campaign-type-select-row,
+  .campaign-type-add-row {
     grid-template-columns: 1fr;
   }
 
   .qa-check-row input[type="checkbox"] {
     justify-self: flex-start;
+  }
+
+  .qa-check-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .qa-check-row .checkpoint-input {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .qa-check-row .mini-button {
+    justify-self: end;
+  }
+
+  .checklist-status-strip {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .launch-score-card {

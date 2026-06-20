@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 const STORAGE_KEY = 'omniqa_launch_workspace';
 const CHECKLIST_KEY = 'omniqa_launch_checklist';
+const CUSTOM_TYPES_KEY = 'omniqa_custom_campaign_types';
 
 const campaignTemplates = {
   birthday: {
@@ -193,6 +194,7 @@ function collectLinks({ brazeHtml, iamButtonLink, smsBody, pushBody }) {
 }
 
 export default function LaunchWorkspace({
+  view = 'workspace',
   campaignState,
   setCampaignState,
   scores,
@@ -209,6 +211,8 @@ export default function LaunchWorkspace({
     notes: ''
   }));
   const [activeProfileKey, setActiveProfileKey] = useState('loyalFood');
+  const [customTypes, setCustomTypes] = useState(() => loadJson(CUSTOM_TYPES_KEY, []));
+  const [newCampaignType, setNewCampaignType] = useState('');
   const [checklist, setChecklist] = useState(() => normalizeChecklist(
     loadJson(CHECKLIST_KEY, campaignTemplates[workspace.campaignType]?.checklist || [])
   ));
@@ -223,6 +227,10 @@ export default function LaunchWorkspace({
     localStorage.setItem(CHECKLIST_KEY, JSON.stringify(checklist));
   }, [checklist]);
 
+  useEffect(() => {
+    localStorage.setItem(CUSTOM_TYPES_KEY, JSON.stringify(customTypes));
+  }, [customTypes]);
+
   const activeProfile = profilePresets[activeProfileKey].values;
   const renderedPreview = useMemo(() => ({
     subject: renderLiquidText(campaignState.subjectLine, activeProfile),
@@ -235,6 +243,7 @@ export default function LaunchWorkspace({
 
   const links = useMemo(() => collectLinks(campaignState), [campaignState]);
   const activeTemplate = campaignTemplates[workspace.campaignType];
+  const selectedCustomType = customTypes.find(type => type.id === workspace.campaignType);
   const channelPlan = activeTemplate?.channelPlan || 'Manual campaign type. Add the channels, checks, and launch notes that fit this build.';
   const checklistDone = checklist.filter(item => item.done).length;
 
@@ -285,6 +294,107 @@ export default function LaunchWorkspace({
     setOpenCommentIds(prev => prev.includes(id) ? prev.filter(openId => openId !== id) : [...prev, id]);
   };
 
+  const addCampaignType = () => {
+    const label = newCampaignType.trim();
+    if (!label) return;
+
+    const type = {
+      id: `custom-${createId()}`,
+      label
+    };
+    setCustomTypes(prev => [...prev, type]);
+    setWorkspace(prev => ({ ...prev, campaignType: type.id }));
+    setNewCampaignType('');
+  };
+
+  const removeCampaignType = () => {
+    if (!selectedCustomType) return;
+    setCustomTypes(prev => prev.filter(type => type.id !== selectedCustomType.id));
+    setWorkspace(prev => ({ ...prev, campaignType: 'promo' }));
+  };
+
+  const checklistPanel = (
+    <div className="panel checklist-panel checklist-focus-panel">
+      <div className="panel-topline">
+        <div>
+          <h3>Review Checklist</h3>
+          <p className="muted-copy">{channelPlan}</p>
+        </div>
+        <span className="checklist-count">{checklistDone}/{checklist.length}</span>
+      </div>
+      <div className="qa-checklist">
+        {checklist.map((item, index) => (
+          <div key={item.id} className="qa-check-card">
+            <div className="qa-check-row">
+              <input
+                type="checkbox"
+                checked={item.done}
+                onChange={e => updateChecklistItem(item.id, { done: e.target.checked })}
+                aria-label={`Mark checkpoint ${index + 1} complete`}
+              />
+              <textarea
+                className="form-textarea checkpoint-input"
+                rows="2"
+                value={item.text}
+                onChange={e => updateChecklistItem(item.id, { text: e.target.value })}
+                aria-label={`Checkpoint ${index + 1}`}
+              />
+              <button className="mini-button" type="button" onClick={() => toggleComment(item.id)}>
+                {item.comment ? 'Edit Note' : 'Note'}
+              </button>
+              <button className="icon-button" type="button" onClick={() => removeCheckpoint(item.id)} aria-label={`Remove checkpoint ${index + 1}`}>
+                ×
+              </button>
+            </div>
+            {(openCommentIds.includes(item.id) || item.comment) && (
+              <textarea
+                className="form-textarea checkpoint-comment"
+                value={item.comment}
+                onChange={e => updateChecklistItem(item.id, { comment: e.target.value })}
+                placeholder="Add a QA note, blocker, owner, or follow-up..."
+                aria-label={`Comment for checkpoint ${index + 1}`}
+              />
+            )}
+          </div>
+        ))}
+        <div className="qa-add-row">
+          <input
+            className="form-input"
+            value={newCheckpoint}
+            onChange={e => setNewCheckpoint(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addCheckpoint();
+              }
+            }}
+            placeholder="Add a new checkpoint"
+          />
+          <button className="btn btn-secondary" type="button" onClick={addCheckpoint}>Add</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (view === 'checklist') {
+    return (
+      <div className="launch-workspace">
+        <section className="launch-summary">
+          <div>
+            <p className="eyebrow">Campaign Checklist</p>
+            <h2>{workspace.campaignName}</h2>
+            <p>Keep campaign-specific checkpoints, decisions, owners, and notes in one focused review screen.</p>
+          </div>
+          <div className="launch-status-strip checklist-status-strip" aria-label="Checklist status">
+            <strong>{checklistDone}/{checklist.length}</strong>
+            <span>Complete</span>
+          </div>
+        </section>
+        {checklistPanel}
+      </div>
+    );
+  }
+
   return (
     <div className="launch-workspace">
       <section className="launch-summary">
@@ -303,7 +413,7 @@ export default function LaunchWorkspace({
       </section>
 
       <section className="launch-grid">
-        <div className="panel">
+        <div className="panel campaign-setup-panel">
           <h3>Campaign Setup</h3>
           <div className="form-group">
             <label className="form-label">Campaign name</label>
@@ -311,22 +421,42 @@ export default function LaunchWorkspace({
           </div>
           <div className="form-group">
             <label className="form-label">Campaign type</label>
-            <select className="form-select" value={workspace.campaignType} onChange={e => setWorkspace({ ...workspace, campaignType: e.target.value })}>
-              {Object.entries(campaignTemplates).map(([key, template]) => (
-                <option key={key} value={key}>{template.label}</option>
-              ))}
-              <option value="custom">Custom / Manual Type</option>
-            </select>
+            <div className="campaign-type-select-row">
+              <select className="form-select" value={workspace.campaignType} onChange={e => setWorkspace({ ...workspace, campaignType: e.target.value })}>
+                {Object.entries(campaignTemplates).map(([key, template]) => (
+                  <option key={key} value={key}>{template.label}</option>
+                ))}
+                {customTypes.map(type => (
+                  <option key={type.id} value={type.id}>{type.label}</option>
+                ))}
+                <option value="custom">Custom / Manual Type</option>
+              </select>
+              {selectedCustomType && (
+                <button className="btn btn-secondary compact-action" type="button" onClick={removeCampaignType}>
+                  Remove
+                </button>
+              )}
+            </div>
+            <div className="campaign-type-add-row">
+              <input
+                className="form-input"
+                value={newCampaignType}
+                onChange={e => setNewCampaignType(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCampaignType();
+                  }
+                }}
+                placeholder="Add a campaign type"
+              />
+              <button className="btn btn-secondary compact-action" type="button" onClick={addCampaignType}>Add Type</button>
+            </div>
           </div>
           {workspace.campaignType === 'custom' && (
             <div className="form-group">
               <label className="form-label">Manual campaign type</label>
-              <input
-                className="form-input"
-                value={workspace.customCampaignType}
-                onChange={e => setWorkspace({ ...workspace, customCampaignType: e.target.value })}
-                placeholder="Example: Loyalty header refresh, footer update, triggered webhook"
-              />
+              <input className="form-input" value={workspace.customCampaignType} onChange={e => setWorkspace({ ...workspace, customCampaignType: e.target.value })} />
             </div>
           )}
           <div className="form-group">
@@ -351,72 +481,13 @@ export default function LaunchWorkspace({
           </div>
         </div>
 
-        <div className="panel checklist-panel">
-          <div className="panel-topline">
-            <div>
-              <h3>Review Checklist</h3>
-              <p className="muted-copy">{channelPlan}</p>
-            </div>
-            <span className="checklist-count">{checklistDone}/{checklist.length}</span>
-          </div>
-          <div className="qa-checklist">
-            {checklist.map((item, index) => (
-              <div key={item.id} className="qa-check-card">
-                <div className="qa-check-row">
-                  <input
-                    type="checkbox"
-                    checked={item.done}
-                    onChange={e => updateChecklistItem(item.id, { done: e.target.checked })}
-                    aria-label={`Mark checkpoint ${index + 1} complete`}
-                  />
-                  <textarea
-                    className="form-textarea checkpoint-input"
-                    rows="2"
-                    value={item.text}
-                    onChange={e => updateChecklistItem(item.id, { text: e.target.value })}
-                    aria-label={`Checkpoint ${index + 1}`}
-                  />
-                  <button className="mini-button" type="button" onClick={() => toggleComment(item.id)}>
-                    {item.comment ? 'Edit Note' : 'Note'}
-                  </button>
-                  <button className="icon-button" type="button" onClick={() => removeCheckpoint(item.id)} aria-label={`Remove checkpoint ${index + 1}`}>
-                    ×
-                  </button>
-                </div>
-                {(openCommentIds.includes(item.id) || item.comment) && (
-                  <textarea
-                    className="form-textarea checkpoint-comment"
-                    value={item.comment}
-                    onChange={e => updateChecklistItem(item.id, { comment: e.target.value })}
-                    placeholder="Add a QA note, blocker, owner, or follow-up..."
-                    aria-label={`Comment for checkpoint ${index + 1}`}
-                  />
-                )}
-              </div>
-            ))}
-            <div className="qa-add-row">
-              <input
-                className="form-input"
-                value={newCheckpoint}
-                onChange={e => setNewCheckpoint(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addCheckpoint();
-                  }
-                }}
-                placeholder="Add a new checkpoint"
-              />
-              <button className="btn btn-secondary" type="button" onClick={addCheckpoint}>Add</button>
-            </div>
-          </div>
-        </div>
-
         <div className="panel wide-panel workspace-review-panel">
           <div>
             <h3>Personalization Preview</h3>
             <p className="muted-copy">
-              Pick a sample profile to see how dynamic fields and fallbacks render before launch.
+              Choose a sample customer profile. OmniQA replaces fields such as first name, favorite category, and
+              points balance in each channel preview. Use “Missing attributes” to confirm fallback copy appears when
+              customer data is unavailable. This is a practical preview, not a complete Braze Liquid engine.
             </p>
             <div className="profile-tabs compact-tabs">
               {Object.entries(profilePresets).map(([key, profile]) => (

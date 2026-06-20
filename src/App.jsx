@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import {
+  BarChart2,
   ClipboardCheck,
   Database,
+  ListChecks,
   RefreshCw,
   Settings as SettingsIcon,
   ShieldCheck,
@@ -89,19 +91,19 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-const PRIMARY_TABS = ['workspace', 'review', 'library', 'settings'];
-const REVIEW_TABS = ['overview', 'copy', 'technical'];
+const PRIMARY_TABS = ['overview', 'workspace', 'checklist', 'review', 'library', 'settings'];
+const REVIEW_TABS = ['copy', 'technical'];
 
 function normalizePrimaryTab(hashTab) {
   if (PRIMARY_TABS.includes(hashTab)) return hashTab;
   if (REVIEW_TABS.includes(hashTab)) return 'review';
   if (hashTab === 'catalog') return 'library';
   if (hashTab === 'visuals' || hashTab === 'ab_evaluator') return 'review';
-  return 'workspace';
+  return 'overview';
 }
 
 function normalizeReviewTab(hashTab) {
-  return REVIEW_TABS.includes(hashTab) ? hashTab : 'overview';
+  return REVIEW_TABS.includes(hashTab) ? hashTab : 'copy';
 }
 
 export default function App() {
@@ -140,7 +142,7 @@ export default function App() {
   };
 
   const openReviewTab = (tab) => {
-    const nextTab = REVIEW_TABS.includes(tab) ? tab : 'overview';
+    const nextTab = REVIEW_TABS.includes(tab) ? tab : tab === 'technical' ? 'technical' : 'copy';
     setActiveReviewTab(nextTab);
     setActiveTab('review');
   };
@@ -239,6 +241,17 @@ export default function App() {
     if (campaign.iamButtonLink !== undefined) setIamButtonLink(campaign.iamButtonLink);
     if (campaign.figmaTexts !== undefined) setFigmaTexts(campaign.figmaTexts);
     setActiveTab('workspace');
+  };
+
+  const handleCampaignStateChange = (nextState) => {
+    if (nextState.subjectLine !== undefined) setSubjectLine(nextState.subjectLine);
+    if (nextState.brazeHtml !== undefined) setBrazeHtml(nextState.brazeHtml);
+    if (nextState.pushBody !== undefined) setPushBody(nextState.pushBody);
+    if (nextState.smsBody !== undefined) setSmsBody(nextState.smsBody);
+    if (nextState.iamHeader !== undefined) setIamHeader(nextState.iamHeader);
+    if (nextState.iamBody !== undefined) setIamBody(nextState.iamBody);
+    if (nextState.iamButtonText !== undefined) setIamButtonText(nextState.iamButtonText);
+    if (nextState.iamButtonLink !== undefined) setIamButtonLink(nextState.iamButtonLink);
   };
 
   // Load mode state on mount
@@ -500,13 +513,17 @@ export default function App() {
   const printContrastIssues = checkWcagContrast(brazeHtml);
   const printImageIssues = auditImages(brazeHtml);
   const activeTitle = {
+    overview: 'Campaign Overview',
     workspace: 'Launch Workspace',
+    checklist: 'Review Checklist',
     review: 'QA Review',
     library: 'Campaign Library',
     settings: 'Settings'
   }[activeTab];
   const activeDescription = {
+    overview: 'See campaign health, open issues, channel readiness, and report actions in one place.',
     workspace: 'Prep a campaign with setup details, checklist comments, personalization preview, and links.',
+    checklist: 'Add, remove, complete, and comment on campaign-specific launch checkpoints.',
     review: 'Run focused checks for launch risk, copy alignment, Liquid, links, and deliverability.',
     library: 'Load campaign examples or save reusable campaign states for repeat review.',
     settings: 'Manage sandbox mode and secure integration settings.'
@@ -522,12 +539,28 @@ export default function App() {
         </div>
 
         <nav className="sidebar-menu">
+          <button
+            className={`sidebar-item ${activeTab === 'overview' ? 'active' : ''}`}
+            onClick={() => openPrimaryTab('overview')}
+          >
+            <BarChart2 size={18} />
+            <span>Overview</span>
+          </button>
+
           <button 
             className={`sidebar-item ${activeTab === 'workspace' ? 'active' : ''}`}
             onClick={() => openPrimaryTab('workspace')}
           >
             <ClipboardCheck size={18} />
             <span>Workspace</span>
+          </button>
+
+          <button
+            className={`sidebar-item ${activeTab === 'checklist' ? 'active' : ''}`}
+            onClick={() => openPrimaryTab('checklist')}
+          >
+            <ListChecks size={18} />
+            <span>Checklist</span>
           </button>
           
           <button 
@@ -610,8 +643,31 @@ export default function App() {
           </div>
         </header>
 
+        {activeTab === 'overview' && (
+          <Overview
+            overallScore={scores.overall}
+            copyScore={scores.copy}
+            visualScore={scores.visual}
+            techScore={scores.tech}
+            spamScore={scores.spam}
+            issuesCount={issuesCount}
+            setActiveTab={openReviewTab}
+            onRunAudit={runAudit}
+            isAuditing={isAuditing}
+            subjectLine={subjectLine}
+            copyAuditResults={copyAuditResults}
+            spamAuditResults={spamAuditResults}
+            brazeHtml={brazeHtml}
+            onPredictEngagement={handlePredictEngagement}
+            isPredicting={isPredicting}
+            predictionResults={predictionResults}
+            setFilterSeverity={setFilterSeverity}
+          />
+        )}
+
         {activeTab === 'workspace' && (
           <LaunchWorkspace
+            view="workspace"
             campaignState={{
               subjectLine,
               brazeHtml,
@@ -622,16 +678,26 @@ export default function App() {
               iamButtonText,
               iamButtonLink
             }}
-            setCampaignState={(nextState) => {
-              if (nextState.subjectLine !== undefined) setSubjectLine(nextState.subjectLine);
-              if (nextState.brazeHtml !== undefined) setBrazeHtml(nextState.brazeHtml);
-              if (nextState.pushBody !== undefined) setPushBody(nextState.pushBody);
-              if (nextState.smsBody !== undefined) setSmsBody(nextState.smsBody);
-              if (nextState.iamHeader !== undefined) setIamHeader(nextState.iamHeader);
-              if (nextState.iamBody !== undefined) setIamBody(nextState.iamBody);
-              if (nextState.iamButtonText !== undefined) setIamButtonText(nextState.iamButtonText);
-              if (nextState.iamButtonLink !== undefined) setIamButtonLink(nextState.iamButtonLink);
+            setCampaignState={handleCampaignStateChange}
+            scores={scores}
+            onRunAudit={() => runAudit(useMockMode)}
+          />
+        )}
+
+        {activeTab === 'checklist' && (
+          <LaunchWorkspace
+            view="checklist"
+            campaignState={{
+              subjectLine,
+              brazeHtml,
+              pushBody,
+              smsBody,
+              iamHeader,
+              iamBody,
+              iamButtonText,
+              iamButtonLink
             }}
+            setCampaignState={handleCampaignStateChange}
             scores={scores}
             onRunAudit={() => runAudit(useMockMode)}
           />
@@ -640,9 +706,6 @@ export default function App() {
         {activeTab === 'review' && (
           <section className="review-center">
             <div className="review-tabs" aria-label="QA review tools">
-              <button className={`review-tab ${activeReviewTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveReviewTab('overview')}>
-                Health
-              </button>
               <button className={`review-tab ${activeReviewTab === 'copy' ? 'active' : ''}`} onClick={() => setActiveReviewTab('copy')}>
                 Copy
               </button>
@@ -650,28 +713,6 @@ export default function App() {
                 Technical
               </button>
             </div>
-
-            {activeReviewTab === 'overview' && (
-              <Overview
-                overallScore={scores.overall}
-                copyScore={scores.copy}
-                visualScore={scores.visual}
-                techScore={scores.tech}
-                spamScore={scores.spam}
-                issuesCount={issuesCount}
-                setActiveTab={openReviewTab}
-                onRunAudit={runAudit}
-                isAuditing={isAuditing}
-                subjectLine={subjectLine}
-                copyAuditResults={copyAuditResults}
-                spamAuditResults={spamAuditResults}
-                brazeHtml={brazeHtml}
-                onPredictEngagement={handlePredictEngagement}
-                isPredicting={isPredicting}
-                predictionResults={predictionResults}
-                setFilterSeverity={setFilterSeverity}
-              />
-            )}
 
             {activeReviewTab === 'copy' && (
               <CopyAuditor
