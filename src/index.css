@@ -107,32 +107,35 @@ h1, h2, h3, h4, h5, h6 {
 /* Layout */
 .app-container {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
   background-color: var(--bg-primary);
 }
 
-/* Sidebar */
 .sidebar {
-  width: var(--sidebar-width);
-  background-color: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
+  width: 100%;
+  background-color: rgba(16, 23, 38, 0.92);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
-  flex-direction: column;
-  height: 100vh;
-  position: fixed;
-  left: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 76px;
+  position: sticky;
   top: 0;
   z-index: 100;
-  padding: 1.5rem 1rem;
+  padding: 1rem 2rem;
+  backdrop-filter: blur(18px);
 }
 
 .sidebar-logo {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 0.5rem 1.5rem 0.5rem;
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 1.5rem;
+  padding: 0;
+  border-bottom: none;
+  margin-bottom: 0;
+  flex-shrink: 0;
 }
 
 .sidebar-logo-icon {
@@ -158,16 +161,18 @@ h1, h2, h3, h4, h5, h6 {
 
 .sidebar-menu {
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  flex: 1;
+  flex-direction: row;
+  gap: 0.5rem;
+  flex: 0 1 auto;
+  align-items: center;
+  justify-content: center;
 }
 
 .sidebar-item {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.8rem 1rem;
+  padding: 0.7rem 1rem;
   color: var(--text-secondary);
   border-radius: var(--border-radius-md);
   text-decoration: none;
@@ -198,20 +203,35 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .sidebar-footer {
-  margin-top: auto;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border-color);
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+  flex-shrink: 0;
+}
+
+.mode-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 /* Main Content Area */
 .main-content {
   flex: 1;
-  margin-left: var(--sidebar-width);
   padding: 2rem;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  max-width: calc(100vw - var(--sidebar-width));
+  width: min(1440px, 100%);
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 .header {
@@ -227,6 +247,39 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.875rem;
   color: var(--text-secondary);
   margin-top: 0.25rem;
+}
+
+.review-center {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.review-tabs {
+  display: inline-flex;
+  width: fit-content;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+}
+
+.review-tab {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.review-tab.active {
+  color: var(--text-primary);
+  background: rgba(6, 182, 212, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(6, 182, 212, 0.22);
 }
 
 /* API Badge */

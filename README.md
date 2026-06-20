@@ -68,7 +68,7 @@ flowchart TD
 3.  **Launch Workspace**: Converts campaign context into reusable intake notes, editable QA checklists, reviewer comments, campaign-type templates, personalization previews, link/UTM review, report export, and local QA history.
 4.  **Local Validators**: Processes Liquid syntax, URL/UTM patterns, contrast checks, image risks, and preview states locally for instant feedback.
 5.  **Secure Server Routes**: Calls `/api/gemini`, `/api/figma-layers`, and `/api/health` so Gemini and Figma secrets stay in Vercel environment variables instead of browser storage.
-6.  **Output Layer**: Supports launch-readiness summaries, print/PDF reports, HTML repair helpers, saved local QA runs, and Braze dashboard deep links. Braze REST write-back is reserved for a later production phase.
+6.  **Output Layer**: Supports launch-readiness review, editable checklist notes, HTML repair helpers, and Braze dashboard deep links. Braze REST write-back is reserved for a later production phase.
 
 ---
 
@@ -80,13 +80,13 @@ flowchart TD
 *   **Editable Review Checklist**: Lets reviewers add, remove, complete, and comment on checkpoints for campaign-specific launch review.
 *   **Personalization Preview**: Renders subject, push, SMS, and IAM copy against sample customer profiles to expose missing attributes and fallback behavior.
 *   **Link & UTM Review**: Collects links from email HTML, IAM, SMS, and push copy so teams can quickly spot missing tracking parameters.
-*   **Launch Report & QA History**: Produces a launch-readiness summary, supports print/PDF export, and stores recent QA runs locally for repeat review.
+*   **Simplified Navigation**: Keeps the live app focused on Launch Workspace, QA Review, Campaign Library, and Settings instead of exposing every diagnostic as a separate top-level tab.
 
 ### 2. Unified Master Diagnostics & Copy Sync
 *   **Figma Layer Cross-Checking**: Compares text nodes extracted from Figma designs directly with Braze HTML templates and subject lines.
 *   **Fuzzy Text-Diff Matcher**: Dynamically tokenizes and scans plain text inside HTML tags to match lines of Figma design copy on the fly.
 *   **Monaco HTML Code Editor**: Embeds a rich, syntax-highlighted editor with line numbers, code folding, word wrap, and automatic layout resizing that compiles state changes in real time.
-*   **Master Diagnostics Hub**: Consolidates all Figma copy discrepancies, WCAG contrast alerts, UTM link crawler checks, Liquid logic errors, and spam triggers under a unified tabbed filter bar with live numeric counter badges.
+*   **Focused QA Review**: Groups campaign health, copy alignment, and technical checks into one review area instead of scattering them across separate screens.
 
 ### 3. Multi-Device & Multi-Channel Visual Stress-Tester
 *   **Interactive Liquid Overrides**: Scans and detects dynamic Liquid template variables (`{{ user.first_name }}`, `{{ tier }}`) and renders text inputs for real-time customer profile updates.

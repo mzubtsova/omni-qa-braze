@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  auditHtmlLinks,
-  auditImages,
-  checkWcagContrast,
-  validateLiquidSyntax
-} from '../utils/validators';
 
 const STORAGE_KEY = 'omniqa_launch_workspace';
-const HISTORY_KEY = 'omniqa_qa_history';
 const CHECKLIST_KEY = 'omniqa_launch_checklist';
 
 const campaignTemplates = {
@@ -199,43 +192,10 @@ function collectLinks({ brazeHtml, iamButtonLink, smsBody, pushBody }) {
   return links;
 }
 
-function summarizeIssues({ brazeHtml, subjectLine, pushBody, smsBody, iamHeader, iamBody, iamButtonLink }) {
-  const liquidIssues = [
-    ...validateLiquidSyntax(brazeHtml),
-    ...validateLiquidSyntax(subjectLine),
-    ...validateLiquidSyntax(pushBody),
-    ...validateLiquidSyntax(smsBody),
-    ...validateLiquidSyntax(iamHeader),
-    ...validateLiquidSyntax(iamBody)
-  ];
-  const linkIssues = auditHtmlLinks(brazeHtml);
-  const contrastIssues = checkWcagContrast(brazeHtml);
-  const imageIssues = auditImages(brazeHtml);
-
-  if (iamButtonLink && iamButtonLink.startsWith('http') && !iamButtonLink.includes('utm_')) {
-    linkIssues.push({
-      severity: 'low',
-      item: 'IAM button',
-      message: 'IAM button link is missing UTM parameters.'
-    });
-  }
-
-  return {
-    liquidIssues,
-    linkIssues,
-    contrastIssues,
-    imageIssues,
-    total: liquidIssues.length + linkIssues.length + contrastIssues.length + imageIssues.length
-  };
-}
-
 export default function LaunchWorkspace({
   campaignState,
   setCampaignState,
   scores,
-  copyAuditResults,
-  spamAuditResults,
-  predictionResults,
   onRunAudit
 }) {
   const [workspace, setWorkspace] = useState(() => loadJson(STORAGE_KEY, {
@@ -249,7 +209,6 @@ export default function LaunchWorkspace({
     notes: ''
   }));
   const [activeProfileKey, setActiveProfileKey] = useState('loyalFood');
-  const [history, setHistory] = useState(() => loadJson(HISTORY_KEY, []));
   const [checklist, setChecklist] = useState(() => normalizeChecklist(
     loadJson(CHECKLIST_KEY, campaignTemplates[workspace.campaignType]?.checklist || [])
   ));
@@ -261,17 +220,8 @@ export default function LaunchWorkspace({
   }, [workspace]);
 
   useEffect(() => {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-  }, [history]);
-
-  useEffect(() => {
     localStorage.setItem(CHECKLIST_KEY, JSON.stringify(checklist));
   }, [checklist]);
-
-  const issueSummary = useMemo(
-    () => summarizeIssues(campaignState),
-    [campaignState]
-  );
 
   const activeProfile = profilePresets[activeProfileKey].values;
   const renderedPreview = useMemo(() => ({
@@ -285,17 +235,10 @@ export default function LaunchWorkspace({
 
   const links = useMemo(() => collectLinks(campaignState), [campaignState]);
   const activeTemplate = campaignTemplates[workspace.campaignType];
-  const campaignTypeLabel = activeTemplate?.label || workspace.customCampaignType || 'Custom Campaign';
   const channelPlan = activeTemplate?.channelPlan || 'Manual campaign type. Add the channels, checks, and launch notes that fit this build.';
   const checklistDone = checklist.filter(item => item.done).length;
 
-  const riskLabel = scores.overall >= 90 ? 'Launch ready' : scores.overall >= 75 ? 'Needs light review' : 'Needs fixes before launch';
-  const reportFindings = [
-    issueSummary.liquidIssues.length ? `${issueSummary.liquidIssues.length} Liquid or variable syntax item(s) need review.` : 'Liquid syntax is clean across major channel copy.',
-    issueSummary.linkIssues.length ? `${issueSummary.linkIssues.length} link or UTM item(s) need cleanup.` : 'Links and UTMs have no blocking issues in the current scan.',
-    spamAuditResults?.spamTriggers?.length ? `${spamAuditResults.spamTriggers.length} deliverability phrase(s) are flagged.` : 'No major deliverability language risks are active.',
-    copyAuditResults?.mismatches?.length ? `${copyAuditResults.mismatches.length} creative-to-code alignment item(s) are active.` : 'Creative and coded copy alignment is clear in the current report.'
-  ];
+  const riskLabel = scores.overall >= 90 ? 'Launch ready' : scores.overall >= 75 ? 'Needs review' : 'Needs fixes';
 
   const applyTemplate = () => {
     const template = activeTemplate;
@@ -340,25 +283,6 @@ export default function LaunchWorkspace({
 
   const toggleComment = (id) => {
     setOpenCommentIds(prev => prev.includes(id) ? prev.filter(openId => openId !== id) : [...prev, id]);
-  };
-
-  const saveQaRun = () => {
-    const entry = {
-      id: crypto.randomUUID(),
-      name: workspace.campaignName || 'Untitled campaign',
-      type: campaignTypeLabel,
-      date: new Date().toISOString(),
-      status: riskLabel,
-      score: scores.overall,
-      issues: issueSummary.total,
-      checklist: `${checklistDone}/${checklist.length}`,
-      notes: workspace.notes
-    };
-    setHistory(prev => [entry, ...prev].slice(0, 12));
-  };
-
-  const exportReport = () => {
-    window.print();
   };
 
   return (
@@ -524,46 +448,15 @@ export default function LaunchWorkspace({
               ))}
             </div>
           </div>
-        </div>
 
-        <div className="panel wide-panel">
-          <h3>Report Notes</h3>
-          <div className="report-grid">
-            <div>
-              <p className="report-status">{riskLabel}</p>
-              <p className="muted-copy">Forecast: {predictionResults?.summary || 'Run QA to refresh engagement forecast.'}</p>
-            </div>
-            <ul>
-              {reportFindings.map(item => <li key={item}>{item}</li>)}
-            </ul>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Reviewer notes</label>
-            <textarea className="form-textarea" value={workspace.notes} onChange={e => setWorkspace({ ...workspace, notes: e.target.value })} />
-          </div>
-          <div className="button-row">
-            <button className="btn btn-primary" onClick={saveQaRun}>Save QA Run</button>
-            <button className="btn btn-secondary" onClick={exportReport}>Export / Print Report</button>
-          </div>
-
-          <div className="history-compact">
-            <h4>Recent QA Runs</h4>
-            <div className="history-list">
-              {history.length === 0 ? (
-                <p className="muted-copy">No saved runs yet.</p>
-              ) : history.slice(0, 4).map(entry => (
-                <div className="history-row" key={entry.id}>
-                  <div>
-                    <strong>{entry.name}</strong>
-                    <span>{entry.type} • {new Date(entry.date).toLocaleString()}</span>
-                  </div>
-                  <div>
-                    <strong>{entry.score}/100</strong>
-                    <span>{entry.status} • {entry.checklist || '0/0'} checklist</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="reviewer-notes-panel">
+            <h3>Reviewer Notes</h3>
+            <textarea
+              className="form-textarea"
+              value={workspace.notes}
+              onChange={e => setWorkspace({ ...workspace, notes: e.target.value })}
+              placeholder="Add launch decision notes, open questions, owners, or blockers..."
+            />
           </div>
         </div>
       </section>
