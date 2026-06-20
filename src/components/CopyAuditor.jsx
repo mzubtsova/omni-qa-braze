@@ -304,6 +304,13 @@ export default function CopyAuditor({
           </button>
         </div>
       )}
+      <div className="copy-source-note">
+        <Info size={18} />
+        <div>
+          <strong>How copy gets here</strong>
+          <span>Load a saved Library example, paste or edit message content here, or sync Figma text when configured. Braze links open the source campaign; OmniQA does not currently import message bodies from Braze.</span>
+        </div>
+      </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.25rem' }}>
         <button 
           onClick={() => setIsExtensionView(!isExtensionView)}

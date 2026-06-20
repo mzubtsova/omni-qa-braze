@@ -220,9 +220,9 @@ export default function Catalog({
       {/* Top action block */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h2>Braze Campaign Catalog & Sync Manager</h2>
+          <h2>Campaign Library</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Simulate staging, versioning, and deploying campaign assets directly via Braze API endpoints.
+            Store reusable QA examples locally. Braze links open the source campaign; message content is loaded from saved examples or entered manually.
           </p>
         </div>
         
@@ -499,9 +499,9 @@ export default function Catalog({
                   backgroundColor: 'var(--bg-secondary)',
                   cursor: 'pointer'
                 }}
-                title="Simulate Braze API Sync"
+                title="Simulate a connection status refresh"
               >
-                <RefreshCw size={12} className={syncingId === c.id ? 'spin' : ''} /> {syncingId === c.id ? 'Syncing...' : 'Sync API'}
+                <RefreshCw size={12} className={syncingId === c.id ? 'spin' : ''} /> {syncingId === c.id ? 'Refreshing...' : 'Refresh Status'}
               </button>
               <button 
                 onClick={() => handleDelete(c.id)}

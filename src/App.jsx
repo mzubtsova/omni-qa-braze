@@ -172,9 +172,8 @@ export default function App() {
 
   // Scores state (initialized to the exact pre-calculated score of default campaign)
   const [scores, setScores] = useState({
-    overall: 70,
+    overall: 61,
     copy: 58,
-    visual: 95,
     tech: 43,
     spam: 83
   });
@@ -479,19 +478,15 @@ export default function App() {
         });
       }
 
-      // Visual alignment score is arbitrary in mock but simulated
-      const visualScoreVal = liquidErrors.length > 0 ? 80 : 95;
-
       const overallScoreVal = Math.round(
-        (copyScoreVal + techScoreVal + spamScoreVal + visualScoreVal) / 4
+        (copyScoreVal + techScoreVal + spamScoreVal) / 3
       );
 
       setScores({
         overall: overallScoreVal,
         copy: copyScoreVal,
         tech: techScoreVal,
-        spam: spamScoreVal,
-        visual: visualScoreVal
+        spam: spamScoreVal
       });
 
       setIssuesCount({
@@ -637,7 +632,6 @@ export default function App() {
           <Overview
             overallScore={scores.overall}
             copyScore={scores.copy}
-            visualScore={scores.visual}
             techScore={scores.tech}
             spamScore={scores.spam}
             issuesCount={issuesCount}

@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { CheckCircle2, AlertTriangle, AlertCircle, FileText, Smartphone, Code, ShieldCheck, ArrowRight, Mail, X, RefreshCw, Sparkles } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, AlertCircle, FileText, Code, ShieldCheck, ArrowRight, Mail, X, RefreshCw, Sparkles } from 'lucide-react';
 import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast } from '../utils/validators';
 
 export default function Overview({ 
   overallScore, 
   copyScore, 
-  visualScore, 
   techScore, 
   spamScore, 
   issuesCount, 
@@ -117,7 +116,6 @@ Status: ${statusLabel}
 📊 DIAGNOSTICS SCORECARD:
 --------------------------------------------------
 • Copy Sync Accuracy:   ${copyScore}%
-• Visual Simulator Score: ${visualScore}%
 • Code Syntax & links:   ${techScore}%
 • Spam Filter Safety:     ${spamScore}%
 
@@ -223,7 +221,7 @@ OmniQA Quality Assurance Engine`;
               }}
               disabled={isAuditing}
             >
-              <Mail size={16} /> Send Report via Email
+              <Mail size={16} /> Create Email Draft
             </button>
 
             <button 
@@ -232,7 +230,7 @@ OmniQA Quality Assurance Engine`;
               onClick={() => window.print()}
               disabled={isAuditing}
             >
-              <Sparkles size={14} /> Download PDF Report
+              <Sparkles size={14} /> Save or Print PDF
             </button>
           </div>
         </div>
@@ -300,7 +298,7 @@ OmniQA Quality Assurance Engine`;
                 : `⚠️ Found ${issuesCount.high + issuesCount.medium} issues requiring attention.`}
             </span>
             <span style={{ fontSize: '0.85rem', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              Checked 6 standard deliverables <CheckCircle2 size={14} style={{ color: 'var(--success)' }} />
+              Checked active message inputs <CheckCircle2 size={14} style={{ color: 'var(--success)' }} />
             </span>
           </div>
         </div>
@@ -377,13 +375,6 @@ OmniQA Quality Assurance Engine`;
 
             </div>
 
-            <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <h5 style={{ color: 'var(--accent-cyan)', fontWeight: '700', fontSize: '0.9rem' }}>🎯 AI Copywriting Recommendations</h5>
-              <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-primary)' }}>
-                {predictionResults.recommendations?.map((r, i) => <li key={i}>{r}</li>)}
-              </ul>
-            </div>
-
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-muted)', border: '1px dashed var(--border-color)', borderRadius: 'var(--border-radius-md)' }}>
@@ -414,23 +405,6 @@ OmniQA Quality Assurance Engine`;
           </div>
         </div>
 
-        {/* Visual stress */}
-        <div className="category-card" onClick={() => setActiveTab('visuals')}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div className="category-icon-bg" style={{ backgroundColor: 'rgba(139, 92, 246, 0.08)', color: 'var(--accent-purple)' }}>
-              <Smartphone size={20} />
-            </div>
-            <div>
-              <h4 style={{ fontSize: '1rem', marginBottom: '0.15rem' }}>Visual Stress-Tester</h4>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Renders customization fallbacks & previews</p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span className="category-score" style={{ color: getScoreColor(visualScore) }}>{visualScore}%</span>
-            <ArrowRight size={16} style={{ color: 'var(--text-muted)' }} />
-          </div>
-        </div>
-
         {/* Code & liquid */}
         <div className="category-card" onClick={() => setActiveTab('technical')}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -455,8 +429,8 @@ OmniQA Quality Assurance Engine`;
               <ShieldCheck size={20} />
             </div>
             <div>
-              <h4 style={{ fontSize: '1rem', marginBottom: '0.15rem' }}>Spam & WCAG Auditing</h4>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Calculates contrast ratio & filters spam triggers</p>
+              <h4 style={{ fontSize: '1rem', marginBottom: '0.15rem' }}>Deliverability & Accessibility</h4>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Spam-language checks and WCAG contrast validation</p>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

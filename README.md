@@ -1,6 +1,6 @@
 # OmniQA for Braze 🍦
 
-OmniQA is a unified, real-time diagnostic dashboard designed for CRM engineering, campaign managers, and marketing developers. It automates campaign quality assurance by validating coding structures, verifying design compliance, and predicting deliverability health before you hit "Send" in Braze.
+OmniQA is a focused diagnostic workspace for CRM engineering, campaign managers, and marketing developers. It reviews one active campaign message at a time, combining campaign intake, copy comparison, code checks, launch checkpoints, and report-ready results before a Braze send.
 
 ![OmniQA Dashboard Preview](omniqa_preview.png)
 
@@ -20,7 +20,7 @@ flowchart TD
     %% Nodes
     Figma["🎨 Figma File ID / URL"]:::source
     Payload["✉️ Coded Campaign HTML/CSS"]:::source
-    Catalog["🗂️ Campaign Catalog Workspace"]:::source
+    Catalog["🗂️ Local Campaign Library"]:::source
     
     App["📊 OmniQA Diagnostics Console"]:::core
     
@@ -38,8 +38,8 @@ flowchart TD
     end
     class ServerRoutes,GeminiRoute,FigmaRoute,HealthRoute server;
     
-    PDFExport["📄 Visual QA PDF Scorecard"]:::output
-    ReportEmail["📧 HTML Diagnostics Report Email"]:::output
+    PDFExport["📄 QA Report / Print PDF"]:::output
+    ReportEmail["📧 Prefilled Email Draft"]:::output
     AutoFix["🪄 One-Click HTML Auto-Fixer"]:::output
     BrazeLinks["🔥 Braze Dashboard Deep Links"]:::output
     
@@ -59,13 +59,13 @@ flowchart TD
     App -->|Generate Scorecard| PDFExport
     App -->|Generate Email| ReportEmail
     App -->|Trigger Repair| AutoFix
-    Catalog -->|Open campaign workspace| BrazeLinks
+    Catalog -->|Open source campaign| BrazeLinks
 ```
 
 ### Component Breakdown & Data Flow
-1.  **Input Sources**: Campaign contexts come from pasted/imported HTML, campaign catalog entries, and Figma file IDs or URLs.
+1.  **Input Sources**: Active-message content comes from pasted or edited HTML/copy, local Library entries, and Figma file IDs or URLs. OmniQA does not currently import message bodies from Braze.
 2.  **OmniQA Core Controller (`App.jsx`)**: Orchestrates shared campaign data across Overview, Campaign Checklist, QA Review, Library, and Settings.
-3.  **Campaign Checklist**: Combines campaign setup, editable campaign types, reusable templates, checkpoints, comments, and reviewer notes in one ordered workflow.
+3.  **Campaign Checklist**: Combines compact campaign setup, editable campaign types, reusable templates, checkpoints, comments, and reviewer notes in one ordered workflow. A multistage Canvas is reviewed message by message.
 4.  **Local Validators**: Processes Liquid syntax, URL/UTM patterns, contrast checks, image risks, and preview states locally for instant feedback.
 5.  **Secure Server Routes**: Calls `/api/gemini`, `/api/figma-layers`, and `/api/health` so Gemini and Figma secrets stay in Vercel environment variables instead of browser storage.
 6.  **Output Layer**: Supports launch-readiness review, editable checklist notes, HTML repair helpers, and Braze dashboard deep links. Braze REST write-back is reserved for a later production phase.
@@ -75,18 +75,21 @@ flowchart TD
 ## 🚀 Key Features
 
 ### 1. Overview & Reporting
-*   **Campaign Health Overview**: Shows campaign scores, issue severity, channel readiness, and engagement forecast in one starting view.
+*   **Campaign Health Overview**: Shows active-message scores, issue severity, channel readiness, and engagement forecast in one starting view.
 *   **Email Report Draft**: Opens a prefilled email with the current QA summary and issue list.
 *   **PDF Export**: Uses the browser print flow to save or print a campaign QA report.
 
 ### 2. Campaign Checklist
-*   **Structured Campaign Intake**: Captures campaign name, type, launch date, audience/segment, offer logic, expected variables, and reviewer notes.
+*   **Structured Campaign Intake**: Captures campaign or Canvas name, type, launch date, audience/segment, offer logic, required variables, and reviewer notes.
 *   **Editable Campaign Types**: Keeps built-in templates while allowing reviewers to add, select, and remove custom campaign types.
 *   **Reusable Templates**: Applies starter channel copy for birthday, onboarding, promotional loyalty, and winback workflows.
 *   **Editable Checkpoints**: Lets reviewers add, remove, reorder through edits, and complete campaign-specific checks.
 *   **Checkpoint Notes**: Stores a note, blocker, owner, or follow-up directly with each checkpoint.
 
 ### 3. Focused QA Review
+*   **Active-Message Scope**: Reviews one email, push, SMS, or IAM state at a time. For a multistage Canvas, save or load each message separately and run QA for every step.
+*   **Automatic Sandbox Checks**: Re-runs local and simulated checks as active-message content changes. Live mode runs when the reviewer selects **Run QA**.
+*   **Manual or Library Copy Intake**: Loads copy from local Library examples, direct editing/paste, or configured Figma text extraction. Braze links are navigation shortcuts, not content imports.
 *   **Figma Layer Cross-Checking**: Compares text nodes extracted from Figma designs directly with Braze HTML templates and subject lines.
 *   **Fuzzy Text-Diff Matcher**: Dynamically tokenizes and scans plain text inside HTML tags to match lines of Figma design copy on the fly.
 *   **Monaco HTML Code Editor**: Embeds a rich, syntax-highlighted editor with line numbers, code folding, word wrap, and automatic layout resizing that compiles state changes in real time.
@@ -95,7 +98,7 @@ flowchart TD
 *   **HTML Contrast Auto-Fixer**: Features a one-click repair engine that automatically adjusts violating button contrasts, resolves empty placeholder links, and appends missing UTM trackers.
 
 ### 4. Campaign Library
-*   **Dynamic Campaign Catalog**: Tracks campaign drafts, versions, status, and synchronization state.
+*   **Local Campaign Library**: Tracks reusable campaign examples, versions, and status for repeat QA.
 *   **Cluster-Mapped Workspace Links**: Maps REST API endpoints (e.g. `rest.iad-01`, `rest.iad-03`, `rest.eu`) to direct, clickable URLs pointing straight to your campaign configuration inside the Braze dashboard console.
 
 ---
@@ -148,5 +151,6 @@ Live mode currently supports:
 
 Reserved for a later production phase:
 *   Braze REST read/write sync.
+*   Canvas-level aggregation that combines several message audits into one journey report.
 *   Authenticated user accounts and server-side audit history.
 *   Server-side PDF/report storage and email delivery.

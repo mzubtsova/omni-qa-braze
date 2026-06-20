@@ -192,10 +192,6 @@ function getMockEngagementPredictor(subjectLine) {
     negatives: [
       "Subject line contains spam-prone triggers ('Free', 'Alert').",
       "Limited direct call-to-actions in secondary channels."
-    ],
-    recommendations: [
-      "A/B test subject lines replacing 'Free' with 'On us' to prevent delivery blocks.",
-      "Inject explicit urgency modifiers (e.g. 'Valid for 14 days' directly in subject)."
     ]
   };
 }

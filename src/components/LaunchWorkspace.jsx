@@ -310,12 +310,24 @@ export default function LaunchWorkspace({
 
       <section className="launch-grid">
         <div className="panel campaign-setup-panel">
-          <h3>Campaign Setup</h3>
-          <div className="form-group">
-            <label className="form-label">Campaign name</label>
-            <input className="form-input" value={workspace.campaignName} onChange={e => setWorkspace({ ...workspace, campaignName: e.target.value })} />
+          <div className="campaign-setup-heading">
+            <div>
+              <p className="eyebrow">Step 1</p>
+              <h3>Campaign setup</h3>
+            </div>
+            <span className="setup-scope-badge">Active message</span>
           </div>
-          <div className="form-group">
+          <p className="setup-intro">Define the message being reviewed. For a multistage Canvas, load and audit each email, push, SMS, or IAM separately.</p>
+          <div className="campaign-setup-grid">
+            <div className="form-group">
+              <label className="form-label">Campaign or Canvas name</label>
+              <input className="form-input" value={workspace.campaignName} onChange={e => setWorkspace({ ...workspace, campaignName: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Launch date</label>
+              <input className="form-input" type="date" value={workspace.launchDate} onChange={e => setWorkspace({ ...workspace, launchDate: e.target.value })} />
+            </div>
+            <div className="form-group setup-field-full">
             <label className="form-label">Campaign type</label>
             <div className="campaign-type-select-row">
               <select className="form-select" value={workspace.campaignType} onChange={e => setWorkspace({ ...workspace, campaignType: e.target.value })}>
@@ -348,32 +360,32 @@ export default function LaunchWorkspace({
               />
               <button className="btn btn-secondary compact-action" type="button" onClick={addCampaignType}>Add Type</button>
             </div>
-          </div>
-          {workspace.campaignType === 'custom' && (
-            <div className="form-group">
-              <label className="form-label">Manual campaign type</label>
-              <input className="form-input" value={workspace.customCampaignType} onChange={e => setWorkspace({ ...workspace, customCampaignType: e.target.value })} />
             </div>
-          )}
-          <div className="form-group">
-            <label className="form-label">Launch date</label>
-            <input className="form-input" type="date" value={workspace.launchDate} onChange={e => setWorkspace({ ...workspace, launchDate: e.target.value })} />
+            {workspace.campaignType === 'custom' && (
+              <div className="form-group setup-field-full">
+                <label className="form-label">Manual campaign type</label>
+                <input className="form-input" value={workspace.customCampaignType} onChange={e => setWorkspace({ ...workspace, customCampaignType: e.target.value })} />
+              </div>
+            )}
+            <div className="form-group">
+              <label className="form-label">Audience / segment</label>
+              <textarea className="form-textarea setup-textarea" value={workspace.audience} onChange={e => setWorkspace({ ...workspace, audience: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Offer / journey logic</label>
+              <textarea className="form-textarea setup-textarea" value={workspace.offerLogic} onChange={e => setWorkspace({ ...workspace, offerLogic: e.target.value })} />
+            </div>
+            <div className="form-group setup-field-full">
+              <label className="form-label">Required data and variables</label>
+              <input className="form-input" value={workspace.expectedVariables} onChange={e => setWorkspace({ ...workspace, expectedVariables: e.target.value })} />
+            </div>
           </div>
-          <div className="form-group">
-            <label className="form-label">Audience / segment</label>
-            <textarea className="form-textarea" value={workspace.audience} onChange={e => setWorkspace({ ...workspace, audience: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Offer / journey logic</label>
-            <textarea className="form-textarea" value={workspace.offerLogic} onChange={e => setWorkspace({ ...workspace, offerLogic: e.target.value })} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Expected personalization fields</label>
-            <input className="form-input" value={workspace.expectedVariables} onChange={e => setWorkspace({ ...workspace, expectedVariables: e.target.value })} />
-          </div>
-          <div className="button-row">
-            <button className="btn btn-primary" onClick={applyTemplate} disabled={!activeTemplate}>Apply Template Copy</button>
-            <button className="btn btn-secondary" onClick={() => onRunAudit()}>Run Full QA</button>
+          <div className="campaign-setup-actions">
+            <div className="setup-action-note">Template copy replaces the active message fields. Run QA when the message is ready for review.</div>
+            <div className="button-row">
+              <button className="btn btn-primary" onClick={applyTemplate} disabled={!activeTemplate}>Load Campaign Template</button>
+              <button className="btn btn-secondary" onClick={() => onRunAudit()}>Run QA</button>
+            </div>
           </div>
         </div>
         {checklistPanel}
