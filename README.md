@@ -64,8 +64,8 @@ flowchart TD
 
 ### Component Breakdown & Data Flow
 1.  **Input Sources**: Campaign contexts come from pasted/imported HTML, campaign catalog entries, and Figma file IDs or URLs.
-2.  **OmniQA Core Controller (`App.jsx`)**: Orchestrates shared campaign data across Overview, Campaign, Checklist, QA Review, Library, and Settings.
-3.  **Campaign Workspace**: Converts campaign context into reusable intake notes, editable campaign types, campaign templates, personalization previews, and link review.
+2.  **OmniQA Core Controller (`App.jsx`)**: Orchestrates shared campaign data across Overview, Campaign Checklist, QA Review, Library, and Settings.
+3.  **Campaign Checklist**: Combines campaign setup, editable campaign types, reusable templates, checkpoints, comments, and reviewer notes in one ordered workflow.
 4.  **Local Validators**: Processes Liquid syntax, URL/UTM patterns, contrast checks, image risks, and preview states locally for instant feedback.
 5.  **Secure Server Routes**: Calls `/api/gemini`, `/api/figma-layers`, and `/api/health` so Gemini and Figma secrets stay in Vercel environment variables instead of browser storage.
 6.  **Output Layer**: Supports launch-readiness review, editable checklist notes, HTML repair helpers, and Braze dashboard deep links. Braze REST write-back is reserved for a later production phase.
@@ -79,19 +79,14 @@ flowchart TD
 *   **Email Report Draft**: Opens a prefilled email with the current QA summary and issue list.
 *   **PDF Export**: Uses the browser print flow to save or print a campaign QA report.
 
-### 2. Campaign Workspace
+### 2. Campaign Checklist
 *   **Structured Campaign Intake**: Captures campaign name, type, launch date, audience/segment, offer logic, expected variables, and reviewer notes.
 *   **Editable Campaign Types**: Keeps built-in templates while allowing reviewers to add, select, and remove custom campaign types.
 *   **Reusable Templates**: Applies starter channel copy for birthday, onboarding, promotional loyalty, and winback workflows.
-*   **Personalization Preview**: Substitutes sample profile values into subject, push, SMS, and IAM copy so reviewers can test populated values and missing-data fallbacks before launch. It is a practical preview, not a full Braze Liquid runtime.
-*   **Link & UTM Review**: Collects links from email HTML, IAM, SMS, and push copy so teams can quickly spot missing tracking parameters.
-
-### 3. Separate Review Checklist
 *   **Editable Checkpoints**: Lets reviewers add, remove, reorder through edits, and complete campaign-specific checks.
 *   **Checkpoint Notes**: Stores a note, blocker, owner, or follow-up directly with each checkpoint.
-*   **Shared Campaign State**: Uses the same saved campaign and template data as the Campaign Workspace without duplicating the checklist there.
 
-### 4. Focused QA Review
+### 3. Focused QA Review
 *   **Figma Layer Cross-Checking**: Compares text nodes extracted from Figma designs directly with Braze HTML templates and subject lines.
 *   **Fuzzy Text-Diff Matcher**: Dynamically tokenizes and scans plain text inside HTML tags to match lines of Figma design copy on the fly.
 *   **Monaco HTML Code Editor**: Embeds a rich, syntax-highlighted editor with line numbers, code folding, word wrap, and automatic layout resizing that compiles state changes in real time.
@@ -99,7 +94,7 @@ flowchart TD
 *   **UTM Link Crawler**: Crawls all anchor links to detect dead hrefs, placeholder domains, and missing marketing UTM analytics keys.
 *   **HTML Contrast Auto-Fixer**: Features a one-click repair engine that automatically adjusts violating button contrasts, resolves empty placeholder links, and appends missing UTM trackers.
 
-### 5. Campaign Library
+### 4. Campaign Library
 *   **Dynamic Campaign Catalog**: Tracks campaign drafts, versions, status, and synchronization state.
 *   **Cluster-Mapped Workspace Links**: Maps REST API endpoints (e.g. `rest.iad-01`, `rest.iad-03`, `rest.eu`) to direct, clickable URLs pointing straight to your campaign configuration inside the Braze dashboard console.
 

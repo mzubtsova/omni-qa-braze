@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   BarChart2,
-  ClipboardCheck,
   Database,
   ListChecks,
   RefreshCw,
@@ -91,11 +90,12 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-const PRIMARY_TABS = ['overview', 'workspace', 'checklist', 'review', 'library', 'settings'];
+const PRIMARY_TABS = ['overview', 'checklist', 'review', 'library', 'settings'];
 const REVIEW_TABS = ['copy', 'technical'];
 
 function normalizePrimaryTab(hashTab) {
   if (PRIMARY_TABS.includes(hashTab)) return hashTab;
+  if (hashTab === 'workspace') return 'checklist';
   if (REVIEW_TABS.includes(hashTab)) return 'review';
   if (hashTab === 'catalog') return 'library';
   if (hashTab === 'visuals' || hashTab === 'ab_evaluator') return 'review';
@@ -240,7 +240,7 @@ export default function App() {
     if (campaign.iamButtonText !== undefined) setIamButtonText(campaign.iamButtonText);
     if (campaign.iamButtonLink !== undefined) setIamButtonLink(campaign.iamButtonLink);
     if (campaign.figmaTexts !== undefined) setFigmaTexts(campaign.figmaTexts);
-    setActiveTab('workspace');
+    setActiveTab('checklist');
   };
 
   const handleCampaignStateChange = (nextState) => {
@@ -514,16 +514,14 @@ export default function App() {
   const printImageIssues = auditImages(brazeHtml);
   const activeTitle = {
     overview: 'Campaign Overview',
-    workspace: 'Launch Workspace',
-    checklist: 'Review Checklist',
+    checklist: 'Campaign Checklist',
     review: 'QA Review',
     library: 'Campaign Library',
     settings: 'Settings'
   }[activeTab];
   const activeDescription = {
     overview: 'See campaign health, open issues, channel readiness, and report actions in one place.',
-    workspace: 'Prep a campaign with setup details, checklist comments, personalization preview, and links.',
-    checklist: 'Add, remove, complete, and comment on campaign-specific launch checkpoints.',
+    checklist: 'Set up campaign details first, then add, complete, remove, and comment on launch checkpoints.',
     review: 'Run focused checks for launch risk, copy alignment, Liquid, links, and deliverability.',
     library: 'Load campaign examples or save reusable campaign states for repeat review.',
     settings: 'Manage sandbox mode and secure integration settings.'
@@ -547,20 +545,12 @@ export default function App() {
             <span>Overview</span>
           </button>
 
-          <button 
-            className={`sidebar-item ${activeTab === 'workspace' ? 'active' : ''}`}
-            onClick={() => openPrimaryTab('workspace')}
-          >
-            <ClipboardCheck size={18} />
-            <span>Workspace</span>
-          </button>
-
           <button
             className={`sidebar-item ${activeTab === 'checklist' ? 'active' : ''}`}
             onClick={() => openPrimaryTab('checklist')}
           >
             <ListChecks size={18} />
-            <span>Checklist</span>
+            <span>Campaign Checklist</span>
           </button>
           
           <button 
@@ -665,38 +655,8 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'workspace' && (
-          <LaunchWorkspace
-            view="workspace"
-            campaignState={{
-              subjectLine,
-              brazeHtml,
-              pushBody,
-              smsBody,
-              iamHeader,
-              iamBody,
-              iamButtonText,
-              iamButtonLink
-            }}
-            setCampaignState={handleCampaignStateChange}
-            scores={scores}
-            onRunAudit={() => runAudit(useMockMode)}
-          />
-        )}
-
         {activeTab === 'checklist' && (
           <LaunchWorkspace
-            view="checklist"
-            campaignState={{
-              subjectLine,
-              brazeHtml,
-              pushBody,
-              smsBody,
-              iamHeader,
-              iamBody,
-              iamButtonText,
-              iamButtonLink
-            }}
             setCampaignState={handleCampaignStateChange}
             scores={scores}
             onRunAudit={() => runAudit(useMockMode)}

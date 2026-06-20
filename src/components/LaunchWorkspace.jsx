@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'omniqa_launch_workspace';
 const CHECKLIST_KEY = 'omniqa_launch_checklist';
@@ -79,45 +79,6 @@ const campaignTemplates = {
   }
 };
 
-const profilePresets = {
-  loyalFood: {
-    label: 'Food favorite / push opted-in',
-    values: {
-      'user.first_name': 'Maya',
-      first_name: 'Maya',
-      favorite_category: 'food',
-      points_balance: '420',
-      language: 'en',
-      country: 'US',
-      push_opt_in: 'true'
-    }
-  },
-  loyalTreats: {
-    label: 'Treats favorite / email fallback',
-    values: {
-      'user.first_name': 'Alex',
-      first_name: 'Alex',
-      favorite_category: 'treats',
-      points_balance: '180',
-      language: 'en',
-      country: 'CA',
-      push_opt_in: 'false'
-    }
-  },
-  missingData: {
-    label: 'Missing attributes fallback',
-    values: {
-      'user.first_name': '',
-      first_name: '',
-      favorite_category: '',
-      points_balance: '',
-      language: 'en',
-      country: 'US',
-      push_opt_in: 'false'
-    }
-  }
-};
-
 function createId() {
   return crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -151,51 +112,7 @@ function loadJson(key, fallback) {
   }
 }
 
-function stripHtml(html) {
-  return html.replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-function renderLiquidText(text, profile) {
-  if (!text) return '';
-
-  let rendered = text.replace(/\{\{\s*([^}|]+?)(?:\s*\|\s*default\s*:\s*["']([^"']+)["'])?\s*\}\}/g, (_, key, fallback = '') => {
-    const cleanKey = key.trim();
-    const value = profile[cleanKey] ?? profile[cleanKey.replace(/^user\./, '')] ?? '';
-    return value || fallback;
-  });
-
-  rendered = rendered.replace(/\{%\s*if\s+([^%]+?)\s*%\}([\s\S]*?)(?:\{%\s*else\s*%\}([\s\S]*?))?\{%\s*endif\s*%\}/g, (_, condition, truthy, fallback = '') => {
-    const key = condition.trim().split(/\s+/)[0];
-    return profile[key] ? truthy : fallback;
-  });
-
-  return rendered.replace(/\{%\s*(for|endfor|assign|elsif|else|endif)[^%]*%\}/g, '').trim();
-}
-
-function collectLinks({ brazeHtml, iamButtonLink, smsBody, pushBody }) {
-  const links = [];
-  const hrefRegex = /<a\s+[^>]*href=["']([^"']*)["']/gi;
-  let match;
-  while ((match = hrefRegex.exec(brazeHtml)) !== null) {
-    links.push({ channel: 'Email HTML', url: match[1] });
-  }
-
-  [
-    ['IAM button', iamButtonLink],
-    ['SMS', smsBody],
-    ['Push', pushBody]
-  ].forEach(([channel, value]) => {
-    const text = value || '';
-    const matches = text.match(/https?:\/\/[^\s)]+/gi) || [];
-    matches.forEach(url => links.push({ channel, url }));
-  });
-
-  return links;
-}
-
 export default function LaunchWorkspace({
-  view = 'workspace',
-  campaignState,
   setCampaignState,
   scores,
   onRunAudit
@@ -210,7 +127,6 @@ export default function LaunchWorkspace({
     customCampaignType: '',
     notes: ''
   }));
-  const [activeProfileKey, setActiveProfileKey] = useState('loyalFood');
   const [customTypes, setCustomTypes] = useState(() => loadJson(CUSTOM_TYPES_KEY, []));
   const [newCampaignType, setNewCampaignType] = useState('');
   const [checklist, setChecklist] = useState(() => normalizeChecklist(
@@ -231,17 +147,6 @@ export default function LaunchWorkspace({
     localStorage.setItem(CUSTOM_TYPES_KEY, JSON.stringify(customTypes));
   }, [customTypes]);
 
-  const activeProfile = profilePresets[activeProfileKey].values;
-  const renderedPreview = useMemo(() => ({
-    subject: renderLiquidText(campaignState.subjectLine, activeProfile),
-    email: renderLiquidText(stripHtml(campaignState.brazeHtml), activeProfile),
-    push: renderLiquidText(campaignState.pushBody, activeProfile),
-    sms: renderLiquidText(campaignState.smsBody, activeProfile),
-    iamHeader: renderLiquidText(campaignState.iamHeader, activeProfile),
-    iamBody: renderLiquidText(campaignState.iamBody, activeProfile)
-  }), [activeProfile, campaignState]);
-
-  const links = useMemo(() => collectLinks(campaignState), [campaignState]);
   const activeTemplate = campaignTemplates[workspace.campaignType];
   const selectedCustomType = customTypes.find(type => type.id === workspace.campaignType);
   const channelPlan = activeTemplate?.channelPlan || 'Manual campaign type. Add the channels, checks, and launch notes that fit this build.';
@@ -314,7 +219,7 @@ export default function LaunchWorkspace({
   };
 
   const checklistPanel = (
-    <div className="panel checklist-panel checklist-focus-panel">
+    <div className="panel wide-panel checklist-panel checklist-focus-panel">
       <div className="panel-topline">
         <div>
           <h3>Review Checklist</h3>
@@ -373,36 +278,27 @@ export default function LaunchWorkspace({
           <button className="btn btn-secondary" type="button" onClick={addCheckpoint}>Add</button>
         </div>
       </div>
+      <div className="reviewer-notes-panel">
+        <label className="form-label" htmlFor="reviewer-notes">Reviewer notes</label>
+        <textarea
+          id="reviewer-notes"
+          className="form-textarea"
+          value={workspace.notes}
+          onChange={e => setWorkspace({ ...workspace, notes: e.target.value })}
+          placeholder="Add launch decisions, open questions, owners, or blockers..."
+        />
+      </div>
     </div>
   );
-
-  if (view === 'checklist') {
-    return (
-      <div className="launch-workspace">
-        <section className="launch-summary">
-          <div>
-            <p className="eyebrow">Campaign Checklist</p>
-            <h2>{workspace.campaignName}</h2>
-            <p>Keep campaign-specific checkpoints, decisions, owners, and notes in one focused review screen.</p>
-          </div>
-          <div className="launch-status-strip checklist-status-strip" aria-label="Checklist status">
-            <strong>{checklistDone}/{checklist.length}</strong>
-            <span>Complete</span>
-          </div>
-        </section>
-        {checklistPanel}
-      </div>
-    );
-  }
 
   return (
     <div className="launch-workspace">
       <section className="launch-summary">
         <div>
-          <p className="eyebrow">Launch Workspace</p>
+          <p className="eyebrow">Campaign Checklist</p>
           <h2>{workspace.campaignName}</h2>
           <p>
-            One place to prep a campaign for review: setup, checklist, personalization preview, links, and final notes.
+            Start with campaign setup, then complete the launch checklist and document review decisions.
           </p>
         </div>
         <div className="launch-status-strip" aria-label="Launch status">
@@ -480,56 +376,7 @@ export default function LaunchWorkspace({
             <button className="btn btn-secondary" onClick={() => onRunAudit()}>Run Full QA</button>
           </div>
         </div>
-
-        <div className="panel wide-panel workspace-review-panel">
-          <div>
-            <h3>Personalization Preview</h3>
-            <p className="muted-copy">
-              Choose a sample customer profile. OmniQA replaces fields such as first name, favorite category, and
-              points balance in each channel preview. Use “Missing attributes” to confirm fallback copy appears when
-              customer data is unavailable. This is a practical preview, not a complete Braze Liquid engine.
-            </p>
-            <div className="profile-tabs compact-tabs">
-              {Object.entries(profilePresets).map(([key, profile]) => (
-                <button key={key} className={`btn ${activeProfileKey === key ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveProfileKey(key)}>
-                  {profile.label}
-                </button>
-              ))}
-            </div>
-            <div className="preview-grid">
-              <div><strong>Subject</strong><p>{renderedPreview.subject}</p></div>
-              <div><strong>Push</strong><p>{renderedPreview.push}</p></div>
-              <div><strong>SMS</strong><p>{renderedPreview.sms}</p></div>
-              <div><strong>IAM</strong><p>{renderedPreview.iamHeader}: {renderedPreview.iamBody}</p></div>
-            </div>
-          </div>
-
-          <div>
-            <h3>Links</h3>
-            <p className="muted-copy">Quick scan for missing tracking before deeper technical review.</p>
-            <div className="link-table">
-              {links.length === 0 ? (
-                <p className="muted-copy">No links detected yet.</p>
-              ) : links.map((link, index) => (
-                <div className="link-row" key={`${link.url}-${index}`}>
-                  <span>{link.channel}</span>
-                  <code>{link.url}</code>
-                  <strong className={link.url.includes('utm_') ? 'ok' : 'warn'}>{link.url.includes('utm_') ? 'UTM' : 'No UTM'}</strong>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="reviewer-notes-panel">
-            <h3>Reviewer Notes</h3>
-            <textarea
-              className="form-textarea"
-              value={workspace.notes}
-              onChange={e => setWorkspace({ ...workspace, notes: e.target.value })}
-              placeholder="Add launch decision notes, open questions, owners, or blockers..."
-            />
-          </div>
-        </div>
+        {checklistPanel}
       </section>
     </div>
   );
