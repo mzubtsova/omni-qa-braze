@@ -131,7 +131,7 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
               <option value="campaign">Campaign</option>
             </select>
           </div>
-          <button className="btn btn-primary automation-import-button" disabled={isImporting || !sourceInput.trim() || useMockMode}>
+          <button className="btn btn-primary automation-import-button" disabled={isImporting || !sourceInput.trim()}>
             {isImporting ? <><RefreshCw size={16} className="spin" /> {funnyComment || 'Importing...'}</> : <><FileSearch size={16} /> Import and run QA</>}
           </button>
           <label className="automation-checkbox">
