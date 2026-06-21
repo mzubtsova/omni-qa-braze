@@ -144,7 +144,10 @@ export default function App() {
   };
 
   const openReviewTab = (tab) => {
-    const nextTab = REVIEW_TABS.includes(tab) ? tab : tab === 'technical' ? 'technical' : 'copy';
+    let nextTab = REVIEW_TABS.includes(tab) ? tab : tab === 'technical' ? 'technical' : 'copy';
+    if (unifiedQAMode && (nextTab === 'copy' || nextTab === 'technical')) {
+      nextTab = 'preapproval';
+    }
     setActiveReviewTab(nextTab);
     setActiveTab('review');
   };
@@ -202,6 +205,17 @@ export default function App() {
   const [filterSeverity, setFilterSeverity] = useState('all');
   const [automationState, setAutomationState] = useState(null);
   const [preApprovalStatus, setPreApprovalStatus] = useState({ complete: 0, total: 0, ready: false });
+  const [unifiedQAMode, setUnifiedQAMode] = useState(() => {
+    return localStorage.getItem('omniqa_unified_qa') === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('omniqa_unified_qa', unifiedQAMode);
+    if (unifiedQAMode && (activeReviewTab === 'copy' || activeReviewTab === 'technical')) {
+      setActiveReviewTab('preapproval');
+    }
+  }, [unifiedQAMode, activeReviewTab]);
+
   const handleAutomationAuditChange = useCallback((nextState) => setAutomationState(nextState), []);
   const handleApprovalChange = useCallback((approval) => setAutomationState((current) => current ? { ...current, approval } : current), []);
   const handlePreApprovalChange = useCallback((status) => setPreApprovalStatus(status), []);
@@ -259,20 +273,26 @@ export default function App() {
 
   const handleSelectAutomatedMessage = (message, openReview = false) => {
     setFigmaTexts([]);
-    if (message.channel === 'email') {
+    if (!message) return;
+    const channel = message.channel || '';
+    if (channel === 'email') {
       setSubjectLine(message.subject || '');
       setBrazeHtml(message.body || '');
-    } else if (message.channel === 'sms') {
+    } else if (channel === 'sms') {
       setSmsBody(message.body || '');
-    } else if (message.channel === 'in_app_message') {
+    } else if (channel === 'in_app_message') {
       setIamHeader(message.title || '');
       setIamBody(message.body || '');
       setIamButtonLink(message.actionUrl || '');
-    } else if (message.channel.includes('push')) {
+    } else if (channel && channel.includes('push')) {
       setPushBody(message.body || '');
     }
     if (openReview) {
-      setActiveReviewTab('copy');
+      if (unifiedQAMode) {
+        setActiveReviewTab('preapproval');
+      } else {
+        setActiveReviewTab('copy');
+      }
       setActiveTab('review');
     }
   };
@@ -680,80 +700,108 @@ export default function App() {
             useMockMode={useMockMode}
             onAuditChange={handleAutomationAuditChange}
             onSelectMessage={handleSelectAutomatedMessage}
+            figmaTexts={figmaTexts}
+            unifiedQAMode={unifiedQAMode}
+            setUnifiedQAMode={setUnifiedQAMode}
           />
         )}
 
         {activeTab === 'review' && (
           <section className="review-center">
-            <div className="review-tabs" aria-label="QA review tools">
-              <button className={`review-tab ${activeReviewTab === 'copy' ? 'active' : ''}`} onClick={() => setActiveReviewTab('copy')}>
-                Message QA
-              </button>
-              <button className={`review-tab ${activeReviewTab === 'technical' ? 'active' : ''}`} onClick={() => setActiveReviewTab('technical')}>
-                Technical
-              </button>
-              <button className={`review-tab ${activeReviewTab === 'preapproval' ? 'active' : ''}`} onClick={() => setActiveReviewTab('preapproval')}>
-                Pre-Approval
-              </button>
-              <button className={`review-tab ${activeReviewTab === 'approval' ? 'active' : ''}`} onClick={() => setActiveReviewTab('approval')}>
-                Approval
-              </button>
-            </div>
+            {(!automationState || !automationState.journey) ? (
+              <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 2rem', textAlign: 'center', minHeight: '450px' }}>
+                <div className="panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', maxWidth: '600px', width: '100%', padding: '3rem 2rem' }}>
+                  <div style={{ padding: '1.25rem', borderRadius: '50%', backgroundColor: 'rgba(6, 182, 212, 0.08)', color: 'var(--accent-cyan)', display: 'inline-flex' }}>
+                    <ShieldCheck size={40} />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: '1.6rem', marginBottom: '0.75rem', fontWeight: '700' }}>No Active Campaign Loaded</h2>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+                      Before running granular QA reviews, checklists, and approvals, please navigate to the Automated QA tab and import a Campaign/Canvas link or load a sandbox demo.
+                    </p>
+                  </div>
+                  <button className="btn btn-primary" onClick={() => setActiveTab('automation')} style={{ minWidth: '200px' }}>
+                    Go to Automated QA
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="review-tabs" aria-label="QA review tools">
+                  {!unifiedQAMode && (
+                    <>
+                      <button className={`review-tab ${activeReviewTab === 'copy' ? 'active' : ''}`} onClick={() => setActiveReviewTab('copy')}>
+                        Message QA
+                      </button>
+                      <button className={`review-tab ${activeReviewTab === 'technical' ? 'active' : ''}`} onClick={() => setActiveReviewTab('technical')}>
+                        Technical
+                      </button>
+                    </>
+                  )}
+                  <button className={`review-tab ${activeReviewTab === 'preapproval' ? 'active' : ''}`} onClick={() => setActiveReviewTab('preapproval')}>
+                    Pre-Approval
+                  </button>
+                  <button className={`review-tab ${activeReviewTab === 'approval' ? 'active' : ''}`} onClick={() => setActiveReviewTab('approval')}>
+                    Approval
+                  </button>
+                </div>
 
-            {activeReviewTab === 'copy' && (
-              <CopyAuditor
-                figmaTexts={figmaTexts}
-                setFigmaTexts={setFigmaTexts}
-                subjectLine={subjectLine}
-                setSubjectLine={setSubjectLine}
-                brazeHtml={brazeHtml}
-                setBrazeHtml={setBrazeHtml}
-                pushBody={pushBody}
-                setPushBody={setPushBody}
-                smsBody={smsBody}
-                setSmsBody={setSmsBody}
-                iamHeader={iamHeader}
-                setIamHeader={setIamHeader}
-                iamBody={iamBody}
-                setIamBody={setIamBody}
-                iamButtonText={iamButtonText}
-                setIamButtonText={setIamButtonText}
-                iamButtonLink={iamButtonLink}
-                setIamButtonLink={setIamButtonLink}
-                auditResults={copyAuditResults}
-                spamAuditResults={spamAuditResults}
-                isAuditing={isAuditing}
-                onRunAudit={runAudit}
-                onSyncFigma={handleSyncFigma}
-                figmaSyncLoading={figmaSyncLoading}
-              />
-            )}
+                {activeReviewTab === 'copy' && !unifiedQAMode && (
+                  <CopyAuditor
+                    figmaTexts={figmaTexts}
+                    setFigmaTexts={setFigmaTexts}
+                    subjectLine={subjectLine}
+                    setSubjectLine={setSubjectLine}
+                    brazeHtml={brazeHtml}
+                    setBrazeHtml={setBrazeHtml}
+                    pushBody={pushBody}
+                    setPushBody={setPushBody}
+                    smsBody={smsBody}
+                    setSmsBody={setSmsBody}
+                    iamHeader={iamHeader}
+                    setIamHeader={setIamHeader}
+                    iamBody={iamBody}
+                    setIamBody={setIamBody}
+                    iamButtonText={iamButtonText}
+                    setIamButtonText={setIamButtonText}
+                    iamButtonLink={iamButtonLink}
+                    setIamButtonLink={setIamButtonLink}
+                    auditResults={copyAuditResults}
+                    spamAuditResults={spamAuditResults}
+                    isAuditing={isAuditing}
+                    onRunAudit={runAudit}
+                    onSyncFigma={handleSyncFigma}
+                    figmaSyncLoading={figmaSyncLoading}
+                  />
+                )}
 
-            {activeReviewTab === 'technical' && (
-              <TechnicalAuditor
-                brazeHtml={brazeHtml}
-                setBrazeHtml={setBrazeHtml}
-                subjectLine={subjectLine}
-                pushBody={pushBody}
-                smsBody={smsBody}
-                iamHeader={iamHeader}
-                iamBody={iamBody}
-                iamButtonLink={iamButtonLink}
-                setIamButtonLink={setIamButtonLink}
-                spamAuditResults={spamAuditResults}
-                isAuditing={isAuditing}
-                onRunAudit={runAudit}
-                filterSeverity={filterSeverity}
-                setFilterSeverity={setFilterSeverity}
-              />
-            )}
+                {activeReviewTab === 'technical' && !unifiedQAMode && (
+                  <TechnicalAuditor
+                    brazeHtml={brazeHtml}
+                    setBrazeHtml={setBrazeHtml}
+                    subjectLine={subjectLine}
+                    pushBody={pushBody}
+                    smsBody={smsBody}
+                    iamHeader={iamHeader}
+                    iamBody={iamBody}
+                    iamButtonLink={iamButtonLink}
+                    setIamButtonLink={setIamButtonLink}
+                    spamAuditResults={spamAuditResults}
+                    isAuditing={isAuditing}
+                    onRunAudit={runAudit}
+                    filterSeverity={filterSeverity}
+                    setFilterSeverity={setFilterSeverity}
+                  />
+                )}
 
-            {activeReviewTab === 'approval' && (
-              <ApprovalGate automationState={automationState} preApprovalStatus={preApprovalStatus} onApprovalChange={handleApprovalChange} />
-            )}
+                {activeReviewTab === 'approval' && (
+                  <ApprovalGate automationState={automationState} preApprovalStatus={preApprovalStatus} onApprovalChange={handleApprovalChange} />
+                )}
 
-            {activeReviewTab === 'preapproval' && (
-              <PreApprovalChecklist automationState={automationState} onStatusChange={handlePreApprovalChange} />
+                {activeReviewTab === 'preapproval' && (
+                  <PreApprovalChecklist automationState={automationState} onStatusChange={handlePreApprovalChange} />
+                )}
+              </>
             )}
           </section>
         )}

@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
-  ArrowRight,
   CheckCircle2,
-  ExternalLink,
   FileSearch,
   RefreshCw,
   ShieldCheck
@@ -20,7 +18,7 @@ function formatStatus(status) {
   }[status] || 'Pending review';
 }
 
-export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMode }) {
+export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMode, figmaTexts = [], unifiedQAMode, setUnifiedQAMode }) {
   const [journey, setJourney] = useState(null);
   const [sourceInput, setSourceInput] = useState('');
   const [assetType, setAssetType] = useState('canvas');
@@ -47,10 +45,32 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
         counts: { blocker: 0, high: 0, medium: 0, low: 0 }
       };
     }
-    return auditJourneyAutomatically(journey);
-  }, [journey]);
-  const visibleFindings = audit.findings.filter((item) => severityFilter === 'all' || item.severity === severityFilter);
-  const selectedMessage = audit.messages.find((message) => message.id === selectedMessageId) || audit.messages[0];
+    return auditJourneyAutomatically(journey, figmaTexts);
+  }, [journey, figmaTexts]);
+
+  const selectedMessage = useMemo(() => {
+    return audit.messages.find((message) => message.id === selectedMessageId) || audit.messages[0] || null;
+  }, [audit.messages, selectedMessageId]);
+
+  useEffect(() => {
+    if (selectedMessage && selectedMessage.id !== selectedMessageId) {
+      setSelectedMessageId(selectedMessage.id);
+    }
+  }, [selectedMessage, selectedMessageId]);
+
+  useEffect(() => {
+    if (selectedMessage) {
+      onSelectMessage?.(selectedMessage, false);
+    }
+  }, [selectedMessage, onSelectMessage]);
+
+  const visibleFindings = useMemo(() => {
+    return audit.findings.filter((item) => {
+      const matchesMessage = !selectedMessageId || item.messageId === selectedMessageId || item.scope === 'journey';
+      const matchesSeverity = severityFilter === 'all' || item.severity === severityFilter;
+      return matchesMessage && matchesSeverity;
+    });
+  }, [audit.findings, selectedMessageId, severityFilter]);
 
   useEffect(() => {
     onAuditChange?.({ journey, audit });
@@ -217,7 +237,7 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
     onSelectMessage?.(message, openReview);
   };
 
-  const showDashboard = useMockMode || (journey && journey.source === 'braze');
+  const showDashboard = journey !== null;
 
   return (
     <div className="automated-qa fade-in">
@@ -256,6 +276,15 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
             <input type="checkbox" checked={postLaunchDraftVersion} onChange={(event) => setPostLaunchDraftVersion(event.target.checked)} />
             Include the post-launch draft when available
           </label>
+          <div className="form-group" style={{ gridColumn: '1 / -1', marginTop: '0.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+            <label className="automation-checkbox" style={{ fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input type="checkbox" checked={unifiedQAMode} onChange={(event) => setUnifiedQAMode(event.target.checked)} />
+              <span>Unified Campaign QA Mode (Bypass Separate Message & Technical QA tabs)</span>
+            </label>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', margin: '0.25rem 0 0 1.35rem', lineHeight: '1.4' }}>
+              When enabled, Automated QA performs all link, alt text, accessibility, copy mismatch, and spam checks directly in the dropdown message selector below, simplifying QA Review to approvals and checklists.
+            </p>
+          </div>
         </form>
         {useMockMode && <p className="automation-callout"><b>Demo mode:</b> the current asset is fictional sample data stored in the browser. It does not call Braze. Disable Sandbox Simulation in Settings after the read-only Braze variables are configured.</p>}
         {importError && <p className="automation-error" role="alert"><AlertCircle size={16} />{importError}</p>}
@@ -286,32 +315,75 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
           <section className="automation-workspace">
             <div className="panel journey-map-panel">
               <div className="panel-topline">
-                <div><p className="eyebrow">{journey.source === 'braze' ? 'Imported from Braze' : 'Fictional demo source'}</p><h3>Imported messages</h3><small>This is the message list returned by the selected Campaign or Canvas. A real read-only key replaces the demo names and content with the available data from your Braze asset. Select one to open its detailed QA Review.</small></div>
+                <div><p className="eyebrow">{journey.source === 'braze' ? 'Imported from Braze' : 'Fictional demo source'}</p><h3>Message Variant Selector</h3><small>Choose a campaign message variant from the dropdown to review its full copy mismatch, link, accessibility, and deliverability findings.</small></div>
                 <span className="read-only-label"><ShieldCheck size={14} /> Read only</span>
               </div>
-              <div className="journey-step-list">
-                {journey.steps.map((step, stepIndex) => (
-                  <div className="journey-step" key={step.id}>
-                    <div className="journey-step-heading"><span>{String(stepIndex + 1).padStart(2, '0')}</span><div><strong>{step.name}</strong><small>{String(step.type || 'step').replace(/[_-]+/g, ' ')} · {step.messages.length ? `${step.messages.length} message${step.messages.length === 1 ? '' : 's'}` : 'logic or timing step; no message content'}</small></div></div>
-                    <div className="journey-message-list">
-                      {step.messages.map((message) => {
-                        const count = audit.findings.filter((item) => item.messageId === message.id).length;
-                        return (
-                          <button type="button" key={message.id} className={`journey-message ${selectedMessage?.id === message.id ? 'active' : ''}`} onClick={() => selectMessage(message)}>
-                            <span><b>{getChannelLabel(message.channel)}</b>{message.name}</span>
-                            <span className={count ? 'message-finding-count has-findings' : 'message-finding-count'}>{count || 'Pass'} <ArrowRight size={14} /></span>
-                          </button>
-                        );
-                      })}
-                      {!step.messages.length && <p className="non-message-step">This step controls journey logic or timing and has no message body to audit.</p>}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              
+              {audit.messages.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
+                  <label className="form-label" htmlFor="message-select" style={{ fontWeight: '600', fontSize: '0.85rem' }}>Selected Message Variant</label>
+                  <select
+                    id="message-select"
+                    className="form-select"
+                    value={selectedMessageId}
+                    onChange={(e) => {
+                      const msgId = e.target.value;
+                      setSelectedMessageId(msgId);
+                      const msg = audit.messages.find(m => m.id === msgId);
+                      if (msg) {
+                        selectMessage(msg);
+                      }
+                    }}
+                    style={{ fontSize: '0.95rem', padding: '0.8rem', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-md)' }}
+                  >
+                    {audit.messages.map((msg) => (
+                      <option key={msg.id} value={msg.id}>
+                        {msg.stepName ? (msg.stepName === msg.name ? msg.stepName : `${msg.stepName} (${msg.name})`) : msg.name} ({getChannelLabel(msg.channel)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <p className="non-message-step" style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
+                  No message variants found in this campaign asset.
+                </p>
+              )}
+
               {selectedMessage && (
-                <div className="selected-message-card">
-                  <div><p className="eyebrow">Selected imported message</p><h4>{selectedMessage.name}</h4><p>{selectedMessage.subject || selectedMessage.title || selectedMessage.body.slice(0, 120)}</p></div>
-                  <button type="button" className="btn btn-secondary compact-action" onClick={() => selectMessage(selectedMessage, true)}>Open detailed QA Review <ExternalLink size={14} /></button>
+                <div className="selected-message-card" style={{ marginTop: '1.5rem', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-md)', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div>
+                    <span className="eyebrow" style={{ fontSize: '0.7rem' }}>{getChannelLabel(selectedMessage.channel)} Configuration</span>
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: '700', marginTop: '0.25rem', marginBottom: '0.5rem' }}>{selectedMessage.name}</h4>
+                    
+                    {selectedMessage.subject && (
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                        <strong>Subject:</strong> &quot;{selectedMessage.subject}&quot;
+                      </div>
+                    )}
+                    {selectedMessage.preheader && (
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                        <strong>Preheader:</strong> &quot;{selectedMessage.preheader}&quot;
+                      </div>
+                    )}
+                    {selectedMessage.from && (
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                        <strong>From:</strong> {selectedMessage.from}
+                      </div>
+                    )}
+                    {selectedMessage.actionUrl && (
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>
+                        <strong>CTA Link:</strong> <span style={{ color: 'var(--accent-blue)' }}>{selectedMessage.actionUrl}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', borderTop: '1px dashed var(--border-color)', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+                    <strong>Coded Body Text Preview:</strong>
+                    <p style={{ marginTop: '0.25rem', whiteSpace: 'pre-wrap', lineHeight: '1.5', color: 'var(--text-secondary)' }}>
+                      {(selectedMessage.body || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 250)}
+                      {(selectedMessage.body || '').replace(/<[^>]*>/g, ' ').length > 250 ? '...' : ''}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

@@ -216,6 +216,33 @@ function auditMessage(message) {
     findings.push(finding({ id: `${message.id}-action-placeholder`, severity: 'blocker', category: 'Links', title: 'Action uses a placeholder URL', evidence: message.actionUrl, remediation: 'Replace it with the approved production destination.', messageId: message.id, stepId: message.stepId }));
   }
 
+  const subjectLower = (message.subject || '').toLowerCase();
+  const bodyLower = body.toLowerCase();
+  if (subjectLower.includes('free') || subjectLower.includes('alert')) {
+    findings.push(finding({
+      id: `${message.id}-spam-free`,
+      severity: 'medium',
+      category: 'Spam',
+      title: 'Spam trigger word detected',
+      evidence: `Subject contains 'free' or 'alert'`,
+      remediation: "Consider softer wording such as 'Your reward is ready' to avoid email client spam filters.",
+      messageId: message.id,
+      stepId: message.stepId
+    }));
+  }
+  if (bodyLower.includes('!!!') || subjectLower.includes('!')) {
+    findings.push(finding({
+      id: `${message.id}-spam-exclamation`,
+      severity: 'low',
+      category: 'Spam',
+      title: 'Excessive exclamation marks',
+      evidence: `Contains multiple exclamations`,
+      remediation: 'Restrict exclamation marks to one per message to improve deliverability.',
+      messageId: message.id,
+      stepId: message.stepId
+    }));
+  }
+
   return findings;
 }
 
@@ -239,18 +266,98 @@ function auditJourney(journey, messages) {
   return findings;
 }
 
-export function auditJourneyAutomatically(journey) {
+export function auditCopyMismatches(message, figmaTexts = []) {
+  const findings = [];
+  const subject = (message.subject || '').toLowerCase();
+  const bodyText = (message.body || '').toLowerCase().replace(/<[^>]*>/g, ' ');
+  const combinedText = subject + ' ' + bodyText;
+
+  figmaTexts.forEach((figmaLine, index) => {
+    const lineLower = figmaLine.trim().toLowerCase();
+    if (!lineLower) return;
+
+    // Check if exactly matched
+    if (combinedText.includes(lineLower)) return;
+
+    // Check if partially matched (potential typo/mismatch)
+    const words = lineLower.split(/\s+/).filter(w => w.length >= 3);
+    if (words.length === 0) return;
+
+    let overlap = 0;
+    words.forEach(word => {
+      if (combinedText.includes(word)) overlap++;
+    });
+
+    if (overlap > 0 && overlap >= Math.min(2, words.length)) {
+      findings.push(finding({
+        id: `${message.id}-copy-mismatch-${index}`,
+        scope: 'message',
+        severity: 'high',
+        category: 'Copy Mismatch',
+        title: 'Figma copy discrepancy detected',
+        evidence: `Figma spec: "${figmaLine}". Message copy contains overlapping terms but does not match exactly.`,
+        remediation: 'Update the coded campaign text to match the approved Figma copy.',
+        messageId: message.id,
+        stepId: message.stepId
+      }));
+    } else {
+      // Entirely missing
+      findings.push(finding({
+        id: `${message.id}-copy-missing-${index}`,
+        scope: 'message',
+        severity: 'medium',
+        category: 'Copy Mismatch',
+        title: 'Figma text missing from code',
+        evidence: `Creative spec text "${figmaLine}" was not found in the email subject or body.`,
+        remediation: 'Verify if this text is required in the coded version of the campaign.',
+        messageId: message.id,
+        stepId: message.stepId
+      }));
+    }
+  });
+
+  return findings;
+}
+
+export function auditJourneyAutomatically(journey, figmaTexts = []) {
   const messages = journey.steps.flatMap((step) => step.messages || []);
-  const findings = [...auditJourney(journey, messages), ...messages.flatMap(auditMessage)];
+  const copyFindings = messages.flatMap((message) => auditCopyMismatches(message, figmaTexts));
+  const findings = [...auditJourney(journey, messages), ...messages.flatMap(auditMessage), ...copyFindings];
   const counts = findings.reduce((acc, item) => ({ ...acc, [item.severity]: (acc[item.severity] || 0) + 1 }), { blocker: 0, high: 0, medium: 0, low: 0 });
   const totalDeduction = findings.reduce((sum, item) => sum + (severityWeight[item.severity] || 0), 0);
   const score = Math.max(0, 100 - totalDeduction);
   const status = counts.blocker > 0 ? 'blocked' : counts.high > 0 ? 'needs-review' : 'ready-for-approval';
+
+  let copyScore = 100;
+  let techScore = 100;
+  let spamScore = 100;
+
+  findings.forEach(f => {
+    const weight = severityWeight[f.severity] || 0;
+    if (f.category === 'Copy Mismatch' || f.category === 'Content' || f.category === 'Email' || f.category === 'Journey logic') {
+      copyScore -= weight;
+    } else if (f.category === 'Spam') {
+      spamScore -= weight;
+    } else {
+      techScore -= weight;
+    }
+  });
+
+  copyScore = Math.max(0, Math.min(100, Math.round(copyScore)));
+  techScore = Math.max(0, Math.min(100, Math.round(techScore)));
+  spamScore = Math.max(0, Math.min(100, Math.round(spamScore)));
+
   return {
     id: `audit-${journey.id || 'journey'}`,
     journeyId: journey.id,
     generatedAt: new Date().toISOString(),
     score,
+    scores: {
+      overall: score,
+      copy: copyScore,
+      tech: techScore,
+      spam: spamScore
+    },
     status,
     counts,
     messageCount: messages.length,

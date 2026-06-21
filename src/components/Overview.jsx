@@ -23,11 +23,22 @@ export default function Overview({
   useMockMode
 }) {
   // SVG Config for Circular Progress Ring
+  const displayOverallScore = (automationState && automationState.audit && automationState.audit.scores) ? automationState.audit.scores.overall : overallScore;
+  const displayCopyScore = (automationState && automationState.audit && automationState.audit.scores) ? automationState.audit.scores.copy : copyScore;
+  const displayTechScore = (automationState && automationState.audit && automationState.audit.scores) ? automationState.audit.scores.tech : techScore;
+  const displaySpamScore = (automationState && automationState.audit && automationState.audit.scores) ? automationState.audit.scores.spam : spamScore;
+
+  const displayIssuesCount = (automationState && automationState.audit && automationState.audit.counts) ? {
+    high: (automationState.audit.counts.high || 0) + (automationState.audit.counts.blocker || 0),
+    medium: automationState.audit.counts.medium || 0,
+    low: automationState.audit.counts.low || 0
+  } : issuesCount;
+
   const radius = 80;
   const strokeWidth = 10;
   const normalizedRadius = radius - strokeWidth / 2;
   const circumference = normalizedRadius * 2 * Math.PI;
-  const strokeDashoffset = circumference - (overallScore / 100) * circumference;
+  const strokeDashoffset = circumference - (displayOverallScore / 100) * circumference;
 
   const getScoreGradient = (score) => {
     if (score >= 90) return 'url(#score-success-grad)';
@@ -52,7 +63,7 @@ export default function Overview({
 
     setIsSending(true);
 
-    const statusLabel = overallScore >= 90 ? '🟢 READY TO DEPLOY' : overallScore >= 70 ? '🟡 WARNINGS DETECTED' : '🔴 ACTION REQUIRED';
+    const statusLabel = displayOverallScore >= 90 ? '🟢 READY TO DEPLOY' : displayOverallScore >= 70 ? '🟡 WARNINGS DETECTED' : '🔴 ACTION REQUIRED';
     
     // Calculate dynamic list of real issues
     const htmlToAudit = brazeHtml || '';
@@ -103,7 +114,7 @@ export default function Overview({
       ? issueBullets.join('\n') 
       : '🎉 No issues detected! The campaign code, links, and copy are 100% compliant.';
 
-    const subject = `OmniQA Campaign Audit Report: ${overallScore}/100 Health Index`;
+    const subject = `OmniQA Campaign Audit Report: ${displayOverallScore}/100 Health Index`;
     const body = `📬 OMNIQA CAMPAIGN DIAGNOSTICS REPORT
 --------------------------------------------------
 Hi there,
@@ -111,15 +122,15 @@ Hi there,
 Here is your automated Campaign QA Diagnostic Report:
 Campaign Subject: "${subjectLine}"
 
-🎯 OVERALL HEALTH INDEX: ${overallScore} / 100
+🎯 OVERALL HEALTH INDEX: ${displayOverallScore} / 100
 Status: ${statusLabel}
 
 --------------------------------------------------
 📊 DIAGNOSTICS SCORECARD:
 --------------------------------------------------
-• Copy Sync Accuracy:   ${copyScore}%
-• Code Syntax & links:   ${techScore}%
-• Spam Filter Safety:     ${spamScore}%
+• Copy Sync Accuracy:   ${displayCopyScore}%
+• Code Syntax & links:   ${displayTechScore}%
+• Spam Filter Safety:     ${displaySpamScore}%
 
 --------------------------------------------------
 🚨 DETECTED CAMPAIGN ISSUES (REAL-TIME AUDIT):
@@ -188,7 +199,7 @@ OmniQA Quality Assurance Engine`;
           <div>
             <strong>{automationState.audit.score}/100</strong>
             <span className={`readiness-pill ${automationState.approval?.status === 'approved' ? 'approved' : automationState.audit.status}`}>
-              {automationState.approval?.status === 'approved' ? 'Approved by reviewer' : automationState.audit.status.replaceAll('-', ' ')}
+              {automationState.approval?.status === 'approved' ? 'Approved by reviewer' : automationState.audit.status.replace(/-/g, ' ')}
             </span>
           </div>
         </section>
@@ -226,7 +237,7 @@ OmniQA Quality Assurance Engine`;
               />
               {/* Foreground Glow / Track */}
               <circle
-                stroke={getScoreGradient(overallScore)}
+                stroke={getScoreGradient(displayOverallScore)}
                 fill="transparent"
                 strokeWidth={strokeWidth}
                 strokeDasharray={circumference + ' ' + circumference}
@@ -239,7 +250,7 @@ OmniQA Quality Assurance Engine`;
               />
             </svg>
             <div className="progress-ring-text">
-              <span style={{ color: getScoreColor(overallScore) }}>{overallScore}</span>
+              <span style={{ color: getScoreColor(displayOverallScore) }}>{displayOverallScore}</span>
               <span className="progress-ring-label">Health Index</span>
             </div>
           </div>
@@ -297,7 +308,7 @@ OmniQA Quality Assurance Engine`;
               >
                 <AlertCircle size={24} style={{ color: 'var(--error)' }} />
                 <div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>{issuesCount.high}</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>{displayIssuesCount.high}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>High Severity</div>
                 </div>
               </div>
@@ -312,7 +323,7 @@ OmniQA Quality Assurance Engine`;
               >
                 <AlertTriangle size={24} style={{ color: 'var(--warning)' }} />
                 <div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>{issuesCount.medium}</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>{displayIssuesCount.medium}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Medium Severity</div>
                 </div>
               </div>
@@ -327,18 +338,18 @@ OmniQA Quality Assurance Engine`;
               >
                 <CheckCircle2 size={24} style={{ color: 'var(--success)' }} />
                 <div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>{issuesCount.low}</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '700' }}>{displayIssuesCount.low}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Low Severity</div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="overview-footer-stats" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+          <div className="overview-main-grid-footer" style={{ marginTop: '1.25rem' }}>
             <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-              {issuesCount.high + issuesCount.medium === 0 
+              {displayIssuesCount.high + displayIssuesCount.medium === 0 
                 ? '🎉 Campaign is in perfect shape to deploy!' 
-                : `⚠️ Found ${issuesCount.high + issuesCount.medium} issues requiring attention.`}
+                : `⚠️ Found ${displayIssuesCount.high + displayIssuesCount.medium} issues requiring attention.`}
             </span>
             <span 
               onClick={() => setActiveTab('automation')} 
@@ -446,7 +457,7 @@ OmniQA Quality Assurance Engine`;
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span className="category-score" style={{ color: getScoreColor(copyScore) }}>{copyScore}%</span>
+            <span className="category-score" style={{ color: getScoreColor(displayCopyScore) }}>{displayCopyScore}%</span>
             <ArrowRight size={16} style={{ color: 'var(--text-muted)' }} />
           </div>
         </div>
@@ -463,7 +474,7 @@ OmniQA Quality Assurance Engine`;
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span className="category-score" style={{ color: getScoreColor(techScore) }}>{techScore}%</span>
+            <span className="category-score" style={{ color: getScoreColor(displayTechScore) }}>{displayTechScore}%</span>
             <ArrowRight size={16} style={{ color: 'var(--text-muted)' }} />
           </div>
         </div>
@@ -480,7 +491,7 @@ OmniQA Quality Assurance Engine`;
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span className="category-score" style={{ color: getScoreColor(spamScore) }}>{spamScore}%</span>
+            <span className="category-score" style={{ color: getScoreColor(displaySpamScore) }}>{displaySpamScore}%</span>
             <ArrowRight size={16} style={{ color: 'var(--text-muted)' }} />
           </div>
         </div>
@@ -586,15 +597,15 @@ OmniQA Quality Assurance Engine`;
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.35rem' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Campaign Health Index:</span>
-                      <strong style={{ color: overallScore >= 90 ? 'var(--success)' : overallScore >= 70 ? 'var(--warning)' : 'var(--error)' }}>{overallScore}/100</strong>
+                      <strong style={{ color: displayOverallScore >= 90 ? 'var(--success)' : displayOverallScore >= 70 ? 'var(--warning)' : 'var(--error)' }}>{displayOverallScore}/100</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.35rem' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Figma Copy Mismatches:</span>
-                      <strong style={{ color: (issuesCount.high + issuesCount.medium) === 0 ? 'var(--success)' : 'var(--warning)' }}>{issuesCount.high + issuesCount.medium} flag(s)</strong>
+                      <strong style={{ color: (displayIssuesCount.high + displayIssuesCount.medium) === 0 ? 'var(--success)' : 'var(--warning)' }}>{displayIssuesCount.high + displayIssuesCount.medium} flag(s)</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.35rem' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Link & Contrast Warnings:</span>
-                      <strong style={{ color: issuesCount.low === 0 ? 'var(--success)' : 'var(--text-primary)' }}>{issuesCount.low} flag(s)</strong>
+                      <strong style={{ color: displayIssuesCount.low === 0 ? 'var(--success)' : 'var(--text-primary)' }}>{displayIssuesCount.low} flag(s)</strong>
                     </div>
                   </div>
                 </div>
