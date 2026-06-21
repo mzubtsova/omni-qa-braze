@@ -157,6 +157,14 @@ export default function App() {
     setActiveTab(tab);
   };
 
+  const handleOverviewNavigation = (tab) => {
+    if (PRIMARY_TABS.includes(tab)) {
+      setActiveTab(tab);
+    } else {
+      openReviewTab(tab);
+    }
+  };
+
   // Campaign data states
   const [subjectLine, setSubjectLine] = useState(DEFAULT_SUBJECT);
   const [figmaTexts, setFigmaTexts] = useState(DEFAULT_FIGMA_TEXTS);
@@ -651,7 +659,7 @@ export default function App() {
             techScore={scores.tech}
             spamScore={scores.spam}
             issuesCount={issuesCount}
-            setActiveTab={openReviewTab}
+            setActiveTab={handleOverviewNavigation}
             onRunAudit={runAudit}
             isAuditing={isAuditing}
             subjectLine={subjectLine}

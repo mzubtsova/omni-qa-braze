@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { demoJourney } from '../data/demoJourney';
 import { importBrazeJourney } from '../services/braze';
-import { auditJourneyAutomatically, getChannelLabel } from '../utils/campaignAudit';
+import { auditJourneyAutomatically, getChannelLabel, normalizeBrazePayload } from '../utils/campaignAudit';
 
 function formatStatus(status) {
   return {
@@ -93,11 +93,115 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
       setFunnyComment(loadingComments[Math.floor(Math.random() * loadingComments.length)]);
       await new Promise(resolve => setTimeout(resolve, 1200));
 
-      const importedJourney = await importBrazeJourney({
-        url: sourceInput.trim(),
-        type: assetType,
-        postLaunchDraftVersion
-      });
+      let importedJourney;
+      if (useMockMode) {
+        const lowerId = sourceInput.trim().toLowerCase();
+        let mockPayload;
+        
+        if (lowerId.includes('spring') || lowerId.includes('sale')) {
+          mockPayload = {
+            id: 'spring-sale',
+            type: 'campaign',
+            name: `Simulated Spring Sale Campaign (${sourceInput})`,
+            draft: false,
+            enabled: true,
+            conversion_behaviors: [{ type: "Purchase", window: 86400 }],
+            source: 'braze',
+            messages: [{
+              id: 'msg-spring-sale',
+              channel: 'email',
+              name: 'Spring Sale Email Variant',
+              subject: '🌸 Spring Sale: Get 20% off today!',
+              preheader: 'Shop our exclusive spring collection now.',
+              body: '<p>Use coupon code SPRING20 at checkout.</p><a href="https://brand.com/spring-sale?utm_source=braze">Shop Now</a>',
+              from: 'newsletter@brand.com'
+            }]
+          };
+        } else if (lowerId.includes('ab-test') || lowerId.includes('notification')) {
+          mockPayload = {
+            id: 'ab-test',
+            type: 'campaign',
+            name: `Simulated A/B Test Campaign (${sourceInput})`,
+            draft: true,
+            enabled: false,
+            conversion_behaviors: [],
+            source: 'braze',
+            messages: [{
+              id: 'msg-ab-test',
+              channel: 'email',
+              name: 'Welcome Variant A',
+              subject: '',
+              preheader: 'Come back and see us!',
+              body: '<p>We miss you! Here is a coupon.</p><a href="http://staging.brand.com/claim-rewards">Claim Rewards</a>',
+              from: ''
+            }]
+          };
+        } else if (lowerId.includes('welcome') || lowerId.includes('canvas') || assetType === 'canvas') {
+          mockPayload = {
+            id: 'onboarding-canvas',
+            type: 'canvas',
+            name: `Simulated Onboarding Canvas (${sourceInput})`,
+            draft: true,
+            enabled: false,
+            conversion_behaviors: [],
+            source: 'braze',
+            steps: [
+              {
+                id: 'step-1',
+                name: 'Onboarding Welcome Email',
+                type: 'email',
+                messages: [{
+                  id: 'msg-welcome-email',
+                  channel: 'email',
+                  name: 'Welcome Email',
+                  subject: 'Welcome to our application!',
+                  preheader: 'Start your journey today.',
+                  body: '<p>Thanks for signing up!</p><a href="https://brand.com/onboarding?utm_source=braze">Get Started</a>',
+                  from: 'support@brand.com'
+                }]
+              },
+              {
+                id: 'step-2',
+                name: 'Follow-up Push Warning',
+                type: 'push',
+                messages: [{
+                  id: 'msg-followup-push',
+                  channel: 'push',
+                  name: 'Push Variant',
+                  title: 'Quick reminder!',
+                  body: 'This is an extremely long push notification body that is going to exceed the standard recommended limit of 178 characters to make sure the platform truncation audit warns the marketer before sending it out to devices.',
+                  from: ''
+                }]
+              }
+            ]
+          };
+        } else {
+          mockPayload = {
+            id: 'default-mock',
+            type: 'campaign',
+            name: `Simulated Live Campaign (${sourceInput})`,
+            draft: true,
+            enabled: false,
+            conversion_behaviors: [],
+            source: 'braze',
+            messages: [{
+              id: 'msg-default',
+              channel: 'email',
+              name: 'Campaign Email Variant',
+              subject: 'Your offer has arrived!',
+              body: '<p>Live import simulation successfully loaded from the serverless backend.</p><a href="https://brand.com/claim?utm_source=braze">Claim Offer</a>',
+              from: 'offers@brand.com'
+            }]
+          };
+        }
+        importedJourney = normalizeBrazePayload(mockPayload, { id: sourceInput.trim(), type: assetType, source: 'braze' });
+      } else {
+        importedJourney = await importBrazeJourney({
+          url: sourceInput.trim(),
+          type: assetType,
+          postLaunchDraftVersion
+        });
+      }
       setJourney(importedJourney);
       setSelectedMessageId('');
     } catch (error) {
