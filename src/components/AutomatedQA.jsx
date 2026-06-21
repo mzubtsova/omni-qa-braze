@@ -144,7 +144,7 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
       <section className="automation-workspace">
         <div className="panel journey-map-panel">
           <div className="panel-topline">
-            <div><p className="eyebrow">Imported asset structure</p><h3>Message inventory</h3><small>Braze step names and message variants appear here. Select a message to inspect its findings or open focused review.</small></div>
+            <div><p className="eyebrow">{journey.source === 'braze' ? 'Imported from Braze' : 'Fictional demo source'}</p><h3>Imported messages</h3><small>This is the message list returned by the selected Campaign or Canvas. A real read-only key replaces the demo names and content with the available data from your Braze asset. Select one to open its detailed QA Review.</small></div>
             <span className="read-only-label"><ShieldCheck size={14} /> Read only</span>
           </div>
           <div className="journey-step-list">
@@ -168,8 +168,8 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
           </div>
           {selectedMessage && (
             <div className="selected-message-card">
-              <div><p className="eyebrow">Selected message</p><h4>{selectedMessage.name}</h4><p>{selectedMessage.subject || selectedMessage.title || selectedMessage.body.slice(0, 120)}</p></div>
-              <button type="button" className="btn btn-secondary compact-action" onClick={() => selectMessage(selectedMessage, true)}>Open focused review <ExternalLink size={14} /></button>
+              <div><p className="eyebrow">Selected imported message</p><h4>{selectedMessage.name}</h4><p>{selectedMessage.subject || selectedMessage.title || selectedMessage.body.slice(0, 120)}</p></div>
+              <button type="button" className="btn btn-secondary compact-action" onClick={() => selectMessage(selectedMessage, true)}>Open detailed QA Review <ExternalLink size={14} /></button>
             </div>
           )}
         </div>

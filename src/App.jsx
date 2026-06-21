@@ -17,6 +17,7 @@ import Settings from './components/Settings';
 import Catalog from './components/Catalog';
 import AutomatedQA from './components/AutomatedQA';
 import ApprovalGate from './components/ApprovalGate';
+import PreApprovalChecklist from './components/PreApprovalChecklist';
 
 import { auditFigmaAndBrazeCopy, auditSpamAndDeliverability, predictCampaignEngagement } from './services/gemini';
 import { fetchFigmaTextLayers } from './services/figma';
@@ -92,7 +93,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 </html>`;
 
 const PRIMARY_TABS = ['overview', 'automation', 'review', 'library', 'settings'];
-const REVIEW_TABS = ['copy', 'technical', 'approval'];
+const REVIEW_TABS = ['copy', 'technical', 'preapproval', 'approval'];
 
 function normalizePrimaryTab(hashTab) {
   if (PRIMARY_TABS.includes(hashTab)) return hashTab;
@@ -192,8 +193,10 @@ export default function App() {
   // Lifted severity filter state for campaign issues tracking
   const [filterSeverity, setFilterSeverity] = useState('all');
   const [automationState, setAutomationState] = useState(null);
+  const [preApprovalStatus, setPreApprovalStatus] = useState({ complete: 0, total: 0, ready: false });
   const handleAutomationAuditChange = useCallback((nextState) => setAutomationState(nextState), []);
   const handleApprovalChange = useCallback((approval) => setAutomationState((current) => current ? { ...current, approval } : current), []);
+  const handlePreApprovalChange = useCallback((status) => setPreApprovalStatus(status), []);
 
   const handleSyncFigma = async () => {
     setFigmaSyncLoading(true);
@@ -675,10 +678,13 @@ export default function App() {
           <section className="review-center">
             <div className="review-tabs" aria-label="QA review tools">
               <button className={`review-tab ${activeReviewTab === 'copy' ? 'active' : ''}`} onClick={() => setActiveReviewTab('copy')}>
-                Copy
+                Message QA
               </button>
               <button className={`review-tab ${activeReviewTab === 'technical' ? 'active' : ''}`} onClick={() => setActiveReviewTab('technical')}>
                 Technical
+              </button>
+              <button className={`review-tab ${activeReviewTab === 'preapproval' ? 'active' : ''}`} onClick={() => setActiveReviewTab('preapproval')}>
+                Pre-Approval
               </button>
               <button className={`review-tab ${activeReviewTab === 'approval' ? 'active' : ''}`} onClick={() => setActiveReviewTab('approval')}>
                 Approval
@@ -734,7 +740,11 @@ export default function App() {
             )}
 
             {activeReviewTab === 'approval' && (
-              <ApprovalGate automationState={automationState} onApprovalChange={handleApprovalChange} />
+              <ApprovalGate automationState={automationState} preApprovalStatus={preApprovalStatus} onApprovalChange={handleApprovalChange} />
+            )}
+
+            {activeReviewTab === 'preapproval' && (
+              <PreApprovalChecklist automationState={automationState} onStatusChange={handlePreApprovalChange} />
             )}
           </section>
         )}

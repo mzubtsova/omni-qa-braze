@@ -66,11 +66,11 @@ READINESS BOUNDARY
 This report records a QA decision. A person still controls activation and scheduling in Braze.`;
 }
 
-export default function ApprovalGate({ automationState, onApprovalChange }) {
+export default function ApprovalGate({ automationState, preApprovalStatus, onApprovalChange }) {
   const [approval, setApproval] = useState(loadStoredApproval);
   const journey = automationState?.journey;
   const audit = automationState?.audit;
-  const approvalAllowed = useMemo(() => audit ? canApproveAudit(audit, approval) : false, [audit, approval]);
+  const approvalAllowed = useMemo(() => audit ? canApproveAudit(audit, approval) && preApprovalStatus?.ready : false, [audit, approval, preApprovalStatus]);
 
   useEffect(() => {
     localStorage.setItem('omniqa_approval', JSON.stringify(approval));
@@ -122,6 +122,7 @@ export default function ApprovalGate({ automationState, onApprovalChange }) {
         <span className={`readiness-pill ${approval.status === 'approved' ? 'approved' : audit.status}`}>{formatStatus(approval.status === 'approved' ? 'approved' : audit.status)}</span>
       </div>
       <p className="approval-intro">Automated findings are evidence, not a launch decision. Confirm the remaining business and test checks, record the reviewer, and approve readiness here.</p>
+      {!preApprovalStatus?.ready && <p className="approval-blocked"><AlertCircle size={16} />Complete the Pre-Approval checklist first ({preApprovalStatus?.complete || 0}/{preApprovalStatus?.total || 0}).</p>}
       <div className="approval-grid">
         <div className="approval-checks">
           {approvalChecks.map(([key, label]) => (

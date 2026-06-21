@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Info, Sparkles, CheckCircle, RefreshCw, Layers, Monitor, Play, X } from 'lucide-react';
 import Editor from '@monaco-editor/react';
-import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast } from '../utils/validators';
+import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast, auditImages } from '../utils/validators';
 
 export default function CopyAuditor({ 
   figmaTexts, 
@@ -159,6 +159,7 @@ export default function CopyAuditor({
   const liquidErrors = validateLiquidSyntax(htmlToAudit);
   const linkIssues = auditHtmlLinks(htmlToAudit);
   const contrastIssues = checkWcagContrast(htmlToAudit);
+  const imageIssues = auditImages(htmlToAudit);
   const copyMismatches = auditResults?.mismatches?.filter(m => m.brazeText !== 'Dark Mode Contrast Risk' && m.brazeText !== 'Low Color Contrast') || [];
   const spamTriggers = spamAuditResults?.spamTriggers || [];
 
@@ -205,6 +206,20 @@ export default function CopyAuditor({
       detail2: 'parameter context:',
       value2: l.item === 'Missing Tracking' ? 'UTM parameters check' : 'Broken URL check',
       message: l.message
+    });
+  });
+
+  // Image source and accessibility checks
+  imageIssues.forEach((image) => {
+    allIssues.push({
+      category: 'image',
+      severity: image.severity || 'medium',
+      title: image.item || 'Image issue',
+      detail1: 'Image QA:',
+      value1: image.item || 'Source and alt text',
+      detail2: 'Review scope:',
+      value2: 'Accessibility and asset health',
+      message: image.message
     });
   });
 
@@ -284,6 +299,7 @@ export default function CopyAuditor({
     copy: allIssues.filter(i => i.category === 'copy').length,
     contrast: allIssues.filter(i => i.category === 'contrast').length,
     link: allIssues.filter(i => i.category === 'link').length,
+    image: allIssues.filter(i => i.category === 'image').length,
     liquid: allIssues.filter(i => i.category === 'liquid').length,
     spam: allIssues.filter(i => i.category === 'spam').length
   };
@@ -307,8 +323,8 @@ export default function CopyAuditor({
       <div className="copy-source-note">
         <Info size={18} />
         <div>
-          <strong>How copy gets here</strong>
-          <span>Automated QA can import message content through the read-only Braze route. You can also load a Library example, paste or edit content, and optionally sync approved Figma text for comparison.</span>
+          <strong>Focused message QA</strong>
+          <span>This view re-checks the selected message across copy alignment, Liquid, links and UTMs, image sources and alt text, contrast, and spam signals. Automated QA can populate it from Braze; Library examples and manual editing are also supported.</span>
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.25rem' }}>
@@ -493,8 +509,8 @@ export default function CopyAuditor({
               {/* Mini counter dials */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', textAlign: 'center' }}>
                 <div style={{ padding: '0.4rem', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
-                  <div style={{ color: 'var(--error)', fontWeight: '700', fontSize: '1.1rem' }}>{counts.liquid + counts.link}</div>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Code/Link</div>
+                  <div style={{ color: 'var(--error)', fontWeight: '700', fontSize: '1.1rem' }}>{counts.liquid + counts.link + counts.image}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Code/Assets</div>
                 </div>
                 <div style={{ padding: '0.4rem', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
                   <div style={{ color: 'var(--warning)', fontWeight: '700', fontSize: '1.1rem' }}>{counts.copy}</div>
@@ -777,7 +793,7 @@ export default function CopyAuditor({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3>Master Diagnostics & Audit Log</h3>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              Powered by <Sparkles size={12} style={{ color: 'var(--accent-cyan)' }} /> Gemini 3.5
+              Local checks + <Sparkles size={12} style={{ color: 'var(--accent-cyan)' }} /> optional Gemini
             </span>
           </div>
 
@@ -817,6 +833,13 @@ export default function CopyAuditor({
               style={{ fontSize: '0.72rem', padding: '0.35rem 0.55rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
             >
               🚨 Liquid ({counts.liquid})
+            </button>
+            <button
+              onClick={() => setActiveFilter('image')}
+              className={`sub-tab ${activeFilter === 'image' ? 'active' : ''}`}
+              style={{ fontSize: '0.72rem', padding: '0.35rem 0.55rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+            >
+              🖼️ Images ({counts.image})
             </button>
             <button 
               onClick={() => setActiveFilter('spam')}

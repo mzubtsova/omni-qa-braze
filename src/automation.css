@@ -79,6 +79,25 @@
 .approval-empty h3 { margin: 0.5rem 0 0; }
 .approval-empty p { max-width: 560px; color: var(--text-secondary); }
 .source-explainer { max-width: 720px; margin: 0.35rem 0 0.85rem; color: var(--text-secondary); font-size: 0.78rem; line-height: 1.5; }
+.preapproval-workspace { display: flex; flex-direction: column; gap: 1rem; }
+.preapproval-intro { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; }
+.preapproval-intro h3 { margin: 0.2rem 0 0.35rem; }
+.preapproval-intro p:not(.eyebrow) { max-width: 780px; color: var(--text-secondary); }
+.preapproval-progress { display: flex; flex-direction: column; align-items: flex-end; min-width: 90px; }
+.preapproval-progress strong { color: var(--accent-cyan); font-size: 1.5rem; }
+.preapproval-progress span { color: var(--text-secondary); font-size: 0.72rem; text-transform: uppercase; }
+.preapproval-setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; margin-top: 1rem; }
+.preapproval-setup-grid .form-group { margin: 0; }
+.preapproval-items { display: flex; flex-direction: column; gap: 0.65rem; margin-top: 1rem; }
+.preapproval-item { padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); background: var(--bg-tertiary); }
+.preapproval-item.done { border-color: rgba(16, 185, 129, 0.3); }
+.preapproval-item-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 0.65rem; align-items: center; }
+.preapproval-item-row > input { accent-color: var(--success); }
+.preapproval-item-row .form-textarea { min-height: 54px; resize: vertical; }
+.preapproval-note { min-height: 64px; margin-top: 0.65rem; }
+.preapproval-add-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.65rem; margin-top: 0.85rem; }
+.preapproval-add-row .btn { width: auto; }
+.preapproval-general-notes { margin: 1rem 0 0; padding-top: 1rem; border-top: 1px solid var(--border-color); }
 
 @media (max-width: 1024px) {
   .automation-summary, .automation-workspace { grid-template-columns: 1fr; }
@@ -86,6 +105,9 @@
 }
 
 @media (max-width: 640px) {
+  .review-tabs { width: 100%; max-width: 100%; overflow-x: auto; }
+  .review-tabs::-webkit-scrollbar { display: none; }
+  .review-tab { flex: 0 0 auto; }
   .overview-automation-strip { align-items: flex-start; flex-direction: column; }
   .overview-automation-strip > div:last-child { align-items: flex-start; }
   .automation-hero, .automation-import-form, .approval-grid { grid-template-columns: 1fr; }
@@ -100,6 +122,13 @@
   .selected-message-card { grid-template-columns: 1fr; align-items: stretch; }
   .approval-actions, .approval-actions > div { align-items: stretch; flex-direction: column; }
   .approval-actions .btn, .selected-message-card .btn { width: 100%; }
+  .preapproval-intro { align-items: flex-start; flex-direction: column; }
+  .preapproval-progress { align-items: flex-start; }
+  .preapproval-setup-grid { grid-template-columns: 1fr; }
+  .preapproval-item-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .preapproval-item-row .icon-button:last-child { grid-column: 3; }
+  .preapproval-add-row { grid-template-columns: 1fr; }
+  .preapproval-add-row .btn { width: 100%; }
 }
 
 @media print {
