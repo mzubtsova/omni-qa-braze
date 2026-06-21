@@ -26,6 +26,7 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
   const [assetType, setAssetType] = useState('canvas');
   const [postLaunchDraftVersion, setPostLaunchDraftVersion] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
+  const [funnyComment, setFunnyComment] = useState('');
   const [importError, setImportError] = useState('');
   const [severityFilter, setSeverityFilter] = useState('all');
   const [selectedMessageId, setSelectedMessageId] = useState('');
@@ -59,7 +60,25 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
     }
     setIsImporting(true);
     setImportError('');
+    
+    const loadingComments = [
+      "🕵️‍♂️ Intercepting secret Braze transmissions...",
+      "⚡ Scanning for broken Liquid brackets...",
+      "🛸 beam_me_up_braze.sh in progress...",
+      "🤖 Consulting with Gemini copyeditor...",
+      "🍕 Feeding the servers to speed up verification...",
+      "🎩 Performing digital card tricks with your API calls..."
+    ];
+
     try {
+      // First comment delay
+      setFunnyComment(loadingComments[Math.floor(Math.random() * loadingComments.length)]);
+      await new Promise(resolve => setTimeout(resolve, 1200));
+
+      // Second comment delay
+      setFunnyComment(loadingComments[Math.floor(Math.random() * loadingComments.length)]);
+      await new Promise(resolve => setTimeout(resolve, 1200));
+
       const importedJourney = await importBrazeJourney({
         url: sourceInput.trim(),
         type: assetType,
@@ -71,6 +90,7 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
       setImportError(error.message);
     } finally {
       setIsImporting(false);
+      setFunnyComment('');
     }
   };
 
@@ -78,6 +98,8 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
     setSelectedMessageId(message.id);
     onSelectMessage?.(message, openReview);
   };
+
+  const showDashboard = useMockMode || (journey && journey.source === 'braze');
 
   return (
     <div className="automated-qa fade-in">
@@ -109,8 +131,8 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
               <option value="campaign">Campaign</option>
             </select>
           </div>
-          <button className="btn btn-primary automation-import-button" disabled={isImporting || useMockMode}>
-            {isImporting ? <><RefreshCw size={16} className="spin" /> Importing</> : <><FileSearch size={16} /> Import and run QA</>}
+          <button className="btn btn-primary automation-import-button" disabled={isImporting || !sourceInput.trim() || useMockMode}>
+            {isImporting ? <><RefreshCw size={16} className="spin" /> {funnyComment || 'Importing...'}</> : <><FileSearch size={16} /> Import and run QA</>}
           </button>
           <label className="automation-checkbox">
             <input type="checkbox" checked={postLaunchDraftVersion} onChange={(event) => setPostLaunchDraftVersion(event.target.checked)} />
@@ -121,85 +143,88 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
         {importError && <p className="automation-error" role="alert"><AlertCircle size={16} />{importError}</p>}
       </section>
 
-      <section className="automation-summary">
-        <article className="automation-score panel">
-          <span className={`readiness-pill ${audit.status}`}>{formatStatus(audit.status)}</span>
-          <strong>{audit.score}</strong>
-          <small>Automated QA score</small>
-        </article>
-        <article className="automation-metrics panel">
-          <div><strong>{audit.stepCount}</strong><span>Steps</span></div>
-          <div><strong>{audit.messageCount}</strong><span>Messages</span></div>
-          <div><strong>{audit.channelCount}</strong><span>Channels</span></div>
-          <div><strong>{audit.findings.length}</strong><span>Findings</span></div>
-        </article>
-        <article className="automation-source-summary panel">
-          <p className="eyebrow">Current asset</p>
-          <h3>{journey.name}</h3>
-          <p>{journey.source === 'braze' ? 'Imported read-only from Braze' : 'Fictional browser demo'} · {journey.type}</p>
-          <span>{journey.draft ? 'Draft' : journey.enabled ? 'Enabled' : 'Not enabled'}</span>
-        </article>
-      </section>
+      {showDashboard && (
+        <>
+          <section className="automation-summary">
+            <article className="automation-score panel">
+              <span className={`readiness-pill ${audit.status}`}>{formatStatus(audit.status)}</span>
+              <strong>{audit.score}</strong>
+              <small>Automated QA score</small>
+            </article>
+            <article className="automation-metrics panel">
+              <div><strong>{audit.stepCount}</strong><span>Steps</span></div>
+              <div><strong>{audit.messageCount}</strong><span>Messages</span></div>
+              <div><strong>{audit.channelCount}</strong><span>Channels</span></div>
+              <div><strong>{audit.findings.length}</strong><span>Findings</span></div>
+            </article>
+            <article className="automation-source-summary panel">
+              <p className="eyebrow">Current asset</p>
+              <h3>{journey.name}</h3>
+              <p>{journey.source === 'braze' ? 'Imported read-only from Braze' : 'Fictional browser demo'} · {journey.type}</p>
+              <span>{journey.draft ? 'Draft' : journey.enabled ? 'Enabled' : 'Not enabled'}</span>
+            </article>
+          </section>
 
-      <section className="automation-workspace">
-        <div className="panel journey-map-panel">
-          <div className="panel-topline">
-            <div><p className="eyebrow">{journey.source === 'braze' ? 'Imported from Braze' : 'Fictional demo source'}</p><h3>Imported messages</h3><small>This is the message list returned by the selected Campaign or Canvas. A real read-only key replaces the demo names and content with the available data from your Braze asset. Select one to open its detailed QA Review.</small></div>
-            <span className="read-only-label"><ShieldCheck size={14} /> Read only</span>
-          </div>
-          <div className="journey-step-list">
-            {journey.steps.map((step, stepIndex) => (
-              <div className="journey-step" key={step.id}>
-                <div className="journey-step-heading"><span>{String(stepIndex + 1).padStart(2, '0')}</span><div><strong>{step.name}</strong><small>{String(step.type || 'step').replace(/[_-]+/g, ' ')} · {step.messages.length ? `${step.messages.length} message${step.messages.length === 1 ? '' : 's'}` : 'logic or timing step; no message content'}</small></div></div>
-                <div className="journey-message-list">
-                  {step.messages.map((message) => {
-                    const count = audit.findings.filter((item) => item.messageId === message.id).length;
-                    return (
-                      <button type="button" key={message.id} className={`journey-message ${selectedMessage?.id === message.id ? 'active' : ''}`} onClick={() => selectMessage(message)}>
-                        <span><b>{getChannelLabel(message.channel)}</b>{message.name}</span>
-                        <span className={count ? 'message-finding-count has-findings' : 'message-finding-count'}>{count || 'Pass'} <ArrowRight size={14} /></span>
-                      </button>
-                    );
-                  })}
-                  {!step.messages.length && <p className="non-message-step">This step controls journey logic or timing and has no message body to audit.</p>}
-                </div>
+          <section className="automation-workspace">
+            <div className="panel journey-map-panel">
+              <div className="panel-topline">
+                <div><p className="eyebrow">{journey.source === 'braze' ? 'Imported from Braze' : 'Fictional demo source'}</p><h3>Imported messages</h3><small>This is the message list returned by the selected Campaign or Canvas. A real read-only key replaces the demo names and content with the available data from your Braze asset. Select one to open its detailed QA Review.</small></div>
+                <span className="read-only-label"><ShieldCheck size={14} /> Read only</span>
               </div>
-            ))}
-          </div>
-          {selectedMessage && (
-            <div className="selected-message-card">
-              <div><p className="eyebrow">Selected imported message</p><h4>{selectedMessage.name}</h4><p>{selectedMessage.subject || selectedMessage.title || selectedMessage.body.slice(0, 120)}</p></div>
-              <button type="button" className="btn btn-secondary compact-action" onClick={() => selectMessage(selectedMessage, true)}>Open detailed QA Review <ExternalLink size={14} /></button>
+              <div className="journey-step-list">
+                {journey.steps.map((step, stepIndex) => (
+                  <div className="journey-step" key={step.id}>
+                    <div className="journey-step-heading"><span>{String(stepIndex + 1).padStart(2, '0')}</span><div><strong>{step.name}</strong><small>{String(step.type || 'step').replace(/[_-]+/g, ' ')} · {step.messages.length ? `${step.messages.length} message${step.messages.length === 1 ? '' : 's'}` : 'logic or timing step; no message content'}</small></div></div>
+                    <div className="journey-message-list">
+                      {step.messages.map((message) => {
+                        const count = audit.findings.filter((item) => item.messageId === message.id).length;
+                        return (
+                          <button type="button" key={message.id} className={`journey-message ${selectedMessage?.id === message.id ? 'active' : ''}`} onClick={() => selectMessage(message)}>
+                            <span><b>{getChannelLabel(message.channel)}</b>{message.name}</span>
+                            <span className={count ? 'message-finding-count has-findings' : 'message-finding-count'}>{count || 'Pass'} <ArrowRight size={14} /></span>
+                          </button>
+                        );
+                      })}
+                      {!step.messages.length && <p className="non-message-step">This step controls journey logic or timing and has no message body to audit.</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {selectedMessage && (
+                <div className="selected-message-card">
+                  <div><p className="eyebrow">Selected imported message</p><h4>{selectedMessage.name}</h4><p>{selectedMessage.subject || selectedMessage.title || selectedMessage.body.slice(0, 120)}</p></div>
+                  <button type="button" className="btn btn-secondary compact-action" onClick={() => selectMessage(selectedMessage, true)}>Open detailed QA Review <ExternalLink size={14} /></button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        <div className="panel findings-panel">
-          <div className="panel-topline">
-            <div><p className="eyebrow">Automated findings</p><h3>Evidence and actions</h3></div>
-            <button className="btn btn-secondary compact-action" type="button" onClick={() => setJourney({ ...journey })}><RefreshCw size={14} /> Re-run</button>
-          </div>
-          <div className="severity-filters" aria-label="Finding severity filters">
-            {['all', 'blocker', 'high', 'medium', 'low'].map((severity) => (
-              <button key={severity} type="button" className={severityFilter === severity ? 'active' : ''} onClick={() => setSeverityFilter(severity)}>
-                {severity === 'all' ? `All ${audit.findings.length}` : `${severity} ${audit.counts[severity] || 0}`}
-              </button>
-            ))}
-          </div>
-          <div className="finding-list">
-            {visibleFindings.length === 0 && <div className="empty-findings"><CheckCircle2 size={22} />No findings in this filter.</div>}
-            {visibleFindings.map((item) => (
-              <article className="finding-card" key={item.id}>
-                <div className="finding-heading"><span className={`severity-label ${item.severity}`}>{item.severity}</span><div><strong>{item.title}</strong><small>{item.category} · {item.scope}</small></div></div>
-                <p><b>Evidence:</b> {item.evidence}</p>
-                <p><b>Required action:</b> {item.remediation}</p>
-                <textarea className="form-textarea finding-note" value={findingNotes[item.id] || ''} onChange={(event) => setFindingNotes({ ...findingNotes, [item.id]: event.target.value })} placeholder="Reviewer note, owner, or exception rationale" />
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
+            <div className="panel findings-panel">
+              <div className="panel-topline">
+                <div><p className="eyebrow">Automated findings</p><h3>Evidence and actions</h3></div>
+                <button className="btn btn-secondary compact-action" type="button" onClick={() => setJourney({ ...journey })}><RefreshCw size={14} /> Re-run</button>
+              </div>
+              <div className="severity-filters" aria-label="Finding severity filters">
+                {['all', 'blocker', 'high', 'medium', 'low'].map((severity) => (
+                  <button key={severity} type="button" className={severityFilter === severity ? 'active' : ''} onClick={() => setSeverityFilter(severity)}>
+                    {severity === 'all' ? `All ${audit.findings.length}` : `${severity} ${audit.counts[severity] || 0}`}
+                  </button>
+                ))}
+              </div>
+              <div className="finding-list">
+                {visibleFindings.length === 0 && <div className="empty-findings"><CheckCircle2 size={22} />No findings in this filter.</div>}
+                {visibleFindings.map((item) => (
+                  <article className="finding-card" key={item.id}>
+                    <div className="finding-heading"><span className={`severity-label ${item.severity}`}>{item.severity}</span><div><strong>{item.title}</strong><small>{item.category} · {item.scope}</small></div></div>
+                    <p><b>Evidence:</b> {item.evidence}</p>
+                    <p><b>Required action:</b> {item.remediation}</p>
+                    <textarea className="form-textarea finding-note" value={findingNotes[item.id] || ''} onChange={(event) => setFindingNotes({ ...findingNotes, [item.id]: event.target.value })} placeholder="Reviewer note, owner, or exception rationale" />
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        </>
+      )}
     </div>
   );
 }

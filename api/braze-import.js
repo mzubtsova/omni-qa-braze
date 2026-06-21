@@ -48,38 +48,103 @@ export default async function handler(req, res) {
   }
 
   if (apiKey === 'mock_braze_key_123') {
-    const mockPayload = source.type === 'canvas' ? {
-      name: `Simulated Live Canvas (${source.id})`,
-      draft: true,
-      steps: [
-        {
-          id: "step-1",
-          name: "Welcome Email Step",
-          type: "email",
-          messages: [
-            {
-              channel: "email",
-              name: "Welcome Email Variant",
-              subject: "Welcome to the real system!",
-              body: "<p>This is a live API response simulation from the serverless backend.</p><a href=\"https://brand.com/get-started?utm_source=braze\">Get Started</a>",
-              from: "hello@brand.com"
-            }
-          ]
-        }
-      ]
-    } : {
-      name: `Simulated Live Campaign (${source.id})`,
-      draft: true,
-      messages: [
-        {
-          channel: "email",
-          name: "Campaign Email Variant",
-          subject: "Your offer has arrived!",
-          body: "<p>Live import simulation successfully loaded from the serverless backend.</p><a href=\"https://brand.com/claim?utm_source=braze\">Claim Offer</a>",
-          from: "offers@brand.com"
-        }
-      ]
-    };
+    let mockPayload;
+    const lowerId = source.id.toLowerCase();
+
+    if (lowerId.includes('spring') || lowerId.includes('sale')) {
+      // 100 Score Campaign - No findings, has preheader, from, and conversion behaviors
+      mockPayload = {
+        name: `Simulated Spring Sale Campaign (${source.id})`,
+        draft: false,
+        enabled: true,
+        conversion_behaviors: [
+          { type: "Purchase", window: 86400 }
+        ],
+        messages: [
+          {
+            id: "msg-spring-sale",
+            channel: "email",
+            name: "Spring Sale Email Variant",
+            subject: "🌸 Spring Sale: Get 20% off today!",
+            preheader: "Shop our exclusive spring collection now.",
+            body: "<p>Use coupon code SPRING20 at checkout.</p><a href=\"https://brand.com/spring-sale?utm_source=braze\">Shop Now</a>",
+            from: "newsletter@brand.com"
+          }
+        ]
+      };
+    } else if (lowerId.includes('ab-test') || lowerId.includes('notification')) {
+      // Low Score Campaign - Blocker & High findings (empty subject, missing from, staging link)
+      mockPayload = {
+        name: `Simulated A/B Test Campaign (${source.id})`,
+        draft: true,
+        messages: [
+          {
+            id: "msg-ab-test",
+            channel: "email",
+            name: "Welcome Variant A",
+            subject: "",
+            preheader: "Come back and see us!",
+            body: "<p>We miss you! Here is a coupon.</p><a href=\"http://staging.brand.com/claim-rewards\">Claim Rewards</a>",
+            from: ""
+          }
+        ]
+      };
+    } else if (lowerId.includes('welcome') || lowerId.includes('canvas') || source.type === 'canvas') {
+      // Multi-step Canvas with a warning (very long push body)
+      mockPayload = {
+        name: `Simulated Onboarding Canvas (${source.id})`,
+        draft: true,
+        steps: [
+          {
+            id: "step-1",
+            name: "Onboarding Welcome Email",
+            type: "email",
+            messages: [
+              {
+                id: "msg-welcome-email",
+                channel: "email",
+                name: "Welcome Email",
+                subject: "Welcome to our application!",
+                preheader: "Start your journey today.",
+                body: "<p>Thanks for signing up!</p><a href=\"https://brand.com/onboarding?utm_source=braze\">Get Started</a>",
+                from: "support@brand.com"
+              }
+            ]
+          },
+          {
+            id: "step-2",
+            name: "Follow-up Push Warning",
+            type: "push",
+            messages: [
+              {
+                id: "msg-followup-push",
+                channel: "push",
+                name: "Push Variant",
+                title: "Quick reminder!",
+                body: "This is an extremely long push notification body that is going to exceed the standard recommended limit of 178 characters to make sure the platform truncation audit warns the marketer before sending it out to devices.",
+                from: ""
+              }
+            ]
+          }
+        ]
+      };
+    } else {
+      // Default: Medium findings (missing preheader, no conversion behaviors)
+      mockPayload = {
+        name: `Simulated Live Campaign (${source.id})`,
+        draft: true,
+        messages: [
+          {
+            channel: "email",
+            name: "Campaign Email Variant",
+            subject: "Your offer has arrived!",
+            body: "<p>Live import simulation successfully loaded from the serverless backend.</p><a href=\"https://brand.com/claim?utm_source=braze\">Claim Offer</a>",
+            from: "offers@brand.com"
+          }
+        ]
+      };
+    }
+
     return res.status(200).json({ payload: mockPayload, source: { ...source, source: 'braze' } });
   }
 
