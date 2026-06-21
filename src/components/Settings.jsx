@@ -99,14 +99,16 @@ export default function Settings({ onSave }) {
     }, 1600);
 
     setTimeout(() => {
-      addLog(`Checking Braze dashboard endpoint routing (${settings.brazeEndpoint})...`, 'ping');
+      addLog(`Checking read-only Braze import configuration...`, 'ping');
     }, 2400);
 
     setTimeout(() => {
       if (settings.useMockData) {
         addLog(`Braze Sandbox endpoint handshake: OK (rest.iad-01.braze.com responded in 68ms)`, 'success');
+      } else if (!health.brazeConfigured) {
+        addLog(`Braze read-only import is not configured. Add BRAZE_REST_API_KEY and BRAZE_REST_ENDPOINT in Vercel.`, 'error');
       } else {
-        addLog(`Braze endpoint saved for catalog deep links. REST read/write sync is reserved for the next integration phase.`, 'info');
+        addLog(`Braze read-only import route is configured. OmniQA has no deployment or write-back route.`, 'success');
       }
     }, 3200);
 
@@ -125,11 +127,11 @@ export default function Settings({ onSave }) {
     }, 4800);
 
     setTimeout(() => {
-      const hasErrors = !settings.useMockData && (!health.figmaConfigured || !health.geminiConfigured);
+      const hasErrors = !settings.useMockData && (!health.figmaConfigured || !health.geminiConfigured || !health.brazeConfigured);
       if (hasErrors) {
         addLog(`Diagnostics complete: server configuration is incomplete. Add missing Vercel environment variables and redeploy.`, 'error');
       } else {
-        addLog(`Diagnostics complete: live AI and Figma routes are ready.`, 'success');
+        addLog(`Diagnostics complete: read-only Braze import, AI review, and Figma extraction are ready.`, 'success');
       }
       setIsDiagnosing(false);
     }, 5500);
@@ -143,7 +145,7 @@ export default function Settings({ onSave }) {
           OmniQA Configuration Panel
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
-          Manage sandbox mode, Figma file routing, and Braze dashboard endpoints. Gemini and Figma secrets are read from Vercel environment variables, not stored in the browser.
+          Manage sandbox mode and non-secret workspace preferences. Gemini, Figma, and read-only Braze credentials are stored only in Vercel environment variables.
         </p>
 
         {savedStatus && (
@@ -277,7 +279,7 @@ export default function Settings({ onSave }) {
               <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <label className="form-label" htmlFor="brazeApiKey" style={{ margin: 0 }}>
-                    Braze API Key
+                    Braze read-only API key
                   </label>
                   <button
                     type="button"
@@ -292,7 +294,7 @@ export default function Settings({ onSave }) {
                   id="brazeApiKey"
                   name="brazeApiKey"
                   className="form-input"
-                  placeholder="Future server-side Braze integration"
+                  placeholder="Configured as BRAZE_REST_API_KEY in Vercel"
                   value={settings.brazeApiKey}
                   onChange={handleChange}
                   disabled
@@ -301,7 +303,7 @@ export default function Settings({ onSave }) {
 
               <div className="form-group">
                 <label className="form-label" htmlFor="brazeEndpoint">
-                  Braze API REST Endpoint
+                  Braze dashboard region
                 </label>
                 <select
                   id="brazeEndpoint"

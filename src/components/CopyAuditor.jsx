@@ -308,7 +308,7 @@ export default function CopyAuditor({
         <Info size={18} />
         <div>
           <strong>How copy gets here</strong>
-          <span>Load a saved Library example, paste or edit message content here, or sync Figma text when configured. Braze links open the source campaign; OmniQA does not currently import message bodies from Braze.</span>
+          <span>Automated QA can import message content through the read-only Braze route. You can also load a Library example, paste or edit content, and optionally sync approved Figma text for comparison.</span>
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.25rem' }}>

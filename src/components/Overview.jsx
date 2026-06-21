@@ -18,7 +18,8 @@ export default function Overview({
   onPredictEngagement,
   isPredicting,
   predictionResults,
-  setFilterSeverity
+  setFilterSeverity,
+  automationState
 }) {
   // SVG Config for Circular Progress Ring
   const radius = 80;
@@ -150,6 +151,21 @@ OmniQA Quality Assurance Engine`;
 
   return (
     <div className="fade-in">
+      {automationState && (
+        <section className="overview-automation-strip">
+          <div>
+            <p className="eyebrow">Latest journey audit</p>
+            <strong>{automationState.journey.name}</strong>
+            <span>{automationState.audit.stepCount} steps · {automationState.audit.messageCount} messages · {automationState.audit.findings.length} findings</span>
+          </div>
+          <div>
+            <strong>{automationState.audit.score}/100</strong>
+            <span className={`readiness-pill ${automationState.approval.status === 'approved' ? 'approved' : automationState.audit.status}`}>
+              {automationState.approval.status === 'approved' ? 'Approved by reviewer' : automationState.audit.status.replaceAll('-', ' ')}
+            </span>
+          </div>
+        </section>
+      )}
       <div className="overview-main-grid">
         
         {/* Left Side: Radial Gauge Panel */}

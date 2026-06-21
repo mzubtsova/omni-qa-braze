@@ -1,6 +1,6 @@
 # OmniQA for Braze 🍦
 
-OmniQA is a focused diagnostic workspace for CRM engineering, campaign managers, and marketing developers. It reviews one active campaign message at a time, combining campaign intake, copy comparison, code checks, launch checkpoints, and report-ready results before a Braze send.
+OmniQA is a read-only pre-deployment QA workspace for Braze Campaigns and Canvases. It can import an approved Braze asset, normalize every available step and message variant, run deterministic campaign and journey checks, produce evidence-based reports, and record a named human readiness decision. It cannot deploy, activate, or modify a Braze asset.
 
 ![OmniQA Dashboard Preview](omniqa_preview.png)
 
@@ -18,11 +18,13 @@ flowchart TD
     classDef output fill:#061712,stroke:#34d399,stroke-width:2px,color:#f8fafc;
 
     %% Nodes
-    Figma["🎨 Figma File ID / URL"]:::source
-    Payload["✉️ Coded Campaign HTML/CSS"]:::source
-    Catalog["🗂️ Local Campaign Library"]:::source
+    Braze["Braze Campaign / Canvas URL"]:::source
+    Figma["Optional Figma File ID / URL"]:::source
+    Catalog["Local Campaign Library"]:::source
     
-    App["📊 OmniQA Diagnostics Console"]:::core
+    ImportRoute["Read-only /api/braze-import"]:::server
+    Normalizer["Campaign + Canvas normalizer"]:::core
+    App["Automated QA + approval workspace"]:::core
     
     subgraph LocalValidators ["🛡️ LOCAL CODE VALIDATORS"]
         Liquid["🧠 AST-less Liquid Parser"]
@@ -38,15 +40,17 @@ flowchart TD
     end
     class ServerRoutes,GeminiRoute,FigmaRoute,HealthRoute server;
     
-    PDFExport["📄 QA Report / Print PDF"]:::output
-    ReportEmail["📧 Prefilled Email Draft"]:::output
-    AutoFix["🪄 One-Click HTML Auto-Fixer"]:::output
-    BrazeLinks["🔥 Braze Dashboard Deep Links"]:::output
+    PDFExport["QA report / print PDF"]:::output
+    ReportEmail["Prefilled email draft"]:::output
+    Approval["Named human approval record"]:::output
+    BrazeLinks["Braze dashboard deep links"]:::output
     
     %% Flow Connections
-    Figma -->|File reference| App
-    Payload -->|Import Code| App
-    Catalog -->|Load Draft| App
+    Braze -->|URL or API ID| ImportRoute
+    ImportRoute -->|Campaign / Canvas metadata| Normalizer
+    Normalizer -->|Steps, variants, channels| App
+    Figma -->|Approved copy reference| App
+    Catalog -->|Reusable example| App
     
     App <-->|Syntax Auditing| Liquid
     App <-->|Link Verification| Links
@@ -56,40 +60,41 @@ flowchart TD
     App <-->|Text layer extraction| FigmaRoute
     App <-->|Environment readiness| HealthRoute
     
-    App -->|Generate Scorecard| PDFExport
-    App -->|Generate Email| ReportEmail
-    App -->|Trigger Repair| AutoFix
+    App -->|Generate evidence| PDFExport
+    App -->|Generate summary| ReportEmail
+    App -->|Blockers resolved + human checks| Approval
     Catalog -->|Open source campaign| BrazeLinks
 ```
 
+![OmniQA automated QA flow](docs/omniqa-automated-qa-flow.svg)
+
 ### Component Breakdown & Data Flow
-1.  **Input Sources**: Active-message content comes from pasted or edited HTML/copy, local Library entries, and Figma file IDs or URLs. OmniQA does not currently import message bodies from Braze.
-2.  **OmniQA Core Controller (`App.jsx`)**: Orchestrates shared campaign data across Overview, Campaign Checklist, QA Review, Library, and Settings.
-3.  **Campaign Checklist**: Combines compact campaign setup, editable campaign types, reusable templates, checkpoints, comments, and reviewer notes in one ordered workflow. A multistage Canvas is reviewed message by message.
-4.  **Local Validators**: Processes Liquid syntax, URL/UTM patterns, contrast checks, image risks, and preview states locally for instant feedback.
-5.  **Secure Server Routes**: Calls `/api/gemini`, `/api/figma-layers`, and `/api/health` so Gemini and Figma secrets stay in Vercel environment variables instead of browser storage.
-6.  **Output Layer**: Supports launch-readiness review, editable checklist notes, HTML repair helpers, and Braze dashboard deep links. Braze REST write-back is reserved for a later production phase.
+1.  **Read-only Braze intake**: `/api/braze-import` accepts a Campaign or Canvas URL/ID and calls only the Braze details export endpoint selected for that asset type.
+2.  **Multistage normalization**: The client converts Campaign messages and Canvas steps into one stable model containing steps, message variants, channels, content, and configuration.
+3.  **Deterministic QA**: Local validators check Liquid pairing, required content, channel limits, sender configuration, links, UTMs, image accessibility, contrast, duplicate content, conversion metadata, and draft safety.
+4.  **Focused review**: Any imported message can be opened in the existing copy and technical review tools for detailed inspection or repair planning.
+5.  **Human approval gate**: Blockers disable approval. A named reviewer must complete business-logic, content, personalization, and test-evidence confirmations before OmniQA records readiness.
+6.  **Safety boundary**: There is no Braze deployment, activation, scheduling, or write-back route.
 
 ---
 
 ## 🚀 Key Features
 
-### 1. Overview & Reporting
-*   **Campaign Health Overview**: Shows active-message scores, issue severity, channel readiness, and engagement forecast in one starting view.
+### 1. Automated QA
+*   **Campaign and Canvas Import**: Accepts a Braze URL or API identifier and can include the post-launch draft when available.
+*   **Full Journey Inventory**: Lists every imported step, message variant, and channel with its finding count.
+*   **Automatic Evidence**: Produces severity, evidence, and required remediation for each deterministic finding.
+*   **Human-Controlled Approval**: Prevents approval while blockers remain and stores the named reviewer, confirmations, decision note, and timestamp locally.
+
+### 2. Overview & Reporting
+*   **Journey Health Overview**: Shows the latest multistage score, status, steps, messages, channels, and open findings.
 *   **Email Report Draft**: Opens a prefilled email with the current QA summary and issue list.
 *   **PDF Export**: Uses the browser print flow to save or print a campaign QA report.
 
-### 2. Campaign Checklist
-*   **Structured Campaign Intake**: Captures campaign or Canvas name, type, launch date, audience/segment, offer logic, required variables, and reviewer notes.
-*   **Editable Campaign Types**: Keeps built-in templates while allowing reviewers to add, select, and remove custom campaign types.
-*   **Reusable Templates**: Applies starter channel copy for birthday, onboarding, promotional loyalty, and winback workflows.
-*   **Editable Checkpoints**: Lets reviewers add, remove, reorder through edits, and complete campaign-specific checks.
-*   **Checkpoint Notes**: Stores a note, blocker, owner, or follow-up directly with each checkpoint.
-
 ### 3. Focused QA Review
-*   **Active-Message Scope**: Reviews one email, push, SMS, or IAM state at a time. For a multistage Canvas, save or load each message separately and run QA for every step.
-*   **Automatic Sandbox Checks**: Re-runs local and simulated checks as active-message content changes. Live mode runs when the reviewer selects **Run QA**.
-*   **Manual or Library Copy Intake**: Loads copy from local Library examples, direct editing/paste, or configured Figma text extraction. Braze links are navigation shortcuts, not content imports.
+*   **Message-Level Handoff**: Opens any imported email, push, SMS, or IAM message in the focused review tools with its current content loaded.
+*   **Automatic Sandbox Checks**: Re-runs local and simulated checks as focused message content changes.
+*   **Multiple Copy Sources**: Supports read-only Braze import, local Library examples, direct editing, and configured Figma text extraction.
 *   **Figma Layer Cross-Checking**: Compares text nodes extracted from Figma designs directly with Braze HTML templates and subject lines.
 *   **Fuzzy Text-Diff Matcher**: Dynamically tokenizes and scans plain text inside HTML tags to match lines of Figma design copy on the fly.
 *   **Monaco HTML Code Editor**: Embeds a rich, syntax-highlighted editor with line numbers, code folding, word wrap, and automatic layout resizing that compiles state changes in real time.
@@ -97,7 +102,7 @@ flowchart TD
 *   **UTM Link Crawler**: Crawls all anchor links to detect dead hrefs, placeholder domains, and missing marketing UTM analytics keys.
 *   **HTML Contrast Auto-Fixer**: Features a one-click repair engine that automatically adjusts violating button contrasts, resolves empty placeholder links, and appends missing UTM trackers.
 
-### 4. Campaign Library
+### 4. Campaign Library and Configuration
 *   **Local Campaign Library**: Tracks reusable campaign examples, versions, and status for repeat QA.
 *   **Cluster-Mapped Workspace Links**: Maps REST API endpoints (e.g. `rest.iad-01`, `rest.iad-03`, `rest.eu`) to direct, clickable URLs pointing straight to your campaign configuration inside the Braze dashboard console.
 
@@ -134,23 +139,27 @@ By default, the app initializes in **Sandbox Demo mode**. This allows you to exp
 OmniQA now supports a secure live-mode MVP through Vercel Serverless Functions. Browser users do **not** paste long-lived API secrets into the app; the frontend calls internal routes and the routes read environment variables on the server.
 
 1.  In Vercel, add these environment variables:
+    *   `BRAZE_REST_API_KEY` - required for live read-only import. Use a key limited to `campaigns.details` and `canvas.details` permissions.
+    *   `BRAZE_REST_ENDPOINT` - required Braze REST base URL for your workspace, such as `https://rest.iad-05.braze.com`.
     *   `GEMINI_API_KEY` - required for live AI copy, spam, and engagement audits.
-    *   `FIGMA_ACCESS_TOKEN` - required for live Figma text-layer extraction.
+    *   `FIGMA_ACCESS_TOKEN` - optional; required only for live Figma text-layer extraction.
     *   `GEMINI_MODEL` - optional, defaults to `gemini-1.5-flash`.
 2.  Redeploy the project after saving environment variables.
 3.  Go to the **Settings** panel in OmniQA.
 4.  Toggle off **Use Sandbox Simulation / Demo Mode**.
-5.  Add a Figma file ID or URL and save the configuration.
-6.  Use **Run Diagnostics Handshake** to confirm the server routes are configured.
+5.  Use **Run Diagnostics Handshake** to confirm the Braze, AI, and optional Figma routes are configured.
+6.  Open **Automated QA**, paste an approved Campaign or Canvas URL, and import it for review.
 
 Live mode currently supports:
+*   Read-only Braze Campaign and Canvas import through `/api/braze-import`.
 *   Server-side Gemini copy, deliverability, and engagement analysis through `/api/gemini`.
 *   Server-side Figma text extraction through `/api/figma-layers`.
 *   Local Liquid, link, image, UTM, and WCAG-style validators in the browser.
 *   Braze dashboard deep-linking from the campaign catalog.
 
 Reserved for a later production phase:
-*   Braze REST read/write sync.
-*   Canvas-level aggregation that combines several message audits into one journey report.
 *   Authenticated user accounts and server-side audit history.
 *   Server-side PDF/report storage and email delivery.
+*   Organization SSO and role-based access controls.
+
+OmniQA intentionally does not include Braze write-back or deployment automation.

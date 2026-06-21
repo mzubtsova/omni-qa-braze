@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   BarChart2,
   Database,
@@ -15,7 +15,7 @@ import CopyAuditor from './components/CopyAuditor';
 import TechnicalAuditor from './components/TechnicalAuditor';
 import Settings from './components/Settings';
 import Catalog from './components/Catalog';
-import LaunchWorkspace from './components/LaunchWorkspace';
+import AutomatedQA from './components/AutomatedQA';
 
 import { auditFigmaAndBrazeCopy, auditSpamAndDeliverability, predictCampaignEngagement } from './services/gemini';
 import { fetchFigmaTextLayers } from './services/figma';
@@ -90,12 +90,12 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-const PRIMARY_TABS = ['overview', 'checklist', 'review', 'library', 'settings'];
+const PRIMARY_TABS = ['overview', 'automation', 'review', 'library', 'settings'];
 const REVIEW_TABS = ['copy', 'technical'];
 
 function normalizePrimaryTab(hashTab) {
   if (PRIMARY_TABS.includes(hashTab)) return hashTab;
-  if (hashTab === 'workspace') return 'checklist';
+  if (hashTab === 'workspace' || hashTab === 'checklist') return 'automation';
   if (REVIEW_TABS.includes(hashTab)) return 'review';
   if (hashTab === 'catalog') return 'library';
   if (hashTab === 'visuals' || hashTab === 'ab_evaluator') return 'review';
@@ -190,6 +190,8 @@ export default function App() {
 
   // Lifted severity filter state for campaign issues tracking
   const [filterSeverity, setFilterSeverity] = useState('all');
+  const [automationState, setAutomationState] = useState(null);
+  const handleAutomationAuditChange = useCallback((nextState) => setAutomationState(nextState), []);
 
   const handleSyncFigma = async () => {
     setFigmaSyncLoading(true);
@@ -239,18 +241,27 @@ export default function App() {
     if (campaign.iamButtonText !== undefined) setIamButtonText(campaign.iamButtonText);
     if (campaign.iamButtonLink !== undefined) setIamButtonLink(campaign.iamButtonLink);
     if (campaign.figmaTexts !== undefined) setFigmaTexts(campaign.figmaTexts);
-    setActiveTab('checklist');
+    setActiveTab('review');
   };
 
-  const handleCampaignStateChange = (nextState) => {
-    if (nextState.subjectLine !== undefined) setSubjectLine(nextState.subjectLine);
-    if (nextState.brazeHtml !== undefined) setBrazeHtml(nextState.brazeHtml);
-    if (nextState.pushBody !== undefined) setPushBody(nextState.pushBody);
-    if (nextState.smsBody !== undefined) setSmsBody(nextState.smsBody);
-    if (nextState.iamHeader !== undefined) setIamHeader(nextState.iamHeader);
-    if (nextState.iamBody !== undefined) setIamBody(nextState.iamBody);
-    if (nextState.iamButtonText !== undefined) setIamButtonText(nextState.iamButtonText);
-    if (nextState.iamButtonLink !== undefined) setIamButtonLink(nextState.iamButtonLink);
+  const handleSelectAutomatedMessage = (message, openReview = false) => {
+    setFigmaTexts([]);
+    if (message.channel === 'email') {
+      setSubjectLine(message.subject || '');
+      setBrazeHtml(message.body || '');
+    } else if (message.channel === 'sms') {
+      setSmsBody(message.body || '');
+    } else if (message.channel === 'in_app_message') {
+      setIamHeader(message.title || '');
+      setIamBody(message.body || '');
+      setIamButtonLink(message.actionUrl || '');
+    } else if (message.channel.includes('push')) {
+      setPushBody(message.body || '');
+    }
+    if (openReview) {
+      setActiveReviewTab('copy');
+      setActiveTab('review');
+    }
   };
 
   // Load mode state on mount
@@ -509,14 +520,14 @@ export default function App() {
   const printImageIssues = auditImages(brazeHtml);
   const activeTitle = {
     overview: 'Campaign Overview',
-    checklist: 'Campaign Checklist',
+    automation: 'Automated QA',
     review: 'QA Review',
     library: 'Campaign Library',
     settings: 'Settings'
   }[activeTab];
   const activeDescription = {
     overview: 'See campaign health, open issues, channel readiness, and report actions in one place.',
-    checklist: 'Set up campaign details first, then add, complete, remove, and comment on launch checkpoints.',
+    automation: 'Import a Braze asset, audit every available message, and record a human readiness decision.',
     review: 'Run focused checks for launch risk, copy alignment, Liquid, links, and deliverability.',
     library: 'Load campaign examples or save reusable campaign states for repeat review.',
     settings: 'Manage sandbox mode and secure integration settings.'
@@ -541,11 +552,11 @@ export default function App() {
           </button>
 
           <button
-            className={`sidebar-item ${activeTab === 'checklist' ? 'active' : ''}`}
-            onClick={() => openPrimaryTab('checklist')}
+            className={`sidebar-item ${activeTab === 'automation' ? 'active' : ''}`}
+            onClick={() => openPrimaryTab('automation')}
           >
             <ListChecks size={18} />
-            <span>Campaign Checklist</span>
+            <span>Automated QA</span>
           </button>
           
           <button 
@@ -646,14 +657,15 @@ export default function App() {
             isPredicting={isPredicting}
             predictionResults={predictionResults}
             setFilterSeverity={setFilterSeverity}
+            automationState={automationState}
           />
         )}
 
-        {activeTab === 'checklist' && (
-          <LaunchWorkspace
-            setCampaignState={handleCampaignStateChange}
-            scores={scores}
-            onRunAudit={() => runAudit(useMockMode)}
+        {activeTab === 'automation' && (
+          <AutomatedQA
+            useMockMode={useMockMode}
+            onAuditChange={handleAutomationAuditChange}
+            onSelectMessage={handleSelectAutomatedMessage}
           />
         )}
 
