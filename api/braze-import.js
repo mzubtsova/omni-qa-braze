@@ -42,16 +42,52 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'BRAZE_REST_API_KEY is not configured on the server.' });
   }
 
+  const source = parseSource(req.body);
+  if (!source.id || !/^[a-zA-Z0-9-]+$/.test(source.id)) {
+    return res.status(400).json({ error: 'Enter a valid Braze Campaign or Canvas URL/ID.' });
+  }
+
+  if (apiKey === 'mock_braze_key_123') {
+    const mockPayload = source.type === 'canvas' ? {
+      name: `Simulated Live Canvas (${source.id})`,
+      draft: true,
+      steps: [
+        {
+          id: "step-1",
+          name: "Welcome Email Step",
+          type: "email",
+          messages: [
+            {
+              channel: "email",
+              name: "Welcome Email Variant",
+              subject: "Welcome to the real system!",
+              body: "<p>This is a live API response simulation from the serverless backend.</p><a href=\"https://brand.com/get-started?utm_source=braze\">Get Started</a>",
+              from: "hello@brand.com"
+            }
+          ]
+        }
+      ]
+    } : {
+      name: `Simulated Live Campaign (${source.id})`,
+      draft: true,
+      messages: [
+        {
+          channel: "email",
+          name: "Campaign Email Variant",
+          subject: "Your offer has arrived!",
+          body: "<p>Live import simulation successfully loaded from the serverless backend.</p><a href=\"https://brand.com/claim?utm_source=braze\">Claim Offer</a>",
+          from: "offers@brand.com"
+        }
+      ]
+    };
+    return res.status(200).json({ payload: mockPayload, source: { ...source, source: 'braze' } });
+  }
+
   let endpoint;
   try {
     endpoint = getBrazeEndpoint();
   } catch (error) {
     return res.status(503).json({ error: error.message });
-  }
-
-  const source = parseSource(req.body);
-  if (!source.id || !/^[a-zA-Z0-9-]+$/.test(source.id)) {
-    return res.status(400).json({ error: 'Enter a valid Braze Campaign or Canvas URL/ID.' });
   }
 
   const path = source.type === 'canvas' ? '/canvas/details' : '/campaigns/details';

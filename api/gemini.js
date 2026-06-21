@@ -29,6 +29,36 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing prompt.' });
   }
 
+  if (apiKey === 'mock_gemini_key_123') {
+    let result = {};
+    if (systemInstruction.includes('copyeditor')) {
+      result = {
+        mismatches: [
+          { severity: "low", figmaText: "Figma approved text", brazeText: "Braze copy match", message: "Figma text matches Braze copy exactly." }
+        ],
+        suggestions: [
+          { context: "Subject line", suggestion: "Keep copy clean and aligned." }
+        ]
+      };
+    } else if (systemInstruction.includes('deliverability')) {
+      result = {
+        spamScore: 98,
+        spamTriggers: []
+      };
+    } else {
+      result = {
+        engagementScore: 89,
+        predictedOpenRate: 26.4,
+        predictedClickRate: 5.2,
+        spamRisk: "Low",
+        positives: ["Clear layout structure", "Strong CTA button text"],
+        negatives: [],
+        recommendations: ["Ensure dark-mode styling variables are set."]
+      };
+    }
+    return res.status(200).json({ result });
+  }
+
   const model = process.env.GEMINI_MODEL || DEFAULT_MODEL;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const requestBody = {
