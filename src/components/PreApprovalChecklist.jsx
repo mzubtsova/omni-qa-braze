@@ -92,7 +92,31 @@ export default function PreApprovalChecklist({ automationState, onStatusChange }
       </section>
 
       <section className="panel preapproval-checklist">
-        <div className="panel-topline"><div><p className="eyebrow">Editable checkpoints</p><h3>Manual verification</h3></div><span className={complete === state.items.length ? 'readiness-pill approved' : 'readiness-pill needs-review'}>{complete === state.items.length ? 'Complete' : 'In progress'}</span></div>
+        <div className="panel-topline">
+          <div>
+            <p className="eyebrow">Editable checkpoints</p>
+            <h3>Manual verification</h3>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button 
+              type="button" 
+              className="btn btn-secondary" 
+              style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem', cursor: 'pointer' }}
+              onClick={() => {
+                const allDone = state.items.every(item => item.done);
+                setState(current => ({
+                  ...current,
+                  items: current.items.map(item => ({ ...item, done: !allDone }))
+                }));
+              }}
+            >
+              {state.items.every(item => item.done) ? 'Deselect All' : 'Select All'}
+            </button>
+            <span className={complete === state.items.length ? 'readiness-pill approved' : 'readiness-pill needs-review'}>
+              {complete === state.items.length ? 'Complete' : 'In progress'}
+            </span>
+          </div>
+        </div>
         <div className="preapproval-items">
           {state.items.map((item, index) => (
             <article className={`preapproval-item ${item.done ? 'done' : ''}`} key={item.id}>

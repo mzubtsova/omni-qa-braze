@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle2, AlertTriangle, AlertCircle, FileText, Code, ShieldCheck, ArrowRight, Mail, X, RefreshCw, Sparkles } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, AlertCircle, FileText, Code, ShieldCheck, ArrowRight, Mail, X, RefreshCw, Sparkles, Save } from 'lucide-react';
 import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast } from '../utils/validators';
 
 export default function Overview({ 
@@ -21,7 +21,8 @@ export default function Overview({
   predictionResults,
   setFilterSeverity,
   automationState,
-  useMockMode
+  useMockMode,
+  onQuickSave
 }) {
   // SVG Config for Circular Progress Ring
   const displayOverallScore = (automationState && automationState.audit && automationState.audit.scores) ? automationState.audit.scores.overall : overallScore;
@@ -282,6 +283,15 @@ OmniQA Quality Assurance Engine`;
               disabled={isAuditing}
             >
               <Mail size={16} /> Create Email Draft
+            </button>
+
+            <button 
+              className="btn btn-secondary" 
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center', borderColor: 'var(--accent-purple)', color: 'var(--accent-purple)' }}
+              onClick={onQuickSave}
+              disabled={isAuditing}
+            >
+              <Save size={16} /> Save QA to Library
             </button>
 
             <button 

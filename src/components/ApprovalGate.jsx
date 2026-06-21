@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, ClipboardCheck, Download, Mail, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ClipboardCheck, Download, Mail, ShieldCheck, Save } from 'lucide-react';
 import { canApproveAudit } from '../utils/campaignAudit';
 
 const approvalChecks = [
@@ -66,7 +66,7 @@ READINESS BOUNDARY
 This report records a QA decision. A person still controls activation and scheduling in Braze.`;
 }
 
-export default function ApprovalGate({ automationState, preApprovalStatus, onApprovalChange }) {
+export default function ApprovalGate({ automationState, preApprovalStatus, onApprovalChange, onQuickSave }) {
   const [approval, setApproval] = useState(loadStoredApproval);
   const journey = automationState?.journey;
   const audit = automationState?.audit;
@@ -119,7 +119,28 @@ export default function ApprovalGate({ automationState, preApprovalStatus, onApp
     <section className="approval-panel panel">
       <div className="panel-topline">
         <div><p className="eyebrow">Final readiness review</p><h3>Human approval</h3></div>
-        <span className={`readiness-pill ${approval.status === 'approved' ? 'approved' : audit.status}`}>{formatStatus(approval.status === 'approved' ? 'approved' : audit.status)}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button 
+            type="button" 
+            className="btn btn-secondary" 
+            style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem', cursor: 'pointer' }}
+            onClick={() => {
+              const keys = approvalChecks.map(([k]) => k);
+              const allChecked = keys.every(k => approval.checks[k]);
+              const nextChecks = {};
+              keys.forEach(k => { nextChecks[k] = !allChecked; });
+              setApproval(current => ({
+                ...current,
+                checks: nextChecks,
+                status: 'pending',
+                approvedAt: ''
+              }));
+            }}
+          >
+            {approvalChecks.map(([k]) => k).every(k => approval.checks[k]) ? 'Deselect All' : 'Select All Checks'}
+          </button>
+          <span className={`readiness-pill ${approval.status === 'approved' ? 'approved' : audit.status}`}>{formatStatus(approval.status === 'approved' ? 'approved' : audit.status)}</span>
+        </div>
       </div>
       <p className="approval-intro">Automated findings are evidence, not a launch decision. Confirm the remaining business and test checks, record the reviewer, and approve readiness here.</p>
       {!preApprovalStatus?.ready && <p className="approval-blocked"><AlertCircle size={16} />Complete the Pre-Approval checklist first ({preApprovalStatus?.complete || 0}/{preApprovalStatus?.total || 0}).</p>}
@@ -137,7 +158,11 @@ export default function ApprovalGate({ automationState, preApprovalStatus, onApp
       </div>
       {audit.counts.blocker > 0 && <p className="approval-blocked"><AlertCircle size={16} />Resolve {audit.counts.blocker} blocker{audit.counts.blocker === 1 ? '' : 's'} before approval can be recorded.</p>}
       <div className="approval-actions">
-        <div><button type="button" className="btn btn-secondary" onClick={createEmailDraft}><Mail size={15} /> Email report</button><button type="button" className="btn btn-secondary" onClick={printReport}><Download size={15} /> Save / print PDF</button></div>
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+          <button type="button" className="btn btn-secondary" onClick={createEmailDraft}><Mail size={15} /> Email report</button>
+          <button type="button" className="btn btn-secondary" onClick={printReport}><Download size={15} /> Save / print PDF</button>
+          <button type="button" className="btn btn-secondary" onClick={onQuickSave} style={{ borderColor: 'var(--accent-purple)', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Save size={15} /> Save QA to Library</button>
+        </div>
         <button type="button" className="btn btn-primary approval-button" onClick={approve} disabled={!approvalAllowed || approval.status === 'approved'}><ClipboardCheck size={16} />{approval.status === 'approved' ? `Approved ${new Date(approval.approvedAt).toLocaleString()}` : 'Approve readiness'}</button>
       </div>
     </section>

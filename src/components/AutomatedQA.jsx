@@ -4,7 +4,8 @@ import {
   CheckCircle2,
   FileSearch,
   RefreshCw,
-  ShieldCheck
+  ShieldCheck,
+  Save
 } from 'lucide-react';
 import { demoJourney } from '../data/demoJourney';
 import { importBrazeJourney } from '../services/braze';
@@ -18,7 +19,7 @@ function formatStatus(status) {
   }[status] || 'Pending review';
 }
 
-export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMode, figmaTexts = [], unifiedQAMode, setUnifiedQAMode }) {
+export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMode, figmaTexts = [], unifiedQAMode, setUnifiedQAMode, onQuickSave }) {
   const [journey, setJourney] = useState(null);
   const [sourceInput, setSourceInput] = useState('');
   const [assetType, setAssetType] = useState('canvas');
@@ -274,7 +275,9 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
             <p className="eyebrow">Source</p>
             <h3>Braze Campaign or Canvas</h3>
           </div>
-          <button className="btn btn-secondary compact-action" type="button" onClick={loadDemo}>Load fictional demo</button>
+          {!sourceInput.trim() && (
+            <button className="btn btn-secondary compact-action" type="button" onClick={loadDemo}>Load fictional demo</button>
+          )}
         </div>
         <form className="automation-import-form" onSubmit={importFromBraze}>
           <div className="form-group automation-source-field">
@@ -410,14 +413,27 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
             <div className="panel findings-panel">
               <div className="panel-topline">
                 <div><p className="eyebrow">Automated findings</p><h3>Evidence and actions</h3></div>
-                <button 
-                  className="btn btn-secondary compact-action" 
-                  type="button" 
-                  onClick={handleReRun}
-                  disabled={isReauditing || isImporting}
-                >
-                  <RefreshCw size={14} className={isReauditing ? 'spin' : ''} /> {isReauditing ? reauditingComment : 'Re-run'}
-                </button>
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <button 
+                    className="btn btn-secondary compact-action" 
+                    type="button" 
+                    onClick={handleReRun}
+                    disabled={isReauditing || isImporting}
+                  >
+                    <RefreshCw size={14} className={isReauditing ? 'spin' : ''} /> {isReauditing ? reauditingComment : 'Re-run'}
+                  </button>
+                  {journey && (
+                    <button 
+                      className="btn btn-secondary compact-action" 
+                      type="button" 
+                      onClick={onQuickSave}
+                      style={{ borderColor: 'var(--accent-purple)', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                      title="Save active workspace editor content & QA status to Library"
+                    >
+                      <Save size={14} /> Save QA
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="severity-filters" aria-label="Finding severity filters">
                 {['all', 'blocker', 'high', 'medium', 'low'].map((severity) => (

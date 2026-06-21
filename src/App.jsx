@@ -218,6 +218,9 @@ export default function App() {
 
   const [loadedCampaignId, setLoadedCampaignId] = useState(null);
   const [auditingComment, setAuditingComment] = useState('🕵️‍♂️ Hunting down campaign bugs...');
+  const [showQuickSaveModal, setShowQuickSaveModal] = useState(false);
+  const [quickSaveName, setQuickSaveName] = useState('');
+  const [quickSaveId, setQuickSaveId] = useState('');
 
   const handleAutomationAuditChange = useCallback((nextState) => {
     if (nextState?.journey && nextState.journey.source === 'braze') {
@@ -233,6 +236,56 @@ export default function App() {
   }, []);
   const handleApprovalChange = useCallback((approval) => setAutomationState((current) => current ? { ...current, approval } : current), []);
   const handlePreApprovalChange = useCallback((status) => setPreApprovalStatus(status), []);
+
+  const handleQuickSave = () => {
+    if (!automationState?.journey) {
+      alert("No active campaign in your workspace to save. Please load a template or import from Braze first.");
+      return;
+    }
+    
+    const saved = localStorage.getItem('omniqa_braze_catalog');
+    let campaigns = [];
+    if (saved) {
+      try {
+        campaigns = JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse catalog", e);
+      }
+    }
+    
+    if (loadedCampaignId && campaigns.some(c => c.id === loadedCampaignId)) {
+      // Overwrite existing card
+      const updated = campaigns.map(c => {
+        if (c.id === loadedCampaignId) {
+          return {
+            ...c,
+            lastSynced: 'Just now (Updated)',
+            status: 'Live',
+            subjectLine,
+            brazeHtml,
+            pushBody,
+            smsBody,
+            iamHeader,
+            iamBody,
+            iamButtonText,
+            iamButtonLink,
+            figmaTexts,
+            savedJourney: automationState?.journey || null,
+            savedAudit: automationState?.audit || null,
+            savedApproval: automationState?.approval || null
+          };
+        }
+        return c;
+      });
+      localStorage.setItem('omniqa_braze_catalog', JSON.stringify(updated));
+      alert(`Successfully saved updated QA state for campaign template "${automationState.journey.name}" in library!`);
+    } else {
+      // Open modal to enter new name
+      setQuickSaveName(automationState?.journey?.name || 'My Campaign Template');
+      setQuickSaveId(automationState?.journey?.id || '');
+      setShowQuickSaveModal(true);
+    }
+  };
 
   const handleSyncFigma = async () => {
     setFigmaSyncLoading(true);
@@ -729,6 +782,7 @@ export default function App() {
             setFilterSeverity={setFilterSeverity}
             automationState={automationState}
             useMockMode={useMockMode}
+            onQuickSave={handleQuickSave}
           />
         )}
 
@@ -740,6 +794,7 @@ export default function App() {
             figmaTexts={figmaTexts}
             unifiedQAMode={unifiedQAMode}
             setUnifiedQAMode={setUnifiedQAMode}
+            onQuickSave={handleQuickSave}
           />
         )}
 
@@ -832,7 +887,7 @@ export default function App() {
                 )}
 
                 {activeReviewTab === 'approval' && (
-                  <ApprovalGate automationState={automationState} preApprovalStatus={preApprovalStatus} onApprovalChange={handleApprovalChange} />
+                  <ApprovalGate automationState={automationState} preApprovalStatus={preApprovalStatus} onApprovalChange={handleApprovalChange} onQuickSave={handleQuickSave} />
                 )}
 
                 {activeReviewTab === 'preapproval' && (
@@ -865,6 +920,97 @@ export default function App() {
 
         {activeTab === 'settings' && (
           <Settings onSave={handleSettingsSave} />
+        )}
+
+        {/* Global Quick Save Modal Overlay */}
+        {showQuickSaveModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(5, 8, 15, 0.85)',
+            zIndex: 2000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backdropFilter: 'blur(8px)',
+            animation: 'fadeIn 0.2s ease-out'
+          }}>
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                const saved = localStorage.getItem('omniqa_braze_catalog');
+                const campaigns = saved ? JSON.parse(saved) : [];
+                const newId = Date.now().toString();
+                const newCampaign = {
+                  id: newId,
+                  name: quickSaveName,
+                  brazeCampaignId: quickSaveId.trim(),
+                  channel: 'email',
+                  version: 'v1.0',
+                  status: 'Draft',
+                  lastSynced: 'Never',
+                  subjectLine,
+                  brazeHtml,
+                  pushBody,
+                  smsBody,
+                  iamHeader,
+                  iamBody,
+                  iamButtonText,
+                  iamButtonLink,
+                  figmaTexts,
+                  savedJourney: automationState?.journey || null,
+                  savedAudit: automationState?.audit || null,
+                  savedApproval: automationState?.approval || null
+                };
+                localStorage.setItem('omniqa_braze_catalog', JSON.stringify([newCampaign, ...campaigns]));
+                setLoadedCampaignId(newId);
+                setShowQuickSaveModal(false);
+                alert(`Successfully saved campaign "${quickSaveName}" to the library!`);
+              }} 
+              className="panel" 
+              style={{
+                width: '90%',
+                maxWidth: '400px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem',
+                border: '1px solid var(--accent-cyan)',
+                background: 'var(--bg-secondary)',
+                boxShadow: '0 25px 60px rgba(0,0,0,0.8)'
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-primary)' }}>Save Workspace to Library</h3>
+              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                Enter a template name to register this active workspace QA report in your Library.
+              </p>
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label className="form-label">Template Name</label>
+                <input 
+                  className="form-input" 
+                  required 
+                  value={quickSaveName} 
+                  onChange={(e) => setQuickSaveName(e.target.value)} 
+                  placeholder="e.g. Black Friday Launch Template"
+                />
+              </div>
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label className="form-label">Braze Campaign ID (Optional)</label>
+                <input 
+                  className="form-input" 
+                  value={quickSaveId} 
+                  onChange={(e) => setQuickSaveId(e.target.value)} 
+                  placeholder="e.g. 65a2d8f9b1c0e3a4f5d6c7b8"
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, cursor: 'pointer' }}>Save Template</button>
+                <button type="button" className="btn btn-secondary" style={{ flex: 1, cursor: 'pointer' }} onClick={() => setShowQuickSaveModal(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
         )}
       </main>
 
