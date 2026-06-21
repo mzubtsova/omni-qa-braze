@@ -179,7 +179,7 @@ OmniQA Quality Assurance Engine`;
   return (
     <div className="fade-in">
       {automationState && (
-        <section className="overview-automation-strip">
+        <section className="overview-automation-strip" onClick={() => setActiveTab('automation')} style={{ cursor: 'pointer' }}>
           <div>
             <p className="eyebrow">Latest journey audit</p>
             <strong>{automationState.journey.name}</strong>
@@ -340,7 +340,10 @@ OmniQA Quality Assurance Engine`;
                 ? '🎉 Campaign is in perfect shape to deploy!' 
                 : `⚠️ Found ${issuesCount.high + issuesCount.medium} issues requiring attention.`}
             </span>
-            <span style={{ fontSize: '0.85rem', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span 
+              onClick={() => setActiveTab('automation')} 
+              style={{ fontSize: '0.85rem', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}
+            >
               Checked active message inputs <CheckCircle2 size={14} style={{ color: 'var(--success)' }} />
             </span>
           </div>
