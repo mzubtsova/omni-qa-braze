@@ -216,7 +216,21 @@ export default function App() {
     }
   }, [unifiedQAMode, activeReviewTab]);
 
-  const handleAutomationAuditChange = useCallback((nextState) => setAutomationState(nextState), []);
+  const [loadedCampaignId, setLoadedCampaignId] = useState(null);
+  const [auditingComment, setAuditingComment] = useState('🕵️‍♂️ Hunting down campaign bugs...');
+
+  const handleAutomationAuditChange = useCallback((nextState) => {
+    if (nextState?.journey && nextState.journey.source === 'braze') {
+      setLoadedCampaignId(null);
+    }
+    setAutomationState((current) => {
+      if (!current) return nextState;
+      return {
+        ...nextState,
+        approval: current.approval || nextState.approval || null
+      };
+    });
+  }, []);
   const handleApprovalChange = useCallback((approval) => setAutomationState((current) => current ? { ...current, approval } : current), []);
   const handlePreApprovalChange = useCallback((status) => setPreApprovalStatus(status), []);
 
@@ -259,6 +273,7 @@ export default function App() {
   };
 
   const handleLoadCampaign = (campaign) => {
+    setLoadedCampaignId(campaign.id);
     if (campaign.subjectLine !== undefined) setSubjectLine(campaign.subjectLine);
     if (campaign.brazeHtml !== undefined) setBrazeHtml(campaign.brazeHtml);
     if (campaign.pushBody !== undefined) setPushBody(campaign.pushBody);
@@ -268,7 +283,18 @@ export default function App() {
     if (campaign.iamButtonText !== undefined) setIamButtonText(campaign.iamButtonText);
     if (campaign.iamButtonLink !== undefined) setIamButtonLink(campaign.iamButtonLink);
     if (campaign.figmaTexts !== undefined) setFigmaTexts(campaign.figmaTexts);
-    setActiveTab('review');
+
+    // Restore saved campaign audit/approval state
+    if (campaign.savedAudit) {
+      setAutomationState({
+        journey: campaign.savedJourney || { id: campaign.id, name: campaign.name, steps: [], source: 'library' },
+        audit: campaign.savedAudit,
+        approval: campaign.savedApproval || null
+      });
+    } else {
+      setAutomationState(null);
+    }
+    setActiveTab('overview');
   };
 
   const handleSelectAutomatedMessage = (message, openReview = false) => {
@@ -331,6 +357,16 @@ export default function App() {
   const runAudit = async (mockOverride, customData = {}, skipDelay = false) => {
     setIsAuditing(true);
     if (!skipDelay) {
+      const comments = [
+        "🕵️‍♂️ Hunting down campaign bugs...",
+        "⚡ Inspecting Liquid constructs...",
+        "🤖 Running copy verification...",
+        "🛡️ Validating UTM integrity...",
+        "🔍 Parsing email layouts..."
+      ];
+      setAuditingComment(comments[Math.floor(Math.random() * comments.length)]);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setAuditingComment(comments[Math.floor(Math.random() * comments.length)]);
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
@@ -682,6 +718,7 @@ export default function App() {
             setActiveTab={handleOverviewNavigation}
             onRunAudit={runAudit}
             isAuditing={isAuditing}
+            auditingComment={auditingComment}
             subjectLine={subjectLine}
             copyAuditResults={copyAuditResults}
             spamAuditResults={spamAuditResults}
@@ -809,6 +846,8 @@ export default function App() {
         {activeTab === 'library' && (
           <Catalog 
             onLoadCampaign={handleLoadCampaign}
+            loadedCampaignId={loadedCampaignId}
+            setLoadedCampaignId={setLoadedCampaignId}
             currentCampaignState={{
               subjectLine,
               brazeHtml,
@@ -820,6 +859,7 @@ export default function App() {
               iamButtonLink,
               figmaTexts
             }}
+            automationState={automationState}
           />
         )}
 

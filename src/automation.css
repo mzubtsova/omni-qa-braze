@@ -158,3 +158,56 @@
   body.print-automation .automation-source-summary p,
   body.print-automation .automation-source-summary > span { color: #475569 !important; }
 }
+
+@media print {
+  body.print-library-report .app-container { display: block !important; }
+  body.print-library-report .sidebar,
+  body.print-library-report .header,
+  body.print-library-report .print-report-only-hide { display: none !important; }
+  
+  body.print-library-report .library-report-modal-overlay {
+    position: static !important;
+    background: white !important;
+    padding: 0 !important;
+    backdrop-filter: none !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+    z-index: auto !important;
+  }
+  
+  body.print-library-report .library-report-modal-content {
+    border: none !important;
+    box-shadow: none !important;
+    background: white !important;
+    color: #111827 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  body.print-library-report .library-report-modal-content h3,
+  body.print-library-report .library-report-modal-content h4,
+  body.print-library-report .library-report-modal-content strong,
+  body.print-library-report .library-report-modal-content div,
+  body.print-library-report .library-report-modal-content span,
+  body.print-library-report .library-report-modal-content p,
+  body.print-library-report .library-report-modal-content code {
+    color: #111827 !important;
+  }
+
+  body.print-library-report .library-report-modal-content .settings-grid > div {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #111827 !important;
+  }
+
+  body.print-library-report .library-report-modal-content .severity-label {
+    border: 1px solid #cbd5e1 !important;
+    background: #f1f5f9 !important;
+    color: #111827 !important;
+  }
+}

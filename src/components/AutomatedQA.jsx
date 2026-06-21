@@ -31,6 +31,25 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
   const [findingNotes, setFindingNotes] = useState(() => {
     try { return JSON.parse(localStorage.getItem('omniqa_finding_notes') || '{}'); } catch { return {}; }
   });
+  const [isReauditing, setIsReauditing] = useState(false);
+  const [reauditingComment, setReauditingComment] = useState('Auditing...');
+
+  const handleReRun = async () => {
+    setIsReauditing(true);
+    const comments = [
+      "🔍 Re-checking active URLs...",
+      "⚡ Analyzing liquid tags...",
+      "🤖 Reviewing contrast ratios...",
+      "🛡️ Verifying UTM configuration...",
+      "📝 Comparing text copy..."
+    ];
+    setReauditingComment(comments[Math.floor(Math.random() * comments.length)]);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setReauditingComment(comments[Math.floor(Math.random() * comments.length)]);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setJourney({ ...journey });
+    setIsReauditing(false);
+  };
 
   const audit = useMemo(() => {
     if (!journey) {
@@ -391,7 +410,14 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
             <div className="panel findings-panel">
               <div className="panel-topline">
                 <div><p className="eyebrow">Automated findings</p><h3>Evidence and actions</h3></div>
-                <button className="btn btn-secondary compact-action" type="button" onClick={() => setJourney({ ...journey })}><RefreshCw size={14} /> Re-run</button>
+                <button 
+                  className="btn btn-secondary compact-action" 
+                  type="button" 
+                  onClick={handleReRun}
+                  disabled={isReauditing || isImporting}
+                >
+                  <RefreshCw size={14} className={isReauditing ? 'spin' : ''} /> {isReauditing ? reauditingComment : 'Re-run'}
+                </button>
               </div>
               <div className="severity-filters" aria-label="Finding severity filters">
                 {['all', 'blocker', 'high', 'medium', 'low'].map((severity) => (

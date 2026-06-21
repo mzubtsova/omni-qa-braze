@@ -11,6 +11,7 @@ export default function Overview({
   setActiveTab,
   onRunAudit,
   isAuditing,
+  auditingComment,
   subjectLine,
   copyAuditResults,
   spamAuditResults,
@@ -258,11 +259,16 @@ OmniQA Quality Assurance Engine`;
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', marginTop: '2rem' }}>
             <button 
               className="btn btn-primary" 
-              style={{ width: '100%' }}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
               onClick={() => onRunAudit()}
               disabled={isAuditing}
             >
-              {isAuditing ? '🕵️‍♂️ Hunting down campaign bugs...' : 'Re-Run QA Audit'}
+              {isAuditing ? (
+                <>
+                  <RefreshCw size={14} className="spin" />
+                  {auditingComment || '🕵️‍♂️ Hunting down campaign bugs...'}
+                </>
+              ) : 'Re-Run QA Audit'}
             </button>
             
             <button 
