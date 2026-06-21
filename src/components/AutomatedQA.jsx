@@ -21,7 +21,7 @@ function formatStatus(status) {
 }
 
 export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMode }) {
-  const [journey, setJourney] = useState(demoJourney);
+  const [journey, setJourney] = useState(null);
   const [sourceInput, setSourceInput] = useState('');
   const [assetType, setAssetType] = useState('canvas');
   const [postLaunchDraftVersion, setPostLaunchDraftVersion] = useState(true);
@@ -34,7 +34,21 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
     try { return JSON.parse(localStorage.getItem('omniqa_finding_notes') || '{}'); } catch { return {}; }
   });
 
-  const audit = useMemo(() => auditJourneyAutomatically(journey), [journey]);
+  const audit = useMemo(() => {
+    if (!journey) {
+      return {
+        status: 'pending',
+        score: 100,
+        stepCount: 0,
+        messageCount: 0,
+        channelCount: 0,
+        findings: [],
+        messages: [],
+        counts: { blocker: 0, high: 0, medium: 0, low: 0 }
+      };
+    }
+    return auditJourneyAutomatically(journey);
+  }, [journey]);
   const visibleFindings = audit.findings.filter((item) => severityFilter === 'all' || item.severity === severityFilter);
   const selectedMessage = audit.messages.find((message) => message.id === selectedMessageId) || audit.messages[0];
 
