@@ -45,7 +45,7 @@ export default function CopyAuditor({
     let fixedIamLink = iamButtonLink;
     let fixCounts = { contrast: 0, utm: 0, placeholder: 0, empty: 0 };
 
-    // 1. Fix low contrast (Claim Blizzard Offer)
+    // 1. Fix low contrast on the primary offer CTA.
     // Replace color: #f87171 with color: #ffffff inside elements with bg #f43f5e
     fixedHtml = fixedHtml.replace(/(background-color\s*:\s*#f43f5e\b[^'"]*color\s*:\s*)#f87171/gi, (match, p1) => {
       fixCounts.contrast++;
@@ -59,13 +59,13 @@ export default function CopyAuditor({
     // 2. Fix empty links href="#" inside unsubscribe or other sections
     fixedHtml = fixedHtml.replace(/href=["']#["']/g, () => {
       fixCounts.empty++;
-      return 'href="https://dairyqueen.com/unsubscribe?utm_source=braze&utm_medium=email&utm_campaign=blizzard_promo"';
+      return 'href="https://example.org/unsubscribe?utm_source=braze&utm_medium=email&utm_campaign=welcome_offer"';
     });
 
     // 3. Fix placeholder links (example.com / placeholder.com)
     fixedHtml = fixedHtml.replace(/href=["'](https?:\/\/example\.com\/[^"']+|https?:\/\/example\.com\b[^"']*)["']/gi, () => {
       fixCounts.placeholder++;
-      return 'href="https://dairyqueen.com/redeem?utm_source=braze&utm_medium=email&utm_campaign=blizzard_promo"';
+      return 'href="https://example.org/redeem?utm_source=braze&utm_medium=email&utm_campaign=welcome_offer"';
     });
 
     // 4. Fix missing UTM parameters for standard links
@@ -73,7 +73,7 @@ export default function CopyAuditor({
       if (!url.includes('utm_source')) {
         fixCounts.utm++;
         const separator = url.includes('?') ? '&' : '?';
-        return `href="${url}${separator}utm_source=braze&utm_medium=email&utm_campaign=blizzard_promo"`;
+        return `href="${url}${separator}utm_source=braze&utm_medium=email&utm_campaign=welcome_offer"`;
       }
       return match;
     });
@@ -82,12 +82,12 @@ export default function CopyAuditor({
     if (iamButtonLink && setIamButtonLink) {
       const url = iamButtonLink.trim();
       if (!url || url === '#' || url.toLowerCase().startsWith('javascript:') || url.includes('example.com') || url.includes('placeholder.com')) {
-        fixedIamLink = 'https://dairyqueen.com/redeem?utm_source=braze&utm_medium=iam&utm_campaign=blizzard_promo';
+        fixedIamLink = 'https://example.org/redeem?utm_source=braze&utm_medium=iam&utm_campaign=welcome_offer';
         setIamButtonLink(fixedIamLink);
         fixCounts.placeholder++;
       } else if (url.startsWith('http') && !url.includes('utm_source')) {
         const separator = url.includes('?') ? '&' : '?';
-        fixedIamLink = `${url}${separator}utm_source=braze&utm_medium=iam&utm_campaign=blizzard_promo`;
+        fixedIamLink = `${url}${separator}utm_source=braze&utm_medium=iam&utm_campaign=welcome_offer`;
         setIamButtonLink(fixedIamLink);
         fixCounts.utm++;
       }
@@ -367,7 +367,7 @@ export default function CopyAuditor({
               border: '1px solid #1e293b'
             }}>
               <span style={{ color: 'var(--success)' }}>🔒 https://</span>
-              <span>dashboard.braze.com/campaigns/editor/blizzard_loyalty_promo</span>
+              <span>dashboard.braze.com/campaigns/editor/welcome_offer</span>
             </div>
             <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: '600' }}>Chrome v120</span>
           </div>
@@ -387,7 +387,7 @@ export default function CopyAuditor({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e293b', paddingBottom: '0.75rem' }}>
                 <div>
                   <h4 style={{ color: '#ffffff', margin: 0, fontSize: '0.95rem' }}>Simulated Braze HTML Campaign Builder</h4>
-                  <p style={{ color: '#64748b', fontSize: '0.78rem', margin: 0 }}>Editing draft assets for QSR Blizzard BOGO campaign.</p>
+                  <p style={{ color: '#64748b', fontSize: '0.78rem', margin: 0 }}>Editing fictional draft assets for a welcome-offer campaign.</p>
                 </div>
                 <span style={{ fontSize: '0.75rem', background: '#312e81', color: '#c084fc', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: '600' }}>
                   Braze HTML v2
@@ -545,7 +545,10 @@ export default function CopyAuditor({
         
         {/* Left Side: Campaign Input Fields */}
         <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <h3>Campaign Data & Mock Source</h3>
+          <div>
+            <h3>Focused Message Source</h3>
+            <p className="source-explainer">Review one message at a time. Content opened from Automated QA is copied here for deeper inspection. In Demo mode, these fields contain fictional sample copy; Figma comparison is optional.</p>
+          </div>
           
           <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label">Subject Line</label>
@@ -554,7 +557,7 @@ export default function CopyAuditor({
               className="form-input" 
               value={subjectLine} 
               onChange={(e) => setSubjectLine(e.target.value)}
-              placeholder="e.g. Free Blizzard Alert! 🍦"
+              placeholder="e.g. Your welcome reward is ready"
             />
           </div>
 

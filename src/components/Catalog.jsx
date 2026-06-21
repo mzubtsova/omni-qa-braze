@@ -4,18 +4,18 @@ import { Plus, RefreshCw, Trash2, CloudLightning, FileEdit, ExternalLink } from 
 const SEED_CAMPAIGNS = [
   {
     id: '1',
-    name: 'Dairy Queen Welcome Lifecycle',
+    name: 'Northstar Welcome Lifecycle',
     brazeCampaignId: '65a2d8f9b1c0e3a4f5d6c7b8',
     channel: 'email',
     version: 'v1.4',
     status: 'Live',
     lastSynced: '2 days ago',
-    subjectLine: 'Get a FREE Blizzard Ice Cream! 🍦 Alert',
+    subjectLine: 'Your welcome reward is ready',
     brazeHtml: `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Dairy Queen Blizzard Welcome</title>
+  <title>Northstar Rewards Welcome</title>
   <style>
     body { font-family: Helvetica, Arial, sans-serif; background-color: #f3f4f6; padding: 20px; }
     .card { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; }
@@ -28,42 +28,42 @@ const SEED_CAMPAIGNS = [
 <body>
   <div class="card">
     <div class="header">
-      <h1 style="margin: 0; font-size: 24px;">Dairy Queen Welcome</h1>
+      <h1 style="margin: 0; font-size: 24px;">Northstar Rewards</h1>
     </div>
     <div class="content">
       <h2>Welcome, {{ user.first_name | default: 'Valued Customer' }}!</h2>
       <p>We loaded a special reward into your account to say thanks for being an app member.</p>
       <p style="text-align: center; margin: 30px 0;">
-        <a href="http://example.com/redeem" style="background-color: #f43f5e; color: #ffffff;" class="btn">Claim Blizzard Offer</a>
+        <a href="http://example.com/redeem" style="background-color: #f43f5e; color: #ffffff;" class="btn">View Welcome Offer</a>
       </p>
     </div>
     <div class="footer">
-      <p>© 2026 Dairy Queen. If you wish to unsubscribe, click <a href="#" style="color: #94a3b8;">here</a>.</p>
+      <p>© 2026 Northstar Rewards. If you wish to unsubscribe, click <a href="#" style="color: #94a3b8;">here</a>.</p>
     </div>
   </div>
 </body>
 </html>`,
-    pushBody: 'Get a FREE Small Blizzard! 🍦 Valid for 14 days. Claim your exclusive app reward today.',
-    smsBody: 'Dairy Queen: Welcome {{ user.first_name | default: \'Valued Customer\' }}! Claim your free Blizzard here: http://example.com/redeem',
-    iamHeader: 'Get a FREE Small Blizzard',
-    iamBody: 'Enjoy soft serve ice cream blended with your favorite toppings! Valid for 14 days.',
-    iamButtonText: 'Claim Offer',
+    pushBody: 'Your welcome reward is ready. Open the app to explore your new member benefits.',
+    smsBody: 'Northstar Rewards: Welcome {{ user.first_name | default: \'Valued Customer\' }}! View your member offer: http://example.com/redeem',
+    iamHeader: 'Your welcome reward is ready',
+    iamBody: 'Explore your new member benefits and available offers. Valid for 14 days.',
+    iamButtonText: 'View Offer',
     iamButtonLink: 'http://example.com/redeem'
   },
   {
     id: '2',
-    name: 'Blizzard Summer Points Boost',
+    name: 'Summer Points Boost',
     brazeCampaignId: '65b3e9a0c2d1f4b5e6f7d8a9',
     channel: 'push',
     version: 'v2.1',
     status: 'Out of Sync',
     lastSynced: '1 week ago',
-    subjectLine: 'Summer Blizzard Madness is here!',
-    brazeHtml: '<h1>Summer Blizzard Points Blast!</h1>',
-    pushBody: 'Get double points on all Blizzards today! 🍦 Open the app to check your loyalty tier.',
-    smsBody: 'Dairy Queen: Summer is here! Get double points on all Blizzards today. Order in-app now!',
+    subjectLine: 'Summer double points are here',
+    brazeHtml: '<h1>Summer Points Boost</h1>',
+    pushBody: 'Get double points on eligible purchases today. Open the app to check your loyalty tier.',
+    smsBody: 'Northstar Rewards: Earn double points on eligible purchases today. Open the app for details.',
     iamHeader: 'Double Points Today!',
-    iamBody: 'Order any Blizzard today and get double points towards your next reward.',
+    iamBody: 'Make an eligible purchase today and get double points toward your next reward.',
     iamButtonText: 'Order Now',
     iamButtonLink: 'http://example.com/order'
   },
@@ -75,10 +75,10 @@ const SEED_CAMPAIGNS = [
     version: 'v1.0',
     status: 'Draft',
     lastSynced: '3 days ago',
-    subjectLine: 'Download the DQ App and get free treats',
-    brazeHtml: '<h1>Get rewards in the Dairy Queen App</h1>',
-    pushBody: 'Sign up in the DQ app to lock in point rewards.',
-    smsBody: 'Dairy Queen: Download the app for free rewards: http://example.com/download',
+    subjectLine: 'Download the app and explore member rewards',
+    brazeHtml: '<h1>Get rewards in the Northstar App</h1>',
+    pushBody: 'Sign up in the app to start earning member rewards.',
+    smsBody: 'Northstar Rewards: Download the app to explore member benefits: http://example.com/download',
     iamHeader: 'Get the App',
     iamBody: 'Receive rewards on your birthday, unlock point multipliers, and get quick ordering.',
     iamButtonText: 'Get App',
@@ -270,7 +270,7 @@ export default function Catalog({
                 type="text" 
                 className="form-input" 
                 required
-                placeholder="e.g. Blizzard BOGO Fall Campaign" 
+                placeholder="e.g. Fall Member Offer"
                 value={newCampaignName}
                 onChange={(e) => setNewCampaignName(e.target.value)}
                 style={{ width: '100%' }}

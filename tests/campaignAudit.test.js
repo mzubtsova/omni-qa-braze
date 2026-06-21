@@ -33,6 +33,16 @@ test('normalizes multistage Canvas messages', () => {
   assert.equal(journey.steps[1].messages[0].stepName, 'Reminder');
 });
 
+test('labels non-message Canvas steps by their returned type', () => {
+  const journey = normalizeBrazePayload({
+    name: 'Canvas with delay',
+    steps: [{ id: 'delay-1', type: 'delay', messages: {} }]
+  }, { type: 'canvas', id: 'canvas-delay' });
+
+  assert.equal(journey.steps[0].name, 'Delay 1');
+  assert.equal(journey.steps[0].messages.length, 0);
+});
+
 test('blocks approval when deterministic blockers remain', () => {
   const journey = normalizeBrazePayload({
     name: 'Broken campaign',

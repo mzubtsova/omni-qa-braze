@@ -93,13 +93,16 @@ export function normalizeBrazePayload(payload, source = {}) {
   let steps = [];
 
   if (inferredType === 'canvas') {
-    steps = asArray(raw.steps).map((step, index) => ({
+    steps = asArray(raw.steps).map((step, index) => {
+      const stepType = String(step.type || 'canvas').replace(/[_-]+/g, ' ').trim();
+      return {
       id: step.id || step.step_id || `step-${index + 1}`,
-      name: step.name || step.step_name || `Step ${index + 1}`,
+      name: step.name || step.step_name || `${stepType.replace(/\b\w/g, (letter) => letter.toUpperCase())} ${index + 1}`,
       type: step.type || 'step',
       messages: extractMessagesFromStep(step),
       raw: step
-    }));
+      };
+    });
   } else {
     const messages = asArray(raw.messages).map((message, index) => normalizeMessage(message, {
       id: message.id || `message-${index + 1}`,

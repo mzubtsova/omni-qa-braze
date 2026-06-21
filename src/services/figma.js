@@ -43,11 +43,11 @@ export async function fetchFigmaTextLayers(fileKey, token) {
  */
 function getMockFigmaTexts() {
   return [
-    'Dairy Queen Exclusive',
-    'Get a FREE Small Blizzard',
-    'Enjoy soft serve ice cream blended with your favorite toppings!',
+    'Northstar Rewards',
+    'Your welcome reward is ready',
+    'Explore your new member benefits and available offers.',
     'Valid for 14 days',
-    'Claim Offer',
+    'View Offer',
     'Welcome, Marina!'
   ];
 }

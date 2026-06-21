@@ -172,7 +172,7 @@ function getMockEngagementPredictor(subjectLine) {
   let score = 78;
   const lowerSubject = subjectLine ? subjectLine.toLowerCase() : '';
   if (lowerSubject.includes('free')) score += 8;
-  if (lowerSubject.includes('blizzard')) score += 5;
+  if (lowerSubject.includes('reward')) score += 5;
   if (lowerSubject.includes('🍦') || lowerSubject.includes('reward')) score += 4;
   if (subjectLine && subjectLine.length > 60) score -= 10;
   
@@ -187,7 +187,7 @@ function getMockEngagementPredictor(subjectLine) {
     spamRisk: score > 75 ? "Low" : score > 60 ? "Medium" : "High",
     positives: [
       "Dynamic personalization placeholder increases user relevance.",
-      "Clear Blizzard branding triggers positive psychological associations."
+      "Clear reward language supports recognition and relevance."
     ],
     negatives: [
       "Subject line contains spam-prone triggers ('Free', 'Alert').",
@@ -245,13 +245,13 @@ function getMockCopyAudit(
     }
 
     // Special case 1: Tier restriction discrepancy
-    if (figmaLineLower.includes('free small blizzard') && 
+    if (figmaLineLower.includes('welcome reward') &&
         (lowercaseHtml.includes('gold members') || lowercaseHtml.includes('tier') || lowercaseHtml.includes('vip'))) {
       mismatches.push({
         severity: "high",
         figmaText: figmaLine,
-        brazeText: "FREE SMALL BLIZZARD coupon valid for Gold members only",
-        message: "Figma design shows a generic 'FREE Small Blizzard' without tier limits, but Braze HTML enforces VIP Gold restrictions. This could cause confusion for Bronze/Standard customers."
+        brazeText: "An exclusive welcome reward is available for Gold members",
+        message: "The design presents a general welcome reward, but the coded message limits it to Gold members. Confirm that the eligibility language matches the intended audience."
       });
       return;
     }
@@ -316,7 +316,7 @@ function getMockCopyAudit(
     // If we found a clause with significant overlap
     if (maxOverlap > 0 && maxOverlap >= Math.min(2, words.length)) {
       mismatches.push({
-        severity: figmaLineLower.includes('free') || figmaLineLower.includes('blizzard') || figmaLineLower.includes('offer') ? 'high' : 'medium',
+        severity: figmaLineLower.includes('free') || figmaLineLower.includes('reward') || figmaLineLower.includes('offer') ? 'high' : 'medium',
         figmaText: figmaLine,
         brazeText: bestMatchClause,
         message: `Text discrepancy detected in ${matchedChannel}. Figma layer text "${figmaLine}" does not match the coded text "${bestMatchClause}".`
@@ -404,10 +404,10 @@ function getMockCopyAudit(
     });
   }
 
-  if (subjectLine && (subjectLine.includes('🍦') || subjectLine.includes('🍨'))) {
+  if (subjectLine && /[🎁✨]/u.test(subjectLine)) {
     suggestions.push({
       context: "Subject Line emoji",
-      suggestion: "Variant A starts with 🍦 (soft serve) while Variant B starts with 🍨. To maintain consistent brand identity for Dairy Queen, recommend using the standard soft serve cup/cone icon."
+      suggestion: "Keep the subject-line emoji consistent across variants so the campaign maintains one recognizable visual cue."
     });
   }
 
@@ -432,8 +432,8 @@ function getMockSpamAudit(subjectLine, bodyText) {
   if (subjectLower.includes('free') || subjectLower.includes('alert')) {
     triggers.push({
       severity: 'medium',
-      phrase: 'Free Blizzard Alert',
-      message: "The word 'Free' in the subject line can trigger spam filters if combined with urgent words like 'Alert'. Recommend soft-selling (e.g. 'Get your Blizzard on us' or 'We've loaded a reward')."
+      phrase: 'Free reward alert',
+      message: "The word 'Free' in the subject line can trigger spam filters if combined with urgent words like 'Alert'. Consider softer wording such as 'Your reward is ready'."
     });
     score -= 10;
   }

@@ -88,7 +88,7 @@ export default function TechnicalAuditor({
     } else if (!hasUtm) {
       hops.push({
         num: 1,
-        url: `https://link.staging-dq.net/track?url=${encodeURIComponent(url)}`,
+        url: `https://links.staging.example.org/track?url=${encodeURIComponent(url)}`,
         status: 301,
         statusText: 'Moved Permanently',
         delay: '85ms',
@@ -113,7 +113,7 @@ export default function TechnicalAuditor({
     } else {
       hops.push({
         num: 1,
-        url: `https://click.dq-promos.com/campaign/blizzard-summer-2026?dest=${encodeURIComponent(url)}`,
+        url: `https://click.example.org/campaign/welcome-offer?dest=${encodeURIComponent(url)}`,
         status: 301,
         statusText: 'Moved Permanently',
         delay: '42ms',
@@ -238,7 +238,7 @@ export default function TechnicalAuditor({
     let fixedIamLink = iamButtonLink;
     let fixCounts = { contrast: 0, utm: 0, placeholder: 0, empty: 0 };
 
-    // 1. Fix low contrast (Claim Blizzard Offer)
+    // 1. Fix low contrast on the primary offer CTA.
     // Replace color: #f87171 with color: #ffffff inside elements with bg #f43f5e
     fixedHtml = fixedHtml.replace(/(background-color\s*:\s*#f43f5e\b[^'"]*color\s*:\s*)#f87171/gi, (match, p1) => {
       fixCounts.contrast++;
@@ -252,13 +252,13 @@ export default function TechnicalAuditor({
     // 2. Fix empty links href="#" inside unsubscribe or other sections
     fixedHtml = fixedHtml.replace(/href=["']#["']/g, () => {
       fixCounts.empty++;
-      return 'href="https://dairyqueen.com/unsubscribe?utm_source=braze&utm_medium=email&utm_campaign=blizzard_promo"';
+      return 'href="https://example.org/unsubscribe?utm_source=braze&utm_medium=email&utm_campaign=welcome_offer"';
     });
 
     // 3. Fix placeholder links (example.com / placeholder.com)
     fixedHtml = fixedHtml.replace(/href=["'](https?:\/\/example\.com\/[^"']+|https?:\/\/example\.com\b[^"']*)["']/gi, () => {
       fixCounts.placeholder++;
-      return 'href="https://dairyqueen.com/redeem?utm_source=braze&utm_medium=email&utm_campaign=blizzard_promo"';
+      return 'href="https://example.org/redeem?utm_source=braze&utm_medium=email&utm_campaign=welcome_offer"';
     });
 
     // 4. Fix missing UTM parameters for standard links
@@ -266,7 +266,7 @@ export default function TechnicalAuditor({
       if (!url.includes('utm_source')) {
         fixCounts.utm++;
         const separator = url.includes('?') ? '&' : '?';
-        return `href="${url}${separator}utm_source=braze&utm_medium=email&utm_campaign=blizzard_promo"`;
+        return `href="${url}${separator}utm_source=braze&utm_medium=email&utm_campaign=welcome_offer"`;
       }
       return match;
     });
@@ -275,12 +275,12 @@ export default function TechnicalAuditor({
     if (iamButtonLink && setIamButtonLink) {
       const url = iamButtonLink.trim();
       if (!url || url === '#' || url.toLowerCase().startsWith('javascript:') || url.includes('example.com') || url.includes('placeholder.com')) {
-        fixedIamLink = 'https://dairyqueen.com/redeem?utm_source=braze&utm_medium=iam&utm_campaign=blizzard_promo';
+        fixedIamLink = 'https://example.org/redeem?utm_source=braze&utm_medium=iam&utm_campaign=welcome_offer';
         setIamButtonLink(fixedIamLink);
         fixCounts.placeholder++;
       } else if (url.startsWith('http') && !url.includes('utm_source')) {
         const separator = url.includes('?') ? '&' : '?';
-        fixedIamLink = `${url}${separator}utm_source=braze&utm_medium=iam&utm_campaign=blizzard_promo`;
+        fixedIamLink = `${url}${separator}utm_source=braze&utm_medium=iam&utm_campaign=welcome_offer`;
         setIamButtonLink(fixedIamLink);
         fixCounts.utm++;
       }

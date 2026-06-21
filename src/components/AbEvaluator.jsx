@@ -10,14 +10,14 @@ export default function AbEvaluator({
   setIamButtonLink
 }) {
   const [abSubjectA, setAbSubjectA] = useState(subjectLine || '');
-  const [abCopyA, setAbCopyA] = useState('Claim your buy-one-get-one free Blizzard at Dairy Queen today!');
-  const [abButtonTextA, setAbButtonTextA] = useState('Claim Blizzard Offer');
+  const [abCopyA, setAbCopyA] = useState('Your member reward is ready to view today.');
+  const [abButtonTextA, setAbButtonTextA] = useState('View Member Offer');
   const [abButtonLinkA, setAbButtonLinkA] = useState('http://example.com/redeem');
 
-  const [abSubjectB, setAbSubjectB] = useState('🍦 BOGO FREE Blizzard is waiting for you...');
-  const [abCopyB, setAbCopyB] = useState('Marina, your BOGO Blizzard coupon expires in 3 days. Tap to redeem now!');
-  const [abButtonTextB, setAbButtonTextB] = useState('Redeem BOGO Offer');
-  const [abButtonLinkB, setAbButtonLinkB] = useState('https://dairyqueen.com/redeem?utm_source=braze&utm_medium=email&utm_campaign=bogo_promo');
+  const [abSubjectB, setAbSubjectB] = useState('🎁 Your welcome offer is waiting');
+  const [abCopyB, setAbCopyB] = useState('Your welcome offer expires in 3 days. Tap to view it now.');
+  const [abButtonTextB, setAbButtonTextB] = useState('View Welcome Offer');
+  const [abButtonLinkB, setAbButtonLinkB] = useState('https://example.org/redeem?utm_source=braze&utm_medium=email&utm_campaign=welcome_offer');
 
   const [abResults, setAbResults] = useState(null);
   const [abEvaluating, setAbEvaluating] = useState(false);
@@ -52,7 +52,7 @@ export default function AbEvaluator({
   const handleLoadBaseline = () => {
     setAbSubjectA(subjectLine || '');
     const plainText = brazeHtml ? brazeHtml.replace(/<[^>]*>/g, '').trim().substring(0, 120) : '';
-    setAbCopyA(plainText || 'Claim your buy-one-get-one free Blizzard at Dairy Queen today!');
+    setAbCopyA(plainText || 'Your member reward is ready to view today.');
 
     if (brazeHtml) {
       const anchorRegex = /<a\s+[^>]*href\s*=\s*["']([^"']*)["'][^>]*>(.*?)<\/a>/i;

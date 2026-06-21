@@ -16,16 +16,17 @@ import TechnicalAuditor from './components/TechnicalAuditor';
 import Settings from './components/Settings';
 import Catalog from './components/Catalog';
 import AutomatedQA from './components/AutomatedQA';
+import ApprovalGate from './components/ApprovalGate';
 
 import { auditFigmaAndBrazeCopy, auditSpamAndDeliverability, predictCampaignEngagement } from './services/gemini';
 import { fetchFigmaTextLayers } from './services/figma';
 import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast, auditImages } from './utils/validators';
 
-const DEFAULT_SUBJECT = 'Get a FREE Blizzard Ice Cream! 🍦 Alert';
+const DEFAULT_SUBJECT = 'Your welcome reward is ready';
 const DEFAULT_FIGMA_TEXTS = [
-  'Dairy Queen Exclusive',
-  'Get a FREE Small Blizzard',
-  'Enjoy soft serve ice cream blended with your favorite toppings!',
+  'Northstar Rewards',
+  'Your welcome reward is ready',
+  'Explore your new member benefits and available offers.',
   'Valid for 14 days'
 ];
 
@@ -33,7 +34,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Dairy Queen Blizzard Promo</title>
+  <title>Northstar Rewards Welcome</title>
   <style>
     body { font-family: Helvetica, Arial, sans-serif; background-color: #f3f4f6; padding: 20px; }
     .card { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -46,7 +47,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 <body>
   <div class="card">
     <div class="header">
-      <h1 style="margin: 0; font-size: 24px;">Dairy Queen Rewards</h1>
+      <h1 style="margin: 0; font-size: 24px;">Northstar Rewards</h1>
     </div>
     <div class="content">
       <h2 style="margin-top: 0; color: #002d62;">Welcome, {{ user.first_name | default: 'Valued Customer' }}!</h2>
@@ -56,7 +57,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
       {% if tier == 'Gold' %}
         <div style="background-color: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
           <strong style="color: #b45309;">🌟 VIP GOLD MEMBERS-ONLY PERK:</strong><br>
-          FREE SMALL BLIZZARD coupon valid for Gold members only. Enjoy your double points day!
+          An exclusive welcome reward is available for Gold members. Enjoy your double-points day!
         </div>
       {% endif %}
 
@@ -73,25 +74,25 @@ const DEFAULT_HTML = `<!DOCTYPE html>
       {% endif %}
 
       <p style="text-align: center; margin: 30px 0;">
-        <a href="http://example.com/redeem" style="background-color: #f43f5e; color: #ffffff;" class="btn">Claim Blizzard Offer</a>
+        <a href="http://example.com/redeem" style="background-color: #f43f5e; color: #ffffff;" class="btn">View Welcome Offer</a>
       </p>
 
       <p style="font-size: 14px; color: #475569; text-align: center; margin-top: 20px; border-top: 1px dashed #e5e7eb; padding-top: 15px;">
-        Use coupon code: <strong>{{ campaign.coupon_code | default: 'DQ-WELCOME-2026' }}</strong><br>
+        Use offer code: <strong>{{ campaign.coupon_code | default: 'WELCOME-2026' }}</strong><br>
         Offer Expires: <strong>{{ campaign.expiry_date | default: 'December 31, 2026' }}</strong>
       </p>
 
       <p>This offer is valid for 7 days at participating locations.</p>
     </div>
     <div class="footer">
-      <p>© 2026 Dairy Queen. If you wish to unsubscribe, click <a href="#" style="color: #94a3b8;">here</a>.</p>
+      <p>© 2026 Northstar Rewards. If you wish to unsubscribe, click <a href="#" style="color: #94a3b8;">here</a>.</p>
     </div>
   </div>
 </body>
 </html>`;
 
 const PRIMARY_TABS = ['overview', 'automation', 'review', 'library', 'settings'];
-const REVIEW_TABS = ['copy', 'technical'];
+const REVIEW_TABS = ['copy', 'technical', 'approval'];
 
 function normalizePrimaryTab(hashTab) {
   if (PRIMARY_TABS.includes(hashTab)) return hashTab;
@@ -159,11 +160,11 @@ export default function App() {
   const [subjectLine, setSubjectLine] = useState(DEFAULT_SUBJECT);
   const [figmaTexts, setFigmaTexts] = useState(DEFAULT_FIGMA_TEXTS);
   const [brazeHtml, setBrazeHtml] = useState(DEFAULT_HTML);
-  const [pushBody, setPushBody] = useState('Get a FREE Small Blizzard! 🍦 Valid for 14 days. Claim your exclusive app reward today.');
-  const [smsBody, setSmsBody] = useState('Dairy Queen: Welcome {{ user.first_name | default: \'Valued Customer\' }}! We loaded a FREE Blizzard reward into your account. Redeem here: http://example.com/redeem');
-  const [iamHeader, setIamHeader] = useState('Get a FREE Small Blizzard');
-  const [iamBody, setIamBody] = useState('Enjoy soft serve ice cream blended with your favorite toppings! Valid for 14 days.');
-  const [iamButtonText, setIamButtonText] = useState('Claim Offer');
+  const [pushBody, setPushBody] = useState('Your welcome reward is ready. Open the app to explore your new member benefits.');
+  const [smsBody, setSmsBody] = useState('Northstar Rewards: Welcome {{ user.first_name | default: \'Valued Customer\' }}! Your member offer is ready: http://example.com/redeem');
+  const [iamHeader, setIamHeader] = useState('Your welcome reward is ready');
+  const [iamBody, setIamBody] = useState('Explore your new member benefits and available offers. Valid for 14 days.');
+  const [iamButtonText, setIamButtonText] = useState('View Offer');
   const [iamButtonLink, setIamButtonLink] = useState('http://example.com/redeem');
 
   // API response logs
@@ -192,6 +193,7 @@ export default function App() {
   const [filterSeverity, setFilterSeverity] = useState('all');
   const [automationState, setAutomationState] = useState(null);
   const handleAutomationAuditChange = useCallback((nextState) => setAutomationState(nextState), []);
+  const handleApprovalChange = useCallback((approval) => setAutomationState((current) => current ? { ...current, approval } : current), []);
 
   const handleSyncFigma = async () => {
     setFigmaSyncLoading(true);
@@ -527,7 +529,7 @@ export default function App() {
   }[activeTab];
   const activeDescription = {
     overview: 'See campaign health, open issues, channel readiness, and report actions in one place.',
-    automation: 'Import a Braze asset, audit every available message, and record a human readiness decision.',
+    automation: '',
     review: 'Run focused checks for launch risk, copy alignment, Liquid, links, and deliverability.',
     library: 'Load campaign examples or save reusable campaign states for repeat review.',
     settings: 'Manage sandbox mode and secure integration settings.'
@@ -605,7 +607,7 @@ export default function App() {
         <header className="header">
           <div>
             <h1>{activeTitle}</h1>
-            <p className="header-title-desc">{activeDescription}</p>
+            {activeDescription && <p className="header-title-desc">{activeDescription}</p>}
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -678,6 +680,9 @@ export default function App() {
               <button className={`review-tab ${activeReviewTab === 'technical' ? 'active' : ''}`} onClick={() => setActiveReviewTab('technical')}>
                 Technical
               </button>
+              <button className={`review-tab ${activeReviewTab === 'approval' ? 'active' : ''}`} onClick={() => setActiveReviewTab('approval')}>
+                Approval
+              </button>
             </div>
 
             {activeReviewTab === 'copy' && (
@@ -726,6 +731,10 @@ export default function App() {
                 filterSeverity={filterSeverity}
                 setFilterSeverity={setFilterSeverity}
               />
+            )}
+
+            {activeReviewTab === 'approval' && (
+              <ApprovalGate automationState={automationState} onApprovalChange={handleApprovalChange} />
             )}
           </section>
         )}
