@@ -19,7 +19,8 @@ export default function Overview({
   isPredicting,
   predictionResults,
   setFilterSeverity,
-  automationState
+  automationState,
+  useMockMode
 }) {
   // SVG Config for Circular Progress Ring
   const radius = 80;
@@ -149,6 +150,32 @@ OmniQA Quality Assurance Engine`;
     }
   };
 
+  const hasCampaign = automationState !== null && automationState.journey !== null;
+  const showOverviewData = useMockMode ? hasCampaign : (hasCampaign && automationState.journey.source === 'braze');
+
+  if (!showOverviewData) {
+    return (
+      <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 2rem', textAlign: 'center', minHeight: '450px' }}>
+        <div className="panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', maxWidth: '600px', width: '100%', padding: '3rem 2rem' }}>
+          <div style={{ padding: '1.25rem', borderRadius: '50%', backgroundColor: 'rgba(6, 182, 212, 0.08)', color: 'var(--accent-cyan)', display: 'inline-flex' }}>
+            <FileText size={40} />
+          </div>
+          <div>
+            <h2 style={{ fontSize: '1.6rem', marginBottom: '0.75rem', fontWeight: '700' }}>No Active Campaign Loaded</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+              {useMockMode 
+                ? "You are in Demo Sandbox mode. Navigate to the Automated QA tab and load the fictional demo campaign, or type a Campaign/Canvas link to populate data."
+                : "You are in Live Connected mode. Connect a Braze Campaign or Canvas in the Automated QA tab to fetch live data and run real-time audits."}
+            </p>
+          </div>
+          <button className="btn btn-primary" onClick={() => setActiveTab('automation')} style={{ minWidth: '200px' }}>
+            Go to Automated QA
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fade-in">
       {automationState && (
@@ -160,8 +187,8 @@ OmniQA Quality Assurance Engine`;
           </div>
           <div>
             <strong>{automationState.audit.score}/100</strong>
-            <span className={`readiness-pill ${automationState.approval.status === 'approved' ? 'approved' : automationState.audit.status}`}>
-              {automationState.approval.status === 'approved' ? 'Approved by reviewer' : automationState.audit.status.replaceAll('-', ' ')}
+            <span className={`readiness-pill ${automationState.approval?.status === 'approved' ? 'approved' : automationState.audit.status}`}>
+              {automationState.approval?.status === 'approved' ? 'Approved by reviewer' : automationState.audit.status.replaceAll('-', ' ')}
             </span>
           </div>
         </section>

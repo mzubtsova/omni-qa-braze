@@ -663,6 +663,7 @@ export default function App() {
             predictionResults={predictionResults}
             setFilterSeverity={setFilterSeverity}
             automationState={automationState}
+            useMockMode={useMockMode}
           />
         )}
 
