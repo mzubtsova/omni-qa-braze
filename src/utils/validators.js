@@ -279,3 +279,30 @@ export function auditImages(html) {
 
   return issues;
 }
+
+/**
+ * Extracts a clean Braze Campaign/Canvas ID from a dashboard URL or raw string.
+ * Supports 24-character hexadecimal campaign IDs and 36-character UUID canvas IDs.
+ */
+export function extractBrazeId(val) {
+  if (!val) return '';
+  const trimmed = String(val).trim();
+  
+  // Try to match standard Braze URLs:
+  // /campaigns/editor/ID or /canvas/editor/ID
+  // /campaigns/ID or /canvas/ID
+  const urlMatch = trimmed.match(/\/(?:campaigns|canvas)(?:\/editor|\/details)?\/([a-fA-F0-9]{24}|[0-9a-fA-F-]{36})/i) ||
+                   trimmed.match(/\/([a-fA-F0-9]{24}|[0-9a-fA-F-]{36})(?:\/|$|\?)/i);
+  
+  if (urlMatch && urlMatch[1]) {
+    return urlMatch[1].toLowerCase();
+  }
+  
+  // If it's a raw 24-character hexadecimal campaign ID or 36-character UUID canvas ID
+  if (/^[a-fA-F0-9]{24}$/i.test(trimmed) || /^[0-9a-fA-F-]{36}$/i.test(trimmed)) {
+    return trimmed.toLowerCase();
+  }
+  
+  return trimmed.toLowerCase();
+}
+

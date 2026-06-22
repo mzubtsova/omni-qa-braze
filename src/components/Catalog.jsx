@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, RefreshCw, Trash2, CloudLightning, FileEdit, ExternalLink } from 'lucide-react';
+import { extractBrazeId } from '../utils/validators';
 
 const SEED_CAMPAIGNS = [
   {
@@ -521,11 +522,12 @@ export default function Catalog({
   };
 
   const handleSaveCampaignId = (id) => {
+    const cleanId = extractBrazeId(tempCampaignId);
     const updated = campaigns.map(c => {
       if (c.id === id) {
         return {
           ...c,
-          brazeCampaignId: tempCampaignId.trim()
+          brazeCampaignId: cleanId
         };
       }
       return c;
@@ -546,10 +548,28 @@ export default function Catalog({
     const computedStatus = getCampaignStatus(tempC);
 
     const targetBrazeId = newCampaignId.trim();
-    const existingIndex = campaigns.findIndex(c => 
-      (targetBrazeId && c.brazeCampaignId === targetBrazeId) ||
-      (c.name.trim().toLowerCase() === newCampaignName.trim().toLowerCase())
-    );
+    const cleanTargetBrazeId = extractBrazeId(targetBrazeId);
+    const isVal = (id) => /^[a-f0-9]{24}$/.test(id) || /^[0-9a-f-]{36}$/.test(id);
+    const targetHasValBraze = cleanTargetBrazeId && isVal(cleanTargetBrazeId);
+
+    let existingIndex = -1;
+    if (targetHasValBraze) {
+      existingIndex = campaigns.findIndex(c => {
+        const cleanCatalog = extractBrazeId(c.brazeCampaignId);
+        return cleanCatalog && isVal(cleanCatalog) && cleanCatalog === cleanTargetBrazeId;
+      });
+    }
+    
+    if (existingIndex === -1) {
+      existingIndex = campaigns.findIndex(c => {
+        const cleanCatalog = extractBrazeId(c.brazeCampaignId);
+        const catalogHasValBraze = cleanCatalog && isVal(cleanCatalog);
+        if (!catalogHasValBraze) {
+          return c.name.trim().toLowerCase() === newCampaignName.trim().toLowerCase();
+        }
+        return false;
+      });
+    }
 
     if (existingIndex > -1) {
       // Overwrite/update existing card instead of creating a duplicate
@@ -559,7 +579,7 @@ export default function Catalog({
           return {
             ...c,
             name: newCampaignName,
-            brazeCampaignId: targetBrazeId,
+            brazeCampaignId: targetHasValBraze ? cleanTargetBrazeId : targetBrazeId,
             status: computedStatus,
             lastSynced: 'Just now (Updated)',
             ...currentCampaignState,
@@ -582,7 +602,7 @@ export default function Catalog({
       const newCampaign = {
         id: newId,
         name: newCampaignName,
-        brazeCampaignId: targetBrazeId,
+        brazeCampaignId: targetHasValBraze ? cleanTargetBrazeId : targetBrazeId,
         channel: 'email', // default primary
         version: 'v1.0',
         status: computedStatus,

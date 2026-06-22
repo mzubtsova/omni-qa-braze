@@ -50,7 +50,7 @@ function getCampaignStatus(c) {
 
 import { auditFigmaAndBrazeCopy, auditSpamAndDeliverability, predictCampaignEngagement } from './services/gemini';
 import { fetchFigmaTextLayers } from './services/figma';
-import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast, auditImages } from './utils/validators';
+import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast, auditImages, extractBrazeId } from './utils/validators';
 
 const DEFAULT_SUBJECT = 'Your welcome reward is ready';
 const DEFAULT_FIGMA_TEXTS = [
@@ -307,7 +307,20 @@ export default function App() {
       const saved = localStorage.getItem('omniqa_braze_catalog');
       if (saved) {
         const campaigns = JSON.parse(saved);
-        savedCampaign = campaigns.find(c => c.id === activeCampaignId);
+        const cleanActiveId = extractBrazeId(activeCampaignId);
+        const isVal = (id) => /^[a-f0-9]{24}$/.test(id) || /^[0-9a-f-]{36}$/.test(id);
+        const activeHasVal = cleanActiveId && isVal(cleanActiveId);
+        
+        savedCampaign = campaigns.find(c => {
+          if (c.id === activeCampaignId) return true;
+          if (activeHasVal) {
+            const cleanCatalog = extractBrazeId(c.brazeCampaignId);
+            if (cleanCatalog && isVal(cleanCatalog) && cleanCatalog === cleanActiveId) {
+              return true;
+            }
+          }
+          return false;
+        });
       }
     } catch (e) {
       console.error("Failed to parse catalog in theme sync", e);
@@ -572,15 +585,35 @@ export default function App() {
     }
     
     const activeJourneyId = automationState?.journey?.id;
-    const activeBrazeId = automationState?.journey?.brazeCampaignId || activeJourneyId;
+    const activeBrazeId = automationState?.journey?.brazeCampaignId;
+    const cleanActiveBrazeId = extractBrazeId(activeBrazeId);
+    
+    const isVal = (id) => /^[a-f0-9]{24}$/.test(id) || /^[0-9a-f-]{36}$/.test(id);
+    const activeHasValBraze = cleanActiveBrazeId && isVal(cleanActiveBrazeId);
     
     // Find matching campaign in catalog
-    const matchingCampaign = campaigns.find(c => 
-      (loadedCampaignId && c.id === loadedCampaignId) ||
-      (activeJourneyId && c.id === activeJourneyId) ||
-      (activeBrazeId && c.brazeCampaignId && c.brazeCampaignId === activeBrazeId) ||
-      (automationState.journey.name && c.name === automationState.journey.name)
-    );
+    const matchingCampaign = campaigns.find(c => {
+      // 1. Exact match by local loaded campaign ID or active journey ID
+      if (loadedCampaignId && c.id === loadedCampaignId) return true;
+      if (activeJourneyId && c.id === activeJourneyId) return true;
+      
+      // 2. Match by extracted Braze Campaign/Canvas ID or Link
+      const cleanCatalogBrazeId = extractBrazeId(c.brazeCampaignId);
+      const catalogHasValBraze = cleanCatalogBrazeId && isVal(cleanCatalogBrazeId);
+      
+      if (activeHasValBraze && catalogHasValBraze && cleanActiveBrazeId === cleanCatalogBrazeId) {
+        return true;
+      }
+      
+      // 3. Fallback to matching by name ONLY if neither has a valid Braze ID
+      if (!activeHasValBraze && !catalogHasValBraze) {
+        if (automationState.journey.name && c.name && automationState.journey.name.trim().toLowerCase() === c.name.trim().toLowerCase()) {
+          return true;
+        }
+      }
+      
+      return false;
+    });
     
     if (matchingCampaign) {
       // Overwrite existing card
@@ -1313,10 +1346,28 @@ export default function App() {
                 }
 
                 const targetBrazeId = quickSaveId.trim();
-                const existingIndex = campaigns.findIndex(c => 
-                  (targetBrazeId && c.brazeCampaignId === targetBrazeId) ||
-                  (c.name.trim().toLowerCase() === quickSaveName.trim().toLowerCase())
-                );
+                const cleanTargetBrazeId = extractBrazeId(targetBrazeId);
+                const isVal = (id) => /^[a-f0-9]{24}$/.test(id) || /^[0-9a-f-]{36}$/.test(id);
+                const targetHasValBraze = cleanTargetBrazeId && isVal(cleanTargetBrazeId);
+
+                let existingIndex = -1;
+                if (targetHasValBraze) {
+                  existingIndex = campaigns.findIndex(c => {
+                    const cleanCatalog = extractBrazeId(c.brazeCampaignId);
+                    return cleanCatalog && isVal(cleanCatalog) && cleanCatalog === cleanTargetBrazeId;
+                  });
+                }
+                
+                if (existingIndex === -1) {
+                  existingIndex = campaigns.findIndex(c => {
+                    const cleanCatalog = extractBrazeId(c.brazeCampaignId);
+                    const catalogHasValBraze = cleanCatalog && isVal(cleanCatalog);
+                    if (!catalogHasValBraze) {
+                      return c.name.trim().toLowerCase() === quickSaveName.trim().toLowerCase();
+                    }
+                    return false;
+                  });
+                }
 
                 const tempC = {
                   savedPreApproval: preApprovalState,
@@ -1331,7 +1382,7 @@ export default function App() {
                   campaigns[existingIndex] = {
                     ...targetCampaign,
                     name: quickSaveName,
-                    brazeCampaignId: targetBrazeId,
+                    brazeCampaignId: targetHasValBraze ? cleanTargetBrazeId : targetBrazeId,
                     status: computedStatus,
                     lastSynced: 'Just now (Updated)',
                     subjectLine,
@@ -1357,7 +1408,7 @@ export default function App() {
                   const newCampaign = {
                     id: newId,
                     name: quickSaveName,
-                    brazeCampaignId: targetBrazeId,
+                    brazeCampaignId: targetHasValBraze ? cleanTargetBrazeId : targetBrazeId,
                     channel: 'email',
                     version: 'v1.0',
                     status: computedStatus,
