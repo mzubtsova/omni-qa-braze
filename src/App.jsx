@@ -319,7 +319,7 @@ export default function App() {
     } else {
       const stored = localStorage.getItem(`omniqa_preapproval_${activeCampaignId}`);
       if (stored) {
-        try { nextPreApproval = JSON.parse(stored); } catch {}
+        try { nextPreApproval = JSON.parse(stored); } catch (e) { console.warn(e); }
       }
     }
 
@@ -345,7 +345,7 @@ export default function App() {
     } else {
       const stored = localStorage.getItem(`omniqa_approval_${activeCampaignId}`);
       if (stored) {
-        try { nextApproval = JSON.parse(stored); } catch {}
+        try { nextApproval = JSON.parse(stored); } catch (e) { console.warn(e); }
       }
     }
 
