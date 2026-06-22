@@ -239,7 +239,7 @@ export default function App() {
   // Hoisted states
   const [preApprovalState, setPreApprovalState] = useState(() => {
     try {
-      const stored = JSON.parse(localStorage.getItem('omniqa_preapproval_checklist') || 'null');
+      const stored = JSON.parse(localStorage.getItem('omniqa_preapproval_default') || localStorage.getItem('omniqa_preapproval_checklist') || 'null');
       if (stored) return stored;
     } catch {
       // console.warn("Failed to parse preapproval");
@@ -247,7 +247,7 @@ export default function App() {
     return {
       setup: { campaignName: '', campaignType: '', owner: '', launchDate: '' },
       items: defaultPreApprovalItems.map((text, idx) => ({
-        id: `${Date.now()}-${idx}-${Math.random().toString(16).slice(2, 6)}`,
+        id: `pre-${Date.now()}-${idx}-${Math.random().toString(16).slice(2, 6)}`,
         text,
         done: false,
         note: ''
@@ -257,8 +257,15 @@ export default function App() {
   });
 
   const [approvalState, setApprovalState] = useState(() => {
+    const defaultApprovalItems = [
+      { id: 'audience', text: 'Audience, exclusions, entry criteria, and schedule were verified in Braze.', done: false },
+      { id: 'content', text: 'Every message variant, link, sender, and destination was reviewed.', done: false },
+      { id: 'personalization', text: 'Liquid variables, fallback values, and channel eligibility were tested.', done: false },
+      { id: 'evidence', text: 'Test-send evidence and required stakeholder approvals are documented.', done: false }
+    ];
     const emptyApproval = {
       reviewer: '',
+      items: defaultApprovalItems,
       checks: { audience: false, content: false, personalization: false, evidence: false },
       confirmHumanReview: false,
       decisionNote: '',
@@ -266,13 +273,110 @@ export default function App() {
       approvedAt: ''
     };
     try {
-      const stored = JSON.parse(localStorage.getItem('omniqa_approval') || 'null');
-      return stored ? { ...emptyApproval, ...stored, checks: { ...emptyApproval.checks, ...(stored.checks || {}) } } : emptyApproval;
+      const stored = JSON.parse(localStorage.getItem('omniqa_approval_default') || localStorage.getItem('omniqa_approval') || 'null');
+      if (stored) {
+        if (stored.checks && !stored.items) {
+          stored.items = [
+            { id: 'audience', text: 'Audience, exclusions, entry criteria, and schedule were verified in Braze.', done: !!stored.checks.audience },
+            { id: 'content', text: 'Every message variant, link, sender, and destination was reviewed.', done: !!stored.checks.content },
+            { id: 'personalization', text: 'Liquid variables, fallback values, and channel eligibility were tested.', done: !!stored.checks.personalization },
+            { id: 'evidence', text: 'Test-send evidence and required stakeholder approvals are documented.', done: !!stored.checks.evidence }
+          ];
+        }
+        return { ...emptyApproval, ...stored };
+      }
+      return emptyApproval;
     } catch {
       return emptyApproval;
     }
   });
 
+  const activeCampaignId = automationState?.journey?.id || loadedCampaignId || 'default';
+  const prevCampaignIdRef = useRef(activeCampaignId);
+
+  // Campaign switcher - loads saved checklist states specifically for the active campaign ID
+  useEffect(() => {
+    if (activeCampaignId === prevCampaignIdRef.current) return;
+    prevCampaignIdRef.current = activeCampaignId;
+
+    let savedCampaign = null;
+    try {
+      const saved = localStorage.getItem('omniqa_braze_catalog');
+      if (saved) {
+        const campaigns = JSON.parse(saved);
+        savedCampaign = campaigns.find(c => c.id === activeCampaignId);
+      }
+    } catch (e) {
+      console.error("Failed to parse catalog in theme sync", e);
+    }
+
+    // Pre-Approval checklist loading or resetting
+    let nextPreApproval = null;
+    if (savedCampaign?.savedPreApproval) {
+      nextPreApproval = savedCampaign.savedPreApproval;
+    } else {
+      const stored = localStorage.getItem(`omniqa_preapproval_${activeCampaignId}`);
+      if (stored) {
+        try { nextPreApproval = JSON.parse(stored); } catch {}
+      }
+    }
+
+    if (nextPreApproval) {
+      setPreApprovalState(nextPreApproval);
+    } else {
+      setPreApprovalState({
+        setup: { campaignName: automationState?.journey?.name || savedCampaign?.name || '', campaignType: '', owner: '', launchDate: '' },
+        items: defaultPreApprovalItems.map((text, idx) => ({
+          id: `pre-${Date.now()}-${idx}-${Math.random().toString(16).slice(2, 6)}`,
+          text,
+          done: false,
+          note: ''
+        })),
+        generalNotes: ''
+      });
+    }
+
+    // Approval gate loading or resetting
+    let nextApproval = null;
+    if (savedCampaign?.savedApproval) {
+      nextApproval = savedCampaign.savedApproval;
+    } else {
+      const stored = localStorage.getItem(`omniqa_approval_${activeCampaignId}`);
+      if (stored) {
+        try { nextApproval = JSON.parse(stored); } catch {}
+      }
+    }
+
+    const defaultApprovalItems = [
+      { id: 'audience', text: 'Audience, exclusions, entry criteria, and schedule were verified in Braze.', done: false },
+      { id: 'content', text: 'Every message variant, link, sender, and destination was reviewed.', done: false },
+      { id: 'personalization', text: 'Liquid variables, fallback values, and channel eligibility were tested.', done: false },
+      { id: 'evidence', text: 'Test-send evidence and required stakeholder approvals are documented.', done: false }
+    ];
+
+    if (nextApproval) {
+      const sa = { ...nextApproval };
+      if (sa.checks && !sa.items) {
+        sa.items = [
+          { id: 'audience', text: 'Audience, exclusions, entry criteria, and schedule were verified in Braze.', done: !!sa.checks.audience },
+          { id: 'content', text: 'Every message variant, link, sender, and destination was reviewed.', done: !!sa.checks.content },
+          { id: 'personalization', text: 'Liquid variables, fallback values, and channel eligibility were tested.', done: !!sa.checks.personalization },
+          { id: 'evidence', text: 'Test-send evidence and required stakeholder approvals are documented.', done: !!sa.checks.evidence }
+        ];
+      }
+      setApprovalState(sa);
+    } else {
+      setApprovalState({
+        reviewer: '',
+        items: defaultApprovalItems,
+        checks: { audience: false, content: false, personalization: false, evidence: false },
+        confirmHumanReview: false,
+        decisionNote: '',
+        status: 'pending',
+        approvedAt: ''
+      });
+    }
+  }, [activeCampaignId, automationState?.journey]);
 
   useEffect(() => {
     if (!automationState?.journey) return;
@@ -389,7 +493,11 @@ export default function App() {
   }, [loadedCampaignId]);
 
   useEffect(() => {
-    localStorage.setItem('omniqa_preapproval_checklist', JSON.stringify(preApprovalState));
+    const currentId = automationState?.journey?.id || loadedCampaignId || 'default';
+    localStorage.setItem(`omniqa_preapproval_${currentId}`, JSON.stringify(preApprovalState));
+    if (currentId === 'default') {
+      localStorage.setItem('omniqa_preapproval_checklist', JSON.stringify(preApprovalState));
+    }
     const complete = preApprovalState?.items?.filter((item) => item.done).length || 0;
     const total = preApprovalState?.items?.length || 0;
     setPreApprovalStatus({
@@ -401,15 +509,19 @@ export default function App() {
     if (loadedCampaignId) {
       autoUpdateLibraryCard(preApprovalState, approvalState);
     }
-  }, [preApprovalState, loadedCampaignId, autoUpdateLibraryCard, approvalState]);
+  }, [preApprovalState, loadedCampaignId, autoUpdateLibraryCard, approvalState, automationState?.journey?.id]);
 
   useEffect(() => {
-    localStorage.setItem('omniqa_approval', JSON.stringify(approvalState));
+    const currentId = automationState?.journey?.id || loadedCampaignId || 'default';
+    localStorage.setItem(`omniqa_approval_${currentId}`, JSON.stringify(approvalState));
+    if (currentId === 'default') {
+      localStorage.setItem('omniqa_approval', JSON.stringify(approvalState));
+    }
 
     if (loadedCampaignId) {
       autoUpdateLibraryCard(preApprovalState, approvalState);
     }
-  }, [approvalState, loadedCampaignId, autoUpdateLibraryCard, preApprovalState]);
+  }, [approvalState, loadedCampaignId, autoUpdateLibraryCard, preApprovalState, automationState?.journey?.id]);
 
   const handleAutomationAuditChange = useCallback((nextState) => {
     if (nextState?.journey && nextState.journey.source === 'braze') {
@@ -558,34 +670,6 @@ export default function App() {
       }
     } else {
       setAutomationState(null);
-    }
-
-    if (campaign.savedPreApproval) {
-      setPreApprovalState(campaign.savedPreApproval);
-    } else {
-      setPreApprovalState({
-        setup: { campaignName: campaign.name || '', campaignType: '', owner: '', launchDate: '' },
-        items: defaultPreApprovalItems.map((text, idx) => ({
-          id: `${Date.now()}-${idx}-${Math.random().toString(16).slice(2, 6)}`,
-          text,
-          done: false,
-          note: ''
-        })),
-        generalNotes: ''
-      });
-    }
-
-    if (campaign.savedApproval) {
-      setApprovalState(campaign.savedApproval);
-    } else {
-      setApprovalState({
-        reviewer: '',
-        checks: { audience: false, content: false, personalization: false, evidence: false },
-        confirmHumanReview: false,
-        decisionNote: '',
-        status: 'pending',
-        approvedAt: ''
-      });
     }
 
     setActiveTab('overview');
@@ -1137,7 +1221,14 @@ export default function App() {
                 )}
 
                 {activeReviewTab === 'preapproval' && (
-                  <PreApprovalChecklist automationState={automationState} state={preApprovalState} setState={setPreApprovalState} onStatusChange={handlePreApprovalChange} />
+                  <PreApprovalChecklist 
+                    automationState={automationState} 
+                    state={preApprovalState} 
+                    setState={setPreApprovalState} 
+                    onStatusChange={handlePreApprovalChange} 
+                    onQuickSave={handleQuickSave}
+                    approval={approvalState}
+                  />
                 )}
               </>
             )}
@@ -1178,7 +1269,7 @@ export default function App() {
             left: 0,
             width: '100vw',
             height: '100vh',
-            background: 'rgba(5, 8, 15, 0.85)',
+            background: 'var(--modal-overlay-bg)',
             zIndex: 2000,
             display: 'flex',
             alignItems: 'center',
@@ -1235,7 +1326,7 @@ export default function App() {
                 gap: '1rem',
                 border: '1px solid var(--accent-cyan)',
                 background: 'var(--bg-secondary)',
-                boxShadow: '0 25px 60px rgba(0,0,0,0.8)'
+                boxShadow: 'var(--modal-shadow)'
               }}
             >
               <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-primary)' }}>Save Workspace to Library</h3>

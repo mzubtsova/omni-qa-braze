@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageSquareText, Plus, Trash2 } from 'lucide-react';
+import { MessageSquareText, Plus, Trash2, Mail, Download, Save } from 'lucide-react';
 
 function createId() {
   return crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -9,7 +9,7 @@ function makeItem(text) {
   return { id: createId(), text, done: false, note: '' };
 }
 
-export default function PreApprovalChecklist({ state, setState }) {
+export default function PreApprovalChecklist({ state, setState, automationState, onQuickSave, approval }) {
   const [newCheckpoint, setNewCheckpoint] = useState('');
   const [openNotes, setOpenNotes] = useState([]);
 
@@ -25,6 +25,58 @@ export default function PreApprovalChecklist({ state, setState }) {
   };
 
   const complete = state.items.filter((item) => item.done).length;
+
+  const journey = automationState?.journey;
+  const audit = automationState?.audit;
+
+  const createEmailDraft = () => {
+    if (!journey || !audit) return;
+    const subject = `OmniQA pre-deployment report: ${journey.name} (${audit.score}/100)`;
+    
+    const formatStatusLocal = (status) => {
+      return {
+        blocked: 'Blocked',
+        'needs-review': 'Needs review',
+        'ready-for-approval': 'Ready for approval',
+        approved: 'Ready for Deploy'
+      }[status] || 'Pending review';
+    };
+
+    const findings = audit.findings.map((item) =>
+      `[${item.severity.toUpperCase()}] ${item.title}\nEvidence: ${item.evidence}\nAction: ${item.remediation}`
+    ).join('\n\n');
+
+    const reportText = `OMNIQA PRE-DEPLOYMENT QA REPORT
+
+Campaign: ${journey.name}
+Type: ${journey.type}
+Generated: ${new Date(audit.generatedAt).toLocaleString()}
+Status: ${formatStatusLocal(approval?.status === 'approved' ? 'approved' : audit.status)}
+Score: ${audit.score}/100
+Steps: ${audit.stepCount}
+Messages: ${audit.messageCount}
+Channels: ${audit.channelCount}
+
+Blockers: ${audit.counts.blocker}
+High: ${audit.counts.high}
+Medium: ${audit.counts.medium}
+Low: ${audit.counts.low}
+
+Reviewer: ${approval?.reviewer || 'Not assigned'}
+Decision note: ${approval?.decisionNote || 'None'}
+
+FINDINGS
+${findings || 'No automated findings.'}
+
+READINESS BOUNDARY
+This report records a QA decision. A person still controls activation and scheduling in Braze.`;
+
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportText)}`;
+  };
+
+  const printReport = () => {
+    window.print();
+  };
 
   return (
     <div className="preapproval-workspace fade-in">
@@ -103,6 +155,15 @@ export default function PreApprovalChecklist({ state, setState }) {
           <button className="btn btn-secondary" type="button" onClick={addItem}><Plus size={15} /> Add</button>
         </div>
         <div className="form-group preapproval-general-notes"><label className="form-label" htmlFor="pre-notes">General reviewer notes</label><textarea id="pre-notes" className="form-textarea" value={state.generalNotes} onChange={(event) => setState((current) => ({ ...current, generalNotes: event.target.value }))} placeholder="Document open questions, owners, decisions, or accepted risks..." /></div>
+        
+        {/* Verification action buttons */}
+        <div className="approval-actions" style={{ marginTop: '1.5rem', paddingTop: '1.25rem' }}>
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+            <button type="button" className="btn btn-secondary" onClick={createEmailDraft} disabled={!journey || !audit}><Mail size={15} /> Email report</button>
+            <button type="button" className="btn btn-secondary" onClick={printReport} disabled={!journey || !audit}><Download size={15} /> Save / print PDF</button>
+            <button type="button" className="btn btn-secondary" onClick={onQuickSave} disabled={!journey || !audit} style={{ borderColor: 'var(--accent-purple)', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Save size={15} /> Save QA to Library</button>
+          </div>
+        </div>
       </section>
     </div>
   );

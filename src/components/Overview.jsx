@@ -523,7 +523,7 @@ OmniQA Quality Assurance Engine`;
             left: 0,
             width: '100vw',
             height: '100vh',
-            background: 'rgba(5, 8, 15, 0.95)',
+            background: 'var(--modal-overlay-bg)',
             zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
@@ -543,7 +543,7 @@ OmniQA Quality Assurance Engine`;
               maxWidth: '450px',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '0 25px 60px rgba(0,0,0,0.8)'
+              boxShadow: 'var(--modal-shadow)'
             }}
           >
             <button 

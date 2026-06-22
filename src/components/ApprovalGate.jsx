@@ -1,13 +1,6 @@
-import { useEffect, useMemo } from 'react';
-import { AlertCircle, ClipboardCheck, Download, Mail, ShieldCheck, Save } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { AlertCircle, ClipboardCheck, Download, Mail, ShieldCheck, Save, Plus, Trash2 } from 'lucide-react';
 import { canApproveAudit } from '../utils/campaignAudit';
-
-const approvalChecks = [
-  ['audience', 'Audience, exclusions, entry criteria, and schedule were verified in Braze.'],
-  ['content', 'Every message variant, link, sender, and destination was reviewed.'],
-  ['personalization', 'Liquid variables, fallback values, and channel eligibility were tested.'],
-  ['evidence', 'Test-send evidence and required stakeholder approvals are documented.']
-];
 
 function formatStatus(status) {
   return {
@@ -22,6 +15,11 @@ function createReportText(journey, audit, approval) {
   const findings = audit.findings.map((item) =>
     `[${item.severity.toUpperCase()}] ${item.title}\nEvidence: ${item.evidence}\nAction: ${item.remediation}`
   ).join('\n\n');
+  
+  const checksText = (approval.items || []).map((item) =>
+    `[${item.done ? 'X' : ' '}] ${item.text}`
+  ).join('\n');
+
   return `OMNIQA PRE-DEPLOYMENT QA REPORT
 
 Campaign: ${journey.name}
@@ -41,6 +39,9 @@ Low: ${audit.counts.low}
 Reviewer: ${approval.reviewer || 'Not assigned'}
 Decision note: ${approval.decisionNote || 'None'}
 
+READINESS CHECKS
+${checksText || 'No checklist items.'}
+
 FINDINGS
 ${findings || 'No automated findings.'}
 
@@ -49,9 +50,17 @@ This report records a QA decision. A person still controls activation and schedu
 }
 
 export default function ApprovalGate({ automationState, preApprovalStatus, approval, setApproval, onApprovalChange, onQuickSave }) {
+  const [newCheckpoint, setNewCheckpoint] = useState('');
   const journey = automationState?.journey;
   const audit = automationState?.audit;
-  const approvalAllowed = useMemo(() => audit ? canApproveAudit(audit, approval) && preApprovalStatus?.ready : false, [audit, approval, preApprovalStatus]);
+
+  const completedChecks = (approval?.items || []).filter(item => item.done).length;
+  const totalChecks = (approval?.items || []).length;
+
+  const approvalAllowed = useMemo(() => {
+    if (!audit) return false;
+    return canApproveAudit(audit, approval) && preApprovalStatus?.ready;
+  }, [audit, approval, preApprovalStatus]);
 
   useEffect(() => {
     onApprovalChange?.(approval);
@@ -67,8 +76,67 @@ export default function ApprovalGate({ automationState, preApprovalStatus, appro
     );
   }
 
-  const updateCheck = (key, checked) => {
-    setApproval((current) => ({ ...current, checks: { ...current.checks, [key]: checked }, status: 'pending', approvedAt: '' }));
+  const updateItem = (id, done) => {
+    setApproval((current) => {
+      const nextItems = (current.items || []).map(item => item.id === id ? { ...item, done } : item);
+      const nextChecks = { ...current.checks, [id]: done };
+      return {
+        ...current,
+        items: nextItems,
+        checks: nextChecks,
+        status: 'pending',
+        approvedAt: ''
+      };
+    });
+  };
+
+  const addItem = () => {
+    const text = newCheckpoint.trim();
+    if (!text) return;
+    const newId = crypto?.randomUUID ? crypto.randomUUID() : `item-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;
+    setApproval((current) => {
+      const nextItems = [...(current.items || []), { id: newId, text, done: false }];
+      const nextChecks = { ...current.checks, [newId]: false };
+      return {
+        ...current,
+        items: nextItems,
+        checks: nextChecks,
+        status: 'pending',
+        approvedAt: ''
+      };
+    });
+    setNewCheckpoint('');
+  };
+
+  const removeItem = (id) => {
+    setApproval((current) => {
+      const nextItems = (current.items || []).filter(item => item.id !== id);
+      const nextChecks = { ...current.checks };
+      delete nextChecks[id];
+      return {
+        ...current,
+        items: nextItems,
+        checks: nextChecks,
+        status: 'pending',
+        approvedAt: ''
+      };
+    });
+  };
+
+  const handleToggleAll = () => {
+    const allChecked = (approval.items || []).every(item => item.done);
+    setApproval((current) => {
+      const nextItems = (current.items || []).map(item => ({ ...item, done: !allChecked }));
+      const nextChecks = {};
+      nextItems.forEach(item => { nextChecks[item.id] = item.done; });
+      return {
+        ...current,
+        items: nextItems,
+        checks: nextChecks,
+        status: 'pending',
+        approvedAt: ''
+      };
+    });
   };
 
   const approve = () => {
@@ -91,13 +159,10 @@ export default function ApprovalGate({ automationState, preApprovalStatus, appro
     window.print();
   };
 
-  const completedChecks = Object.keys(approval?.checks || {}).filter(k => approval.checks[k]).length;
-  const totalChecks = approvalChecks.length;
-
   let approvalPillText = 'Pending Review';
   let approvalPillClass = 'blocked';
 
-  if (approval.status === 'approved' || completedChecks === totalChecks) {
+  if (approval.status === 'approved' || (totalChecks > 0 && completedChecks === totalChecks)) {
     approvalPillText = 'Complete';
     approvalPillClass = 'approved';
   } else if (completedChecks > 0) {
@@ -108,26 +173,15 @@ export default function ApprovalGate({ automationState, preApprovalStatus, appro
   return (
     <section className="approval-panel panel">
       <div className="panel-topline">
-        <div><p className="eyebrow">Final readiness review</p><h3>Human approval</h3></div>
+        <div><p className="eyebrow">Final readiness review</p><h3>Readiness Approval</h3></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <button 
             type="button" 
             className="btn btn-secondary" 
             style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem', cursor: 'pointer' }}
-            onClick={() => {
-              const keys = approvalChecks.map(([k]) => k);
-              const allChecked = keys.every(k => approval.checks[k]);
-              const nextChecks = {};
-              keys.forEach(k => { nextChecks[k] = !allChecked; });
-              setApproval(current => ({
-                ...current,
-                checks: nextChecks,
-                status: 'pending',
-                approvedAt: ''
-              }));
-            }}
+            onClick={handleToggleAll}
           >
-            {approvalChecks.map(([k]) => k).every(k => approval.checks[k]) ? 'Deselect All' : 'Select All Checks'}
+            {(approval.items || []).every(item => item.done) ? 'Deselect All' : 'Select All Checks'}
           </button>
           <span className={`readiness-pill ${approvalPillClass}`}>{approvalPillText}</span>
         </div>
@@ -135,11 +189,84 @@ export default function ApprovalGate({ automationState, preApprovalStatus, appro
       <p className="approval-intro">Automated findings are evidence, not a launch decision. Confirm the remaining business and test checks, record the reviewer, and approve readiness here.</p>
       {!preApprovalStatus?.ready && <p className="approval-blocked"><AlertCircle size={16} />Complete the Pre-Approval checklist first ({preApprovalStatus?.complete || 0}/{preApprovalStatus?.total || 0}).</p>}
       <div className="approval-grid">
-        <div className="approval-checks">
-          {approvalChecks.map(([key, label]) => (
-            <label key={key}><input type="checkbox" checked={approval.checks[key]} onChange={(event) => updateCheck(key, event.target.checked)} /><span>{label}</span></label>
+        <div className="approval-checks" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {(approval.items || []).map((item) => (
+            <div 
+              key={item.id} 
+              className="checklist-item-wrapper"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.6rem 0.8rem',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--border-radius-sm)',
+                gap: '0.75rem'
+              }}
+            >
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', flex: 1, margin: 0 }}>
+                <input 
+                  type="checkbox" 
+                  checked={!!item.done} 
+                  onChange={(event) => updateItem(item.id, event.target.checked)} 
+                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', lineHeight: '1.4' }}>{item.text}</span>
+              </label>
+              
+              <button
+                type="button"
+                className="btn-icon"
+                onClick={() => removeItem(item.id)}
+                title="Remove checkpoint"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '4px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--error)'; e.currentTarget.style.background = 'rgba(244, 63, 94, 0.08)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
           ))}
+          
+          {/* Add custom checkpoint form */}
+          <div className="add-checkpoint-form" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <input
+              type="text"
+              className="form-input"
+              value={newCheckpoint}
+              onChange={(e) => setNewCheckpoint(e.target.value)}
+              placeholder="Add custom readiness check..."
+              style={{ flex: 1, fontSize: '0.85rem' }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addItem();
+                }
+              }}
+            />
+            <button 
+              type="button" 
+              className="btn btn-secondary" 
+              onClick={addItem}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+            >
+              <Plus size={14} /> Add
+            </button>
+          </div>
         </div>
+        
         <div className="approval-fields">
           <div className="form-group"><label className="form-label" htmlFor="reviewer">Reviewer name</label><input id="reviewer" className="form-input" value={approval.reviewer} onChange={(event) => setApproval({ ...approval, reviewer: event.target.value, status: 'pending', approvedAt: '' })} /></div>
           <div className="form-group"><label className="form-label" htmlFor="decision-note">Decision or exception note</label><textarea id="decision-note" className="form-textarea" value={approval.decisionNote} onChange={(event) => setApproval({ ...approval, decisionNote: event.target.value, status: 'pending', approvedAt: '' })} /></div>

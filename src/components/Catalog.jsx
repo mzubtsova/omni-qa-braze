@@ -969,7 +969,8 @@ ${findings}
                           </h5>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '0.35rem', fontSize: '0.75rem' }}>
                             {Object.entries(c.savedApproval?.checks || {}).map(([key, checked]) => {
-                              const label = {
+                              const itemText = c.savedApproval?.items?.find(item => item.id === key)?.text;
+                              const label = itemText || {
                                 audience: 'Audience & schedule verified',
                                 content: 'Copy & links reviewed',
                                 personalization: 'Liquid variables tested',
@@ -1132,7 +1133,7 @@ ${findings}
               left: 0,
               width: '100vw',
               height: '100vh',
-              background: 'rgba(5, 8, 15, 0.95)',
+              background: 'var(--modal-overlay-bg)',
               zIndex: 1000,
               display: 'flex',
               alignItems: 'center',
@@ -1156,7 +1157,7 @@ ${findings}
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '1.25rem',
-                boxShadow: '0 25px 60px rgba(0,0,0,0.8)'
+                boxShadow: 'var(--modal-shadow)'
               }}
             >
               <button 
@@ -1312,7 +1313,8 @@ ${findings}
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem', paddingLeft: '0.5rem' }}>
                   {Object.entries(reportModalCampaign.savedApproval?.checks || {}).map(([key, checked]) => {
-                    const label = {
+                    const itemText = reportModalCampaign.savedApproval?.items?.find(item => item.id === key)?.text;
+                    const label = itemText || {
                       audience: 'Audience & schedule verified in Braze',
                       content: 'Every message variant, link, sender, and destination reviewed',
                       personalization: 'Liquid variables, fallback values, and channel eligibility tested',
