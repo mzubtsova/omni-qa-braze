@@ -68,6 +68,28 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
     return auditJourneyAutomatically(journey, figmaTexts);
   }, [journey, figmaTexts]);
 
+  const currentAudit = useMemo(() => {
+    if (selectedMessageId === 'all') {
+      return audit;
+    }
+    
+    // Calculate message-specific score and counts
+    const filteredFindings = audit.findings.filter(item => item.messageId === selectedMessageId || item.scope === 'journey');
+    const counts = filteredFindings.reduce((acc, item) => ({ ...acc, [item.severity]: (acc[item.severity] || 0) + 1 }), { blocker: 0, high: 0, medium: 0, low: 0 });
+    const severityWeight = { blocker: 24, high: 14, medium: 7, low: 3 };
+    const totalDeduction = filteredFindings.reduce((sum, item) => sum + (severityWeight[item.severity] || 0), 0);
+    const score = Math.max(0, 100 - totalDeduction);
+    const status = counts.blocker > 0 ? 'blocked' : counts.high > 0 ? 'needs-review' : 'ready-for-approval';
+    
+    return {
+      ...audit,
+      score,
+      status,
+      counts,
+      findings: filteredFindings
+    };
+  }, [audit, selectedMessageId]);
+
   const selectedMessage = useMemo(() => {
     if (selectedMessageId === 'all') return null;
     return audit.messages.find((message) => message.id === selectedMessageId) || null;
@@ -87,12 +109,11 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
   }, [selectedMessage, onSelectMessage]);
 
   const visibleFindings = useMemo(() => {
-    return audit.findings.filter((item) => {
-      const matchesMessage = !selectedMessageId || selectedMessageId === 'all' || item.messageId === selectedMessageId || item.scope === 'journey';
+    return currentAudit.findings.filter((item) => {
       const matchesSeverity = severityFilter === 'all' || item.severity === severityFilter;
-      return matchesMessage && matchesSeverity;
+      return matchesSeverity;
     });
-  }, [audit.findings, selectedMessageId, severityFilter]);
+  }, [currentAudit.findings, severityFilter]);
 
   useEffect(() => {
     onAuditChange?.({ journey, audit });
@@ -312,6 +333,30 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
             <button className="btn btn-secondary compact-action" type="button" onClick={loadDemo}>Load fictional demo</button>
           )}
         </div>
+        {importError && (
+          <div 
+            className="automation-error" 
+            role="alert" 
+            style={{ 
+              marginTop: '0.75rem', 
+              marginBottom: '1rem', 
+              padding: '1rem', 
+              backgroundColor: 'rgba(239, 68, 68, 0.12)', 
+              border: '1.5px solid var(--error)', 
+              borderRadius: 'var(--border-radius-md)',
+              color: 'var(--error)', 
+              fontWeight: '600', 
+              fontSize: '0.88rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.15)'
+            }}
+          >
+            <AlertCircle size={18} style={{ flexShrink: 0 }} />
+            <span>{importError}</span>
+          </div>
+        )}
         <form className="automation-import-form" onSubmit={importFromBraze}>
           <div className="form-group automation-source-field">
             <label className="form-label" htmlFor="braze-source">Braze URL or API identifier</label>
@@ -342,22 +387,21 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
           </div>
         </form>
         {useMockMode && <p className="automation-callout"><b>Demo mode:</b> the current asset is fictional sample data stored in the browser. It does not call Braze. Disable Sandbox Simulation in Settings after the read-only Braze variables are configured.</p>}
-        {importError && <p className="automation-error" role="alert"><AlertCircle size={16} />{importError}</p>}
       </section>
 
       {showDashboard && (
         <>
           <section className="automation-summary">
             <article className="automation-score panel">
-              <span className={`readiness-pill ${audit.status}`}>{formatStatus(audit.status)}</span>
-              <strong>{audit.score}</strong>
+              <span className={`readiness-pill ${currentAudit.status}`}>{formatStatus(currentAudit.status)}</span>
+              <strong>{currentAudit.score}</strong>
               <small>Automated QA score</small>
             </article>
             <article className="automation-metrics panel">
-              <div><strong>{audit.stepCount}</strong><span>Steps</span></div>
-              <div><strong>{audit.messageCount}</strong><span>Messages</span></div>
-              <div><strong>{audit.channelCount}</strong><span>Channels</span></div>
-              <div><strong>{audit.findings.length}</strong><span>Findings</span></div>
+              <div><strong>{selectedMessageId === 'all' ? audit.stepCount : 1}</strong><span>Steps</span></div>
+              <div><strong>{selectedMessageId === 'all' ? audit.messageCount : 1}</strong><span>Messages</span></div>
+              <div><strong>{selectedMessageId === 'all' ? audit.channelCount : 1}</strong><span>Channels</span></div>
+              <div><strong>{currentAudit.findings.length}</strong><span>Findings</span></div>
             </article>
             <article className="automation-source-summary panel">
               <p className="eyebrow">Current asset</p>
@@ -516,7 +560,7 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
               <div className="severity-filters" aria-label="Finding severity filters">
                 {['all', 'blocker', 'high', 'medium', 'low'].map((severity) => (
                   <button key={severity} type="button" className={severityFilter === severity ? 'active' : ''} onClick={() => setSeverityFilter(severity)}>
-                    {severity === 'all' ? `All ${audit.findings.length}` : `${severity} ${audit.counts[severity] || 0}`}
+                    {severity === 'all' ? `All ${currentAudit.findings.length}` : `${severity} ${currentAudit.counts[severity] || 0}`}
                   </button>
                 ))}
               </div>
