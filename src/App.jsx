@@ -571,10 +571,21 @@ export default function App() {
       }
     }
     
-    if (loadedCampaignId && campaigns.some(c => c.id === loadedCampaignId)) {
+    const activeJourneyId = automationState?.journey?.id;
+    const activeBrazeId = automationState?.journey?.brazeCampaignId || activeJourneyId;
+    
+    // Find matching campaign in catalog
+    const matchingCampaign = campaigns.find(c => 
+      (loadedCampaignId && c.id === loadedCampaignId) ||
+      (activeJourneyId && c.id === activeJourneyId) ||
+      (activeBrazeId && c.brazeCampaignId && c.brazeCampaignId === activeBrazeId) ||
+      (automationState.journey.name && c.name === automationState.journey.name)
+    );
+    
+    if (matchingCampaign) {
       // Overwrite existing card
       const updated = campaigns.map(c => {
-        if (c.id === loadedCampaignId) {
+        if (c.id === matchingCampaign.id) {
           const tempC = {
             ...c,
             savedPreApproval: preApprovalState,
@@ -595,8 +606,8 @@ export default function App() {
             iamButtonText,
             iamButtonLink,
             figmaTexts,
-            savedJourney: automationState?.journey || null,
-            savedAudit: automationState?.audit || null,
+            savedJourney: automationState?.journey || c.savedJourney || null,
+            savedAudit: automationState?.audit || c.savedAudit || null,
             savedApproval: approvalState || null,
             savedPreApproval: preApprovalState || null
           };
@@ -604,11 +615,12 @@ export default function App() {
         return c;
       });
       localStorage.setItem('omniqa_braze_catalog', JSON.stringify(updated));
-      alert(`Successfully saved updated QA state for campaign template "${automationState.journey.name}" in library!`);
+      setLoadedCampaignId(matchingCampaign.id); // sync loaded campaign ID
+      alert(`Successfully saved updated QA state to existing campaign card: "${matchingCampaign.name}"`);
     } else {
       // Open modal to enter new name
       setQuickSaveName(automationState?.journey?.name || 'My Campaign Template');
-      setQuickSaveId(automationState?.journey?.id || '');
+      setQuickSaveId(automationState?.journey?.brazeCampaignId || automationState?.journey?.id || '');
       setShowQuickSaveModal(true);
     }
   };
@@ -1295,8 +1307,17 @@ export default function App() {
               onSubmit={(e) => {
                 e.preventDefault();
                 const saved = localStorage.getItem('omniqa_braze_catalog');
-                const campaigns = saved ? JSON.parse(saved) : [];
-                const newId = Date.now().toString();
+                let campaigns = [];
+                if (saved) {
+                  try { campaigns = JSON.parse(saved); } catch (err) { console.error(err); }
+                }
+
+                const targetBrazeId = quickSaveId.trim();
+                const existingIndex = campaigns.findIndex(c => 
+                  (targetBrazeId && c.brazeCampaignId === targetBrazeId) ||
+                  (c.name.trim().toLowerCase() === quickSaveName.trim().toLowerCase())
+                );
+
                 const tempC = {
                   savedPreApproval: preApprovalState,
                   savedApproval: approvalState,
@@ -1304,32 +1325,62 @@ export default function App() {
                 };
                 const computedStatus = getCampaignStatus(tempC);
 
-                const newCampaign = {
-                  id: newId,
-                  name: quickSaveName,
-                  brazeCampaignId: quickSaveId.trim(),
-                  channel: 'email',
-                  version: 'v1.0',
-                  status: computedStatus,
-                  lastSynced: 'Never',
-                  subjectLine,
-                  brazeHtml,
-                  pushBody,
-                  smsBody,
-                  iamHeader,
-                  iamBody,
-                  iamButtonText,
-                  iamButtonLink,
-                  figmaTexts,
-                  savedJourney: automationState?.journey || null,
-                  savedAudit: automationState?.audit || null,
-                  savedApproval: approvalState || null,
-                  savedPreApproval: preApprovalState || null
-                };
-                localStorage.setItem('omniqa_braze_catalog', JSON.stringify([newCampaign, ...campaigns]));
-                setLoadedCampaignId(newId);
+                if (existingIndex > -1) {
+                  // Update existing card in catalog
+                  const targetCampaign = campaigns[existingIndex];
+                  campaigns[existingIndex] = {
+                    ...targetCampaign,
+                    name: quickSaveName,
+                    brazeCampaignId: targetBrazeId,
+                    status: computedStatus,
+                    lastSynced: 'Just now (Updated)',
+                    subjectLine,
+                    brazeHtml,
+                    pushBody,
+                    smsBody,
+                    iamHeader,
+                    iamBody,
+                    iamButtonText,
+                    iamButtonLink,
+                    figmaTexts,
+                    savedJourney: automationState?.journey || targetCampaign.savedJourney || null,
+                    savedAudit: automationState?.audit || targetCampaign.savedAudit || null,
+                    savedApproval: approvalState || null,
+                    savedPreApproval: preApprovalState || null
+                  };
+                  localStorage.setItem('omniqa_braze_catalog', JSON.stringify(campaigns));
+                  setLoadedCampaignId(targetCampaign.id);
+                  alert(`Successfully updated existing template card: "${quickSaveName}"`);
+                } else {
+                  // Add new card
+                  const newId = Date.now().toString();
+                  const newCampaign = {
+                    id: newId,
+                    name: quickSaveName,
+                    brazeCampaignId: targetBrazeId,
+                    channel: 'email',
+                    version: 'v1.0',
+                    status: computedStatus,
+                    lastSynced: 'Never',
+                    subjectLine,
+                    brazeHtml,
+                    pushBody,
+                    smsBody,
+                    iamHeader,
+                    iamBody,
+                    iamButtonText,
+                    iamButtonLink,
+                    figmaTexts,
+                    savedJourney: automationState?.journey || null,
+                    savedAudit: automationState?.audit || null,
+                    savedApproval: approvalState || null,
+                    savedPreApproval: preApprovalState || null
+                  };
+                  localStorage.setItem('omniqa_braze_catalog', JSON.stringify([newCampaign, ...campaigns]));
+                  setLoadedCampaignId(newId);
+                  alert(`Successfully saved campaign "${quickSaveName}" to the library!`);
+                }
                 setShowQuickSaveModal(false);
-                alert(`Successfully saved campaign "${quickSaveName}" to the library!`);
               }} 
               className="panel" 
               style={{

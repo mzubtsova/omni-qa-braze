@@ -545,23 +545,61 @@ export default function Catalog({
     };
     const computedStatus = getCampaignStatus(tempC);
 
-    const newCampaign = {
-      id: Date.now().toString(),
-      name: newCampaignName,
-      brazeCampaignId: newCampaignId.trim(),
-      channel: 'email', // default primary
-      version: 'v1.0',
-      status: computedStatus,
-      lastSynced: 'Never',
-      ...currentCampaignState, // Inject all active HTML/Push/SMS workspace values
-      savedJourney: automationState?.journey || null,
-      savedAudit: automationState?.audit || null,
-      savedApproval: approvalState || null,
-      savedPreApproval: preApprovalState || null
-    };
+    const targetBrazeId = newCampaignId.trim();
+    const existingIndex = campaigns.findIndex(c => 
+      (targetBrazeId && c.brazeCampaignId === targetBrazeId) ||
+      (c.name.trim().toLowerCase() === newCampaignName.trim().toLowerCase())
+    );
 
-    const updated = [newCampaign, ...campaigns];
-    saveCatalog(updated);
+    if (existingIndex > -1) {
+      // Overwrite/update existing card instead of creating a duplicate
+      const targetCampaign = campaigns[existingIndex];
+      const updated = campaigns.map((c, idx) => {
+        if (idx === existingIndex) {
+          return {
+            ...c,
+            name: newCampaignName,
+            brazeCampaignId: targetBrazeId,
+            status: computedStatus,
+            lastSynced: 'Just now (Updated)',
+            ...currentCampaignState,
+            savedJourney: automationState?.journey || c.savedJourney || null,
+            savedAudit: automationState?.audit || c.savedAudit || null,
+            savedApproval: approvalState || null,
+            savedPreApproval: preApprovalState || null
+          };
+        }
+        return c;
+      });
+      saveCatalog(updated);
+      if (setLoadedCampaignId) {
+        setLoadedCampaignId(targetCampaign.id);
+      }
+      alert(`Updated existing template card: "${newCampaignName}"`);
+    } else {
+      // Add new card
+      const newId = Date.now().toString();
+      const newCampaign = {
+        id: newId,
+        name: newCampaignName,
+        brazeCampaignId: targetBrazeId,
+        channel: 'email', // default primary
+        version: 'v1.0',
+        status: computedStatus,
+        lastSynced: 'Never',
+        ...currentCampaignState, // Inject all active HTML/Push/SMS workspace values
+        savedJourney: automationState?.journey || null,
+        savedAudit: automationState?.audit || null,
+        savedApproval: approvalState || null,
+        savedPreApproval: preApprovalState || null
+      };
+      saveCatalog([newCampaign, ...campaigns]);
+      if (setLoadedCampaignId) {
+        setLoadedCampaignId(newId);
+      }
+      alert(`Successfully saved campaign template: "${newCampaignName}"`);
+    }
+
     setNewCampaignName('');
     setNewCampaignId('');
     setShowAddForm(false);
