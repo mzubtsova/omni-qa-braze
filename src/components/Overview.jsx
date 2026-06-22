@@ -191,7 +191,7 @@ OmniQA Quality Assurance Engine`;
 
   return (
     <div className="fade-in">
-      {automationState && (
+      {automationState && automationState.journey && automationState.audit && (
         <section className="overview-automation-strip" onClick={() => setActiveTab('automation')} style={{ cursor: 'pointer' }}>
           <div>
             <p className="eyebrow">Latest journey audit</p>
