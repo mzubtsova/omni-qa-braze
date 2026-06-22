@@ -1,8 +1,8 @@
-export const demoJourney = {
+export const onboardingDemo = {
   id: 'demo-onboarding-canvas',
   type: 'canvas',
   name: 'New Member Onboarding Journey',
-  description: 'A safe multistage fixture used to demonstrate automated pre-deployment QA.',
+  description: 'A multi-channel onboarding flow with copy discrepancy checks.',
   source: 'sandbox',
   draft: true,
   enabled: false,
@@ -87,3 +87,98 @@ export const demoJourney = {
     }
   ]
 };
+
+export const reengagementDemo = {
+  id: 'demo-reengagement-campaign',
+  type: 'campaign',
+  name: 'Flash Sale Re-engagement Campaign',
+  description: 'An urgent promotional push/SMS campaign with liquid warnings.',
+  source: 'sandbox',
+  draft: true,
+  enabled: false,
+  scheduleType: 'scheduled',
+  tags: ['promo', 're-engage'],
+  conversionBehaviors: [
+    { type: 'Performs Custom Event', window: 86400, custom_event_name: 'purchase' }
+  ],
+  steps: [
+    {
+      id: 'campaign-messages',
+      name: 'Campaign Messages',
+      type: 'message',
+      messages: [
+        {
+          id: 'reengage-push',
+          stepId: 'campaign-messages',
+          stepName: 'Campaign Messages',
+          name: 'Urgent Push Alert',
+          channel: 'push',
+          title: '🔥 FLASH SALE: 24 Hours Only!!!',
+          body: 'Hey {{user.first_name}}! Don\'t miss out on free shipping and 30% off your next checkout order. Delays will block your rewards!',
+          actionUrl: 'app://flash-sale'
+        },
+        {
+          id: 'reengage-sms',
+          stepId: 'campaign-messages',
+          stepName: 'Campaign Messages',
+          name: 'Urgent SMS Variant',
+          channel: 'sms',
+          body: 'OmniQA Rewards: Use code REENGAGE30 for 30% off! Closes soon! Redeem at http://example.com/reengage'
+        }
+      ]
+    }
+  ]
+};
+
+export const abandonmentDemo = {
+  id: 'demo-abandonment-canvas',
+  type: 'canvas',
+  name: 'Cart Abandonment Rescue Canvas',
+  description: 'A checkout recovery flow containing broken liquid delimiters.',
+  source: 'sandbox',
+  draft: true,
+  enabled: false,
+  scheduleType: 'action_based',
+  tags: ['lifecycle', 'cart-abandonment'],
+  conversionBehaviors: [
+    { type: 'Performs Custom Event', window: 172800, custom_event_name: 'checkout' }
+  ],
+  steps: [
+    {
+      id: 'step-cart-email',
+      name: 'Abandoned Cart Email Step',
+      type: 'message',
+      messages: [
+        {
+          id: 'cart-email-1',
+          stepId: 'step-cart-email',
+          stepName: 'Abandoned Cart Email Step',
+          name: 'Cart Recovery Email',
+          channel: 'email',
+          subject: 'Did you forget something? {{user.first_name',
+          preheader: 'Your cart is waiting for you.',
+          body: '<div style="color:#ffffff; background:#ffffff;"><h1>Complete your order</h1><p>We saved your cart items.</p><a href="http://example.com/checkout">Return to Checkout</a></div>',
+          from: 'support@brand.com'
+        }
+      ]
+    },
+    {
+      id: 'step-cart-push',
+      name: 'Abandoned Cart Push Step',
+      type: 'message',
+      messages: [
+        {
+          id: 'cart-push-1',
+          stepId: 'step-cart-push',
+          stepName: 'Abandoned Cart Push Step',
+          name: 'Cart Recovery Push',
+          channel: 'push',
+          title: 'Still interested?',
+          body: 'We are holding your items for a limited time. Return to checkout now!'
+        }
+      ]
+    }
+  ]
+};
+
+export const demoJourneys = [onboardingDemo, reengagementDemo, abandonmentDemo];

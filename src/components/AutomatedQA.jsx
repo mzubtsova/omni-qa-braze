@@ -7,7 +7,7 @@ import {
   ShieldCheck,
   Save
 } from 'lucide-react';
-import { demoJourney } from '../data/demoJourney';
+import { demoJourneys } from '../data/demoJourney';
 import { importBrazeJourney } from '../services/braze';
 import { auditJourneyAutomatically, getChannelLabel, normalizeBrazePayload } from '../utils/campaignAudit';
 
@@ -21,6 +21,7 @@ function formatStatus(status) {
 
 export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMode, figmaTexts = [], unifiedQAMode, setUnifiedQAMode, onQuickSave, automationState }) {
   const [journey, setJourney] = useState(() => automationState?.journey || null);
+  const [showDemoSelector, setShowDemoSelector] = useState(false);
   const [sourceInput, setSourceInput] = useState('');
   const [assetType, setAssetType] = useState('canvas');
   const [postLaunchDraftVersion, setPostLaunchDraftVersion] = useState(true);
@@ -142,10 +143,11 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
     localStorage.setItem('omniqa_finding_notes', JSON.stringify(findingNotes));
   }, [findingNotes]);
 
-  const loadDemo = () => {
-    setJourney(demoJourney);
+  const loadSelectedDemo = (demo) => {
+    setJourney(demo);
     setImportError('');
     setSelectedMessageId('all');
+    setShowDemoSelector(false);
   };
 
   const importFromBraze = async (event) => {
@@ -349,9 +351,74 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
             <h3>Braze Campaign or Canvas</h3>
           </div>
           {!sourceInput.trim() && (
-            <button className="btn btn-secondary compact-action" type="button" onClick={loadDemo}>Load fictional demo</button>
+            <button className="btn btn-secondary compact-action" type="button" onClick={() => setShowDemoSelector(true)}>Load fictional demo</button>
           )}
         </div>
+        {showDemoSelector && (
+          <div className="demo-selector-container" style={{
+            marginTop: '0.75rem',
+            marginBottom: '1rem',
+            padding: '1.25rem',
+            background: 'var(--bg-tertiary)',
+            border: '1.5px solid var(--border-color)',
+            borderRadius: 'var(--border-radius-md)',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)' }}>Select a fictional project to load:</h4>
+              <button 
+                type="button" 
+                className="btn btn-secondary compact-action" 
+                onClick={() => setShowDemoSelector(false)} 
+                style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
+              >
+                Close
+              </button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+              {demoJourneys.map(demo => (
+                <div 
+                  key={demo.id} 
+                  onClick={() => loadSelectedDemo(demo)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--accent-cyan)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(6, 182, 212, 0.15)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border-color)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                  style={{
+                    padding: '1rem',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--border-radius-sm)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <div>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--accent-cyan)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {demo.type === 'canvas' ? '🔮 Canvas' : '✉️ Campaign'}
+                    </span>
+                    <h5 style={{ margin: '0.25rem 0', fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-primary)' }}>{demo.name}</h5>
+                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{demo.description}</p>
+                  </div>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--accent-cyan)', fontWeight: '600', alignSelf: 'flex-end', marginTop: '0.5rem' }}>Load project →</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {importError && (
           <div 
             className="automation-error" 
