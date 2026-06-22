@@ -233,6 +233,7 @@ export default function App() {
   // Lifted severity filter state for campaign issues tracking
   const [filterSeverity, setFilterSeverity] = useState('all');
   const [automationState, setAutomationState] = useState(null);
+  const [loadedCampaignId, setLoadedCampaignId] = useState(null);
   const [preApprovalStatus, setPreApprovalStatus] = useState({ complete: 0, total: 0, ready: false });
   const lastJourneyId = useRef(null);
 
@@ -469,7 +470,6 @@ export default function App() {
     }
   }, [unifiedQAMode, activeReviewTab]);
 
-  const [loadedCampaignId, setLoadedCampaignId] = useState(null);
   const [auditingComment, setAuditingComment] = useState('🕵️‍♂️ Hunting down campaign bugs...');
   const [showQuickSaveModal, setShowQuickSaveModal] = useState(false);
   const [quickSaveName, setQuickSaveName] = useState('');
