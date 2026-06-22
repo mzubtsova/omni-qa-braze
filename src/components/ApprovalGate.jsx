@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { AlertCircle, ClipboardCheck, Download, Mail, ShieldCheck, Save } from 'lucide-react';
 import { canApproveAudit } from '../utils/campaignAudit';
 
@@ -8,24 +8,6 @@ const approvalChecks = [
   ['personalization', 'Liquid variables, fallback values, and channel eligibility were tested.'],
   ['evidence', 'Test-send evidence and required stakeholder approvals are documented.']
 ];
-
-const emptyApproval = {
-  reviewer: '',
-  checks: { audience: false, content: false, personalization: false, evidence: false },
-  confirmHumanReview: false,
-  decisionNote: '',
-  status: 'pending',
-  approvedAt: ''
-};
-
-function loadStoredApproval() {
-  try {
-    const stored = JSON.parse(localStorage.getItem('omniqa_approval') || 'null');
-    return stored ? { ...emptyApproval, ...stored, checks: { ...emptyApproval.checks, ...(stored.checks || {}) } } : emptyApproval;
-  } catch {
-    return emptyApproval;
-  }
-}
 
 function formatStatus(status) {
   return {
@@ -66,14 +48,12 @@ READINESS BOUNDARY
 This report records a QA decision. A person still controls activation and scheduling in Braze.`;
 }
 
-export default function ApprovalGate({ automationState, preApprovalStatus, onApprovalChange, onQuickSave }) {
-  const [approval, setApproval] = useState(loadStoredApproval);
+export default function ApprovalGate({ automationState, preApprovalStatus, approval, setApproval, onApprovalChange, onQuickSave }) {
   const journey = automationState?.journey;
   const audit = automationState?.audit;
   const approvalAllowed = useMemo(() => audit ? canApproveAudit(audit, approval) && preApprovalStatus?.ready : false, [audit, approval, preApprovalStatus]);
 
   useEffect(() => {
-    localStorage.setItem('omniqa_approval', JSON.stringify(approval));
     onApprovalChange?.(approval);
   }, [approval, onApprovalChange]);
 
@@ -108,11 +88,7 @@ export default function ApprovalGate({ automationState, preApprovalStatus, onApp
   };
 
   const printReport = () => {
-    document.body.classList.add('print-automation');
-    const cleanup = () => document.body.classList.remove('print-automation');
-    window.addEventListener('afterprint', cleanup, { once: true });
     window.print();
-    setTimeout(cleanup, 1500);
   };
 
   return (

@@ -1,16 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { MessageSquareText, Plus, Trash2 } from 'lucide-react';
-
-const STORAGE_KEY = 'omniqa_preapproval_checklist';
-
-const defaultItems = [
-  'Confirm audience, exclusions, entry criteria, and frequency controls.',
-  'Verify campaign schedule, time zone, and launch window.',
-  'Review every message variant, sender, link, and destination.',
-  'Test Liquid variables, fallback values, and channel eligibility.',
-  'Complete test sends or device previews for every active channel.',
-  'Document stakeholder approval and any accepted exceptions.'
-];
 
 function createId() {
   return crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -20,42 +9,9 @@ function makeItem(text) {
   return { id: createId(), text, done: false, note: '' };
 }
 
-function loadState() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    if (stored) return stored;
-  } catch {
-    // Fall through to a clean fictional workspace.
-  }
-  return {
-    setup: { campaignName: '', campaignType: '', owner: '', launchDate: '' },
-    items: defaultItems.map(makeItem),
-    generalNotes: ''
-  };
-}
-
-export default function PreApprovalChecklist({ automationState, onStatusChange }) {
-  const [state, setState] = useState(loadState);
+export default function PreApprovalChecklist({ state, setState }) {
   const [newCheckpoint, setNewCheckpoint] = useState('');
   const [openNotes, setOpenNotes] = useState([]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    const complete = state.items.filter((item) => item.done).length;
-    onStatusChange?.({ complete, total: state.items.length, ready: state.items.length > 0 && complete === state.items.length });
-  }, [state, onStatusChange]);
-
-  useEffect(() => {
-    if (!automationState?.journey) return;
-    setState((current) => ({
-      ...current,
-      setup: {
-        ...current.setup,
-        campaignName: current.setup.campaignName || automationState.journey.name || '',
-        campaignType: current.setup.campaignType || automationState.journey.type || ''
-      }
-    }));
-  }, [automationState?.journey]);
 
   const updateSetup = (key, value) => setState((current) => ({ ...current, setup: { ...current.setup, [key]: value } }));
   const updateItem = (id, updates) => setState((current) => ({ ...current, items: current.items.map((item) => item.id === id ? { ...item, ...updates } : item) }));

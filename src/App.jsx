@@ -19,6 +19,33 @@ import AutomatedQA from './components/AutomatedQA';
 import ApprovalGate from './components/ApprovalGate';
 import PreApprovalChecklist from './components/PreApprovalChecklist';
 
+const defaultPreApprovalItems = [
+  'Confirm audience, exclusions, entry criteria, and frequency controls.',
+  'Verify campaign schedule, time zone, and launch window.',
+  'Review every message variant, sender, link, and destination.',
+  'Test Liquid variables, fallback values, and channel eligibility.',
+  'Complete test sends or device previews for every active channel.',
+  'Document stakeholder approval and any accepted exceptions.'
+];
+
+function getCampaignStatus(c) {
+  const preApproval = c?.savedPreApproval;
+  const approval = c?.savedApproval;
+
+  const totalChecks = preApproval?.items?.length || 0;
+  const completedChecks = preApproval?.items?.filter(item => item.done).length || 0;
+  const isPreApproved = totalChecks > 0 && completedChecks === totalChecks;
+  const isApproved = approval?.status === 'approved';
+
+  if (isPreApproved && isApproved) {
+    return 'Ready for Deploy';
+  } else if (completedChecks > 0 || isApproved) {
+    return 'In Progress';
+  } else {
+    return 'Not Started';
+  }
+}
+
 import { auditFigmaAndBrazeCopy, auditSpamAndDeliverability, predictCampaignEngagement } from './services/gemini';
 import { fetchFigmaTextLayers } from './services/figma';
 import { validateLiquidSyntax, auditHtmlLinks, checkWcagContrast, auditImages } from './utils/validators';
@@ -205,6 +232,74 @@ export default function App() {
   const [filterSeverity, setFilterSeverity] = useState('all');
   const [automationState, setAutomationState] = useState(null);
   const [preApprovalStatus, setPreApprovalStatus] = useState({ complete: 0, total: 0, ready: false });
+
+  // Hoisted states
+  const [preApprovalState, setPreApprovalState] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('omniqa_preapproval_checklist') || 'null');
+      if (stored) return stored;
+    } catch {
+      // console.warn("Failed to parse preapproval");
+    }
+    return {
+      setup: { campaignName: '', campaignType: '', owner: '', launchDate: '' },
+      items: defaultPreApprovalItems.map((text, idx) => ({
+        id: `${Date.now()}-${idx}-${Math.random().toString(16).slice(2, 6)}`,
+        text,
+        done: false,
+        note: ''
+      })),
+      generalNotes: ''
+    };
+  });
+
+  const [approvalState, setApprovalState] = useState(() => {
+    const emptyApproval = {
+      reviewer: '',
+      checks: { audience: false, content: false, personalization: false, evidence: false },
+      confirmHumanReview: false,
+      decisionNote: '',
+      status: 'pending',
+      approvedAt: ''
+    };
+    try {
+      const stored = JSON.parse(localStorage.getItem('omniqa_approval') || 'null');
+      return stored ? { ...emptyApproval, ...stored, checks: { ...emptyApproval.checks, ...(stored.checks || {}) } } : emptyApproval;
+    } catch {
+      return emptyApproval;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('omniqa_preapproval_checklist', JSON.stringify(preApprovalState));
+    const complete = preApprovalState?.items?.filter((item) => item.done).length || 0;
+    const total = preApprovalState?.items?.length || 0;
+    setPreApprovalStatus({
+      complete,
+      total,
+      ready: total > 0 && complete === total
+    });
+  }, [preApprovalState]);
+
+  useEffect(() => {
+    localStorage.setItem('omniqa_approval', JSON.stringify(approvalState));
+  }, [approvalState]);
+
+  useEffect(() => {
+    if (!automationState?.journey) return;
+    setPreApprovalState((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        setup: {
+          ...current.setup,
+          campaignName: current.setup.campaignName || automationState.journey.name || '',
+          campaignType: current.setup.campaignType || automationState.journey.type || ''
+        }
+      };
+    });
+  }, [automationState?.journey]);
+
   const [unifiedQAMode, setUnifiedQAMode] = useState(() => {
     return localStorage.getItem('omniqa_unified_qa') === 'true';
   });
@@ -234,7 +329,10 @@ export default function App() {
       };
     });
   }, []);
-  const handleApprovalChange = useCallback((approval) => setAutomationState((current) => current ? { ...current, approval } : current), []);
+  const handleApprovalChange = useCallback((approval) => {
+    setApprovalState(approval);
+    setAutomationState((current) => current ? { ...current, approval } : current);
+  }, []);
   const handlePreApprovalChange = useCallback((status) => setPreApprovalStatus(status), []);
 
   const handleQuickSave = () => {
@@ -257,10 +355,16 @@ export default function App() {
       // Overwrite existing card
       const updated = campaigns.map(c => {
         if (c.id === loadedCampaignId) {
+          const tempC = {
+            savedPreApproval: preApprovalState,
+            savedApproval: approvalState
+          };
+          const computedStatus = getCampaignStatus(tempC);
+
           return {
             ...c,
             lastSynced: 'Just now (Updated)',
-            status: 'Live',
+            status: computedStatus,
             subjectLine,
             brazeHtml,
             pushBody,
@@ -272,7 +376,8 @@ export default function App() {
             figmaTexts,
             savedJourney: automationState?.journey || null,
             savedAudit: automationState?.audit || null,
-            savedApproval: automationState?.approval || null
+            savedApproval: approvalState || null,
+            savedPreApproval: preApprovalState || null
           };
         }
         return c;
@@ -347,6 +452,35 @@ export default function App() {
     } else {
       setAutomationState(null);
     }
+
+    if (campaign.savedPreApproval) {
+      setPreApprovalState(campaign.savedPreApproval);
+    } else {
+      setPreApprovalState({
+        setup: { campaignName: campaign.name || '', campaignType: '', owner: '', launchDate: '' },
+        items: defaultPreApprovalItems.map((text, idx) => ({
+          id: `${Date.now()}-${idx}-${Math.random().toString(16).slice(2, 6)}`,
+          text,
+          done: false,
+          note: ''
+        })),
+        generalNotes: ''
+      });
+    }
+
+    if (campaign.savedApproval) {
+      setApprovalState(campaign.savedApproval);
+    } else {
+      setApprovalState({
+        reviewer: '',
+        checks: { audience: false, content: false, personalization: false, evidence: false },
+        confirmHumanReview: false,
+        decisionNote: '',
+        status: 'pending',
+        approvedAt: ''
+      });
+    }
+
     setActiveTab('overview');
   };
 
@@ -640,6 +774,11 @@ export default function App() {
   const printLinkIssues = auditHtmlLinks(brazeHtml);
   const printContrastIssues = checkWcagContrast(brazeHtml);
   const printImageIssues = auditImages(brazeHtml);
+  const missingPreApprovalCount = preApprovalState?.items?.filter(item => !item.done).length || 0;
+  const missingApprovalChecksCount = Object.values(approvalState?.checks || {}).filter(checked => !checked).length;
+  const reviewerMissing = !approvalState?.reviewer?.trim();
+  const approvalMissing = approvalState?.status !== 'approved';
+  const isReportIncomplete = missingPreApprovalCount > 0 || missingApprovalChecksCount > 0 || reviewerMissing || approvalMissing;
   const activeTitle = {
     overview: 'Campaign Overview',
     automation: 'Automated QA',
@@ -887,11 +1026,11 @@ export default function App() {
                 )}
 
                 {activeReviewTab === 'approval' && (
-                  <ApprovalGate automationState={automationState} preApprovalStatus={preApprovalStatus} onApprovalChange={handleApprovalChange} onQuickSave={handleQuickSave} />
+                  <ApprovalGate automationState={automationState} preApprovalStatus={preApprovalStatus} approval={approvalState} setApproval={setApprovalState} onApprovalChange={handleApprovalChange} onQuickSave={handleQuickSave} />
                 )}
 
                 {activeReviewTab === 'preapproval' && (
-                  <PreApprovalChecklist automationState={automationState} onStatusChange={handlePreApprovalChange} />
+                  <PreApprovalChecklist automationState={automationState} state={preApprovalState} setState={setPreApprovalState} onStatusChange={handlePreApprovalChange} />
                 )}
               </>
             )}
@@ -915,6 +1054,8 @@ export default function App() {
               figmaTexts
             }}
             automationState={automationState}
+            preApprovalState={preApprovalState}
+            approvalState={approvalState}
           />
         )}
 
@@ -944,13 +1085,19 @@ export default function App() {
                 const saved = localStorage.getItem('omniqa_braze_catalog');
                 const campaigns = saved ? JSON.parse(saved) : [];
                 const newId = Date.now().toString();
+                const tempC = {
+                  savedPreApproval: preApprovalState,
+                  savedApproval: approvalState
+                };
+                const computedStatus = getCampaignStatus(tempC);
+
                 const newCampaign = {
                   id: newId,
                   name: quickSaveName,
                   brazeCampaignId: quickSaveId.trim(),
                   channel: 'email',
                   version: 'v1.0',
-                  status: 'Draft',
+                  status: computedStatus,
                   lastSynced: 'Never',
                   subjectLine,
                   brazeHtml,
@@ -963,7 +1110,8 @@ export default function App() {
                   figmaTexts,
                   savedJourney: automationState?.journey || null,
                   savedAudit: automationState?.audit || null,
-                  savedApproval: automationState?.approval || null
+                  savedApproval: approvalState || null,
+                  savedPreApproval: preApprovalState || null
                 };
                 localStorage.setItem('omniqa_braze_catalog', JSON.stringify([newCampaign, ...campaigns]));
                 setLoadedCampaignId(newId);
@@ -1040,6 +1188,54 @@ export default function App() {
           <strong>Generated By:</strong> OmniQA Engine
         </div>
       </div>
+
+      {isReportIncomplete ? (
+        <div style={{ 
+          marginBottom: '20px', 
+          padding: '16px', 
+          backgroundColor: '#fef2f2', 
+          border: '2px solid #ef4444', 
+          borderRadius: '8px',
+          color: '#991b1b'
+        }}>
+          <h3 style={{ margin: '0 0 8px 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            ⚠️ STAGE INCOMPLETE: Missing Deployment Steps
+          </h3>
+          <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.85rem', lineHeight: '1.5' }}>
+            {missingPreApprovalCount > 0 && (
+              <li>Pre-Approval Checklist is incomplete (<strong>{missingPreApprovalCount}</strong> checkpoints pending).</li>
+            )}
+            {missingApprovalChecksCount > 0 && (
+              <li>Final Human Readiness Checks are incomplete (<strong>{missingApprovalChecksCount}</strong> checks pending).</li>
+            )}
+            {reviewerMissing && (
+              <li>Reviewer Name is not assigned.</li>
+            )}
+            {approvalMissing && (
+              <li>Final Human Review Sign-off is pending (Approve readiness was not clicked).</li>
+            )}
+          </ul>
+          <p style={{ margin: '8px 0 0 0', fontSize: '0.8rem', fontStyle: 'italic', color: '#7f1d1d' }}>
+            Note: This QA report contains warning flags for unverified steps. These must be completed in OmniQA before production deploy.
+          </p>
+        </div>
+      ) : (
+        <div style={{ 
+          marginBottom: '20px', 
+          padding: '16px', 
+          backgroundColor: '#f0fdf4', 
+          border: '2px solid #22c55e', 
+          borderRadius: '8px',
+          color: '#166534'
+        }}>
+          <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            ✅ QA STAGE COMPLETE: Approved & Ready for Deploy
+          </h3>
+          <p style={{ margin: 0, fontSize: '0.85rem' }}>
+            All automated tests, pre-approval checkpoints, and final human readiness controls have been 100% verified and approved by <strong>{approvalState.reviewer}</strong> on {new Date(approvalState.approvedAt).toLocaleString()}.
+          </p>
+        </div>
+      )}
 
       <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
         <h3 style={{ margin: '0 0 8px 0', fontSize: '1rem', color: '#0f172a' }}>Campaign Details</h3>
@@ -1190,6 +1386,90 @@ export default function App() {
             </tbody>
           </table>
         )}
+      </div>
+      {/* Pre-Approval Checklist Section */}
+      <div className="print-section">
+        <h3>4. Pre-Approval Checklist</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
+          {preApprovalState?.items?.map((item) => (
+            <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1rem', color: item.done ? '#059669' : '#dc2626', fontWeight: 'bold' }}>
+                {item.done ? '✓' : '⚠️ [MISSING]'}
+              </span>
+              <span style={{ color: item.done ? '#0f172a' : '#dc2626' }}>
+                {item.text}
+              </span>
+              {item.note && (
+                <span style={{ fontStyle: 'italic', color: '#64748b', marginLeft: '8px' }}>
+                  (Note: {item.note})
+                </span>
+              )}
+            </div>
+          ))}
+          {preApprovalState?.generalNotes && (
+            <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#f8fafc', borderLeft: '3px solid #cbd5e1', fontSize: '0.8rem', fontStyle: 'italic' }}>
+              <strong>General Reviewer Notes:</strong> {preApprovalState.generalNotes}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Human Approval Gate Section */}
+      <div className="print-section">
+        <h3>5. Final Reviewer Approval</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
+          {Object.entries(approvalState?.checks || {}).map(([key, checked]) => {
+            const label = {
+              audience: 'Audience & schedule verified in Braze',
+              content: 'Every message variant, link, sender, and destination reviewed',
+              personalization: 'Liquid variables, fallback values, and channel eligibility tested',
+              evidence: 'Test-send evidence and required stakeholder approvals documented'
+            }[key] || key;
+            return (
+              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1rem', color: checked ? '#059669' : '#dc2626', fontWeight: 'bold' }}>
+                  {checked ? '✓' : '⚠️ [MISSING]'}
+                </span>
+                <span style={{ color: checked ? '#0f172a' : '#dc2626' }}>
+                  {label}
+                </span>
+              </div>
+            );
+          })}
+          
+          <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <div>
+                <strong>Reviewer Name:</strong>{' '}
+                {approvalState?.reviewer ? (
+                  approvalState.reviewer
+                ) : (
+                  <span style={{ color: '#dc2626', fontWeight: 'bold' }}>⚠️ [MISSING] Reviewer Name not specified</span>
+                )}
+              </div>
+              <div>
+                <strong>Status:</strong>{' '}
+                <span style={{ 
+                  color: approvalState?.status === 'approved' ? '#059669' : '#dc2626', 
+                  fontWeight: 'bold',
+                  textTransform: 'uppercase'
+                }}>
+                  {approvalState?.status === 'approved' ? 'Approved' : 'Pending Review'}
+                </span>
+              </div>
+            </div>
+            {approvalState?.approvedAt && (
+              <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '6px' }}>
+                <strong>Approved At:</strong> {new Date(approvalState.approvedAt).toLocaleString()}
+              </div>
+            )}
+            {approvalState?.decisionNote && (
+              <div style={{ fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic', borderTop: '1px dashed #cbd5e1', paddingTop: '6px', marginTop: '6px' }}>
+                <strong>Decision Note:</strong> &quot;{approvalState.decisionNote}&quot;
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
     </>

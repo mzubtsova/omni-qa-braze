@@ -127,7 +127,7 @@ const SEED_CAMPAIGNS = [
   }
 ];
 
-const getBrazeDashboardUrl = (campaignId) => {
+const getBrazeDashboardUrl = (campaignId, type) => {
   const endpoint = localStorage.getItem('braze_endpoint') || 'https://rest.iad-01.braze.com';
   let domain = 'dashboard.braze.com';
   
@@ -139,18 +139,43 @@ const getBrazeDashboardUrl = (campaignId) => {
   else if (endpoint.includes('eu')) domain = 'dashboard-eu.braze.com';
   else if (endpoint.includes('cn')) domain = 'dashboard.braze.com.cn';
 
+  const isCanvas = type === 'canvas' || (campaignId && String(campaignId).includes('canvas'));
+
   if (campaignId) {
+    if (isCanvas) {
+      return `https://${domain}/canvas/editor/${campaignId}/details`;
+    }
     return `https://${domain}/campaigns/editor/${campaignId}/details`;
   }
-  return `https://${domain}/campaigns`;
+  return `https://${domain}/${isCanvas ? 'canvas' : 'campaigns'}`;
 };
+
+export function getCampaignStatus(c) {
+  const preApproval = c?.savedPreApproval;
+  const approval = c?.savedApproval;
+
+  const totalChecks = preApproval?.items?.length || 0;
+  const completedChecks = preApproval?.items?.filter(item => item.done).length || 0;
+  const isPreApproved = totalChecks > 0 && completedChecks === totalChecks;
+  const isApproved = approval?.status === 'approved';
+
+  if (isPreApproved && isApproved) {
+    return 'Ready for Deploy';
+  } else if (completedChecks > 0 || isApproved) {
+    return 'In Progress';
+  } else {
+    return 'Not Started';
+  }
+}
 
 export default function Catalog({ 
   onLoadCampaign,
   loadedCampaignId,
   setLoadedCampaignId,
   currentCampaignState,
-  automationState
+  automationState,
+  preApprovalState,
+  approvalState
 }) {
   const [campaigns, setCampaigns] = useState([]);
   const [newCampaignName, setNewCampaignName] = useState('');
@@ -162,6 +187,7 @@ export default function Catalog({
   const [editingIdField, setEditingIdField] = useState(null);
   const [tempCampaignId, setTempCampaignId] = useState('');
   const [reportModalCampaign, setReportModalCampaign] = useState(null);
+  const [expandedCampaignId, setExpandedCampaignId] = useState(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('omniqa_braze_catalog');
@@ -197,10 +223,34 @@ export default function Catalog({
     setTimeout(() => {
       const updated = campaigns.map(c => {
         if (c.id === id) {
+          let nextSavedPreApproval = c.savedPreApproval;
+          let nextSavedApproval = c.savedApproval;
+          let nextJourney = c.savedJourney;
+          let nextAudit = c.savedAudit;
+
+          // If active campaign, sync with current workspace values
+          if (id === loadedCampaignId && automationState) {
+            nextSavedPreApproval = preApprovalState;
+            nextSavedApproval = approvalState;
+            nextJourney = automationState.journey || c.savedJourney;
+            nextAudit = automationState.audit || c.savedAudit;
+          }
+
+          const tempC = {
+            ...c,
+            savedPreApproval: nextSavedPreApproval,
+            savedApproval: nextSavedApproval
+          };
+          const computedStatus = getCampaignStatus(tempC);
+
           return {
             ...c,
-            status: 'Live',
-            lastSynced: 'Just now',
+            savedPreApproval: nextSavedPreApproval,
+            savedApproval: nextSavedApproval,
+            savedJourney: nextJourney,
+            savedAudit: nextAudit,
+            status: computedStatus,
+            lastSynced: 'Just now (Refreshed)',
             version: `v${(parseFloat(c.version.replace('v', '')) + 0.1).toFixed(1)}`
           };
         }
@@ -236,18 +286,25 @@ export default function Catalog({
     e.preventDefault();
     if (!newCampaignName.trim()) return;
 
+    const tempC = {
+      savedPreApproval: preApprovalState || null,
+      savedApproval: approvalState || null
+    };
+    const computedStatus = getCampaignStatus(tempC);
+
     const newCampaign = {
       id: Date.now().toString(),
       name: newCampaignName,
       brazeCampaignId: newCampaignId.trim(),
       channel: 'email', // default primary
       version: 'v1.0',
-      status: 'Draft',
+      status: computedStatus,
       lastSynced: 'Never',
       ...currentCampaignState, // Inject all active HTML/Push/SMS workspace values
       savedJourney: automationState?.journey || null,
       savedAudit: automationState?.audit || null,
-      savedApproval: automationState?.approval || null
+      savedApproval: approvalState || null,
+      savedPreApproval: preApprovalState || null
     };
 
     const updated = [newCampaign, ...campaigns];
@@ -267,14 +324,22 @@ export default function Catalog({
     if (window.confirm("Are you sure you want to update this template card with the active workspace content, QA score, findings, and approval log?")) {
       const updated = campaigns.map(c => {
         if (c.id === id) {
+          const tempC = {
+            ...c,
+            savedPreApproval: preApprovalState || null,
+            savedApproval: approvalState || null
+          };
+          const computedStatus = getCampaignStatus(tempC);
+
           return {
             ...c,
             lastSynced: 'Just now (Updated)',
-            status: 'Live',
+            status: computedStatus,
             ...currentCampaignState,
             savedJourney: automationState?.journey || null,
             savedAudit: automationState?.audit || null,
-            savedApproval: automationState?.approval || null
+            savedApproval: approvalState || null,
+            savedPreApproval: preApprovalState || null
           };
         }
         return c;
@@ -317,8 +382,9 @@ ${findings}
 
   const getStatusStyle = (status) => {
     switch (status) {
-      case 'Live': return { color: 'var(--success)', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)' };
-      case 'Out of Sync': return { color: 'var(--warning)', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)' };
+      case 'Ready for Deploy': return { color: 'var(--success)', background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.2)' };
+      case 'In Progress': return { color: 'var(--warning)', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)' };
+      case 'Not Started':
       default: return { color: 'var(--text-secondary)', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border-color)' };
     }
   };
@@ -409,198 +475,298 @@ ${findings}
 
       {/* Catalog Card Grid */}
       <div className="catalog-grid print-report-only-hide">
-        {campaigns.map((c) => (
-          <div key={c.id} className="panel" style={{
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            padding: '1.25rem',
-            background: 'var(--bg-tertiary)',
-            border: c.id === loadedCampaignId ? '1px solid var(--accent-purple)' : '1px solid var(--border-color)',
-            borderRadius: 'var(--border-radius-md)',
-            position: 'relative',
-            boxShadow: c.id === loadedCampaignId ? '0 0 10px rgba(139, 92, 246, 0.1)' : 'none'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: 1 }}>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span>{c.channel === 'email' ? '✉️ Email' : c.channel === 'push' ? '📱 Push' : c.channel === 'sms' ? '💬 SMS' : '✨ In-App'}</span>
-                  {c.id === loadedCampaignId && <span style={{ color: 'var(--accent-purple)', textTransform: 'none', fontSize: '0.65rem', fontWeight: '800' }}>· ACTIVE WORKSPACE</span>}
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <a 
-                    href={getBrazeDashboardUrl(c.brazeCampaignId)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ 
-                      textDecoration: 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      color: 'var(--text-primary)'
-                    }}
-                    title={c.brazeCampaignId ? "Open Campaign in Braze Dashboard" : "Go to Braze Campaign Dashboard"}
-                  >
-                    <h4 
-                      style={{ 
-                        margin: 0, 
-                        fontSize: '1.05rem', 
-                        fontWeight: '700', 
-                        transition: 'color 0.15s ease'
-                      }}
-                      onMouseEnter={(e) => e.target.style.color = 'var(--accent-cyan)'}
-                      onMouseLeave={(e) => e.target.style.color = 'var(--text-primary)'}
-                    >
-                      {c.name}
-                    </h4>
-                    <ExternalLink size={12} style={{ color: 'var(--text-muted)' }} />
-                  </a>
-                </div>
-              </div>
-              <span style={{ 
-                padding: '0.2rem 0.5rem', 
-                borderRadius: '4px', 
-                fontSize: '0.72rem',
-                fontWeight: '700',
-                ...getStatusStyle(c.status)
-              }}>
-                {c.status}
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', gap: '1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)', padding: '0.5rem 0', margin: '0.1rem 0', flexWrap: 'wrap' }}>
+        {campaigns.map((c) => {
+          const computedStatus = getCampaignStatus(c);
+          return (
+            <div 
+              key={c.id} 
+              className="catalog-card" 
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: '1rem',
+                padding: '1.25rem',
+                background: 'var(--bg-tertiary)',
+                border: c.id === loadedCampaignId ? '1px solid var(--accent-purple)' : '1px solid var(--border-color)',
+                borderRadius: 'var(--border-radius-md)',
+                position: 'relative',
+                boxShadow: c.id === loadedCampaignId ? '0 0 10px rgba(139, 92, 246, 0.1)' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onClick={(e) => {
+                if (e.target.closest('button, a, input, select, textarea')) return;
+                setExpandedCampaignId(expandedCampaignId === c.id ? null : c.id);
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 30px rgba(6, 182, 212, 0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = c.id === loadedCampaignId ? '0 0 10px rgba(139, 92, 246, 0.1)' : 'none';
+              }}
+            >
               <div>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Version</span>
-                <strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{c.version}</strong>
-              </div>
-              <div>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Last Synced</span>
-                <strong style={{ color: 'var(--text-primary)' }}>{c.lastSynced}</strong>
-              </div>
-              <div style={{ flex: 1, minWidth: '140px' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Braze Campaign ID</span>
-                {editingIdField === c.id ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.15rem' }}>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      value={tempCampaignId}
-                      onChange={(e) => setTempCampaignId(e.target.value)}
-                      placeholder="e.g. 65a2d8f9b1c0e3a4..."
-                      style={{ 
-                        fontSize: '0.75rem', 
-                        padding: '0.1rem 0.3rem', 
-                        width: '120px',
-                        height: '24px',
-                        background: 'var(--bg-primary)',
-                        border: '1px solid var(--accent-cyan)'
-                      }}
-                      autoFocus
-                    />
-                    <button 
-                      type="button"
-                      onClick={() => handleSaveCampaignId(c.id)}
-                      className="btn btn-primary"
-                      style={{ padding: '0.1rem 0.4rem', fontSize: '0.65rem', height: '24px', lineHeight: 1 }}
-                    >
-                      Save
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={() => setEditingIdField(null)}
-                      className="btn btn-secondary"
-                      style={{ padding: '0.1rem 0.4rem', fontSize: '0.65rem', height: '24px', lineHeight: 1 }}
-                    >
-                      Cancel
-                    </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: 1 }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span>{c.channel === 'email' ? '✉️ Email' : c.channel === 'push' ? '📱 Push' : c.channel === 'sms' ? '💬 SMS' : '✨ In-App'}</span>
+                      {c.id === loadedCampaignId && <span style={{ color: 'var(--accent-purple)', textTransform: 'none', fontSize: '0.65rem', fontWeight: '800' }}>· ACTIVE WORKSPACE</span>}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <a 
+                        href={getBrazeDashboardUrl(c.brazeCampaignId, c.savedJourney?.type || c.channel)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ 
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          color: 'var(--text-primary)'
+                        }}
+                        title={c.brazeCampaignId ? "Open Campaign in Braze Dashboard" : "Go to Braze Campaign Dashboard"}
+                      >
+                        <h4 
+                          style={{ 
+                            margin: 0, 
+                            fontSize: '1.05rem', 
+                            fontWeight: '700', 
+                            transition: 'color 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => e.target.style.color = 'var(--accent-cyan)'}
+                          onMouseLeave={(e) => e.target.style.color = 'var(--text-primary)'}
+                        >
+                          {c.name}
+                        </h4>
+                        <ExternalLink size={12} style={{ color: 'var(--text-muted)' }} />
+                      </a>
+                    </div>
                   </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }}>
-                    <strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
-                      {c.brazeCampaignId || 'None'}
-                    </strong>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingIdField(c.id);
-                        setTempCampaignId(c.brazeCampaignId || '');
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--accent-cyan)',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        padding: '2px',
-                        opacity: 0.7
-                      }}
-                      title="Edit Braze Campaign ID"
-                    >
-                      <FileEdit size={10} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {c.savedAudit && (
-              <div style={{ padding: '0.75rem', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.25rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>Saved QA Score:</span>
-                  <strong style={{ color: c.savedAudit.score >= 90 ? 'var(--success)' : c.savedAudit.score >= 70 ? 'var(--warning)' : 'var(--error)' }}>
-                    {c.savedAudit.score}/100
-                  </strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Findings:</span>
-                  <span>
-                    {c.savedAudit.counts.blocker > 0 && <span style={{ color: 'var(--error)', marginRight: '0.25rem' }}>{c.savedAudit.counts.blocker} blocker</span>}
-                    {c.savedAudit.counts.high > 0 && <span style={{ color: 'var(--error)', marginRight: '0.25rem' }}>{c.savedAudit.counts.high} high</span>}
-                    {c.savedAudit.counts.medium > 0 && <span style={{ color: 'var(--warning)', marginRight: '0.25rem' }}>{c.savedAudit.counts.medium} med</span>}
-                    {c.savedAudit.counts.low > 0 && <span style={{ color: 'var(--text-secondary)' }}>{c.savedAudit.counts.low} low</span>}
-                    {(!c.savedAudit.counts.blocker && !c.savedAudit.counts.high && !c.savedAudit.counts.medium && !c.savedAudit.counts.low) && <span style={{ color: 'var(--success)' }}>Clean Pass</span>}
+                  <span style={{ 
+                    padding: '0.2rem 0.5rem', 
+                    borderRadius: '4px', 
+                    fontSize: '0.72rem',
+                    fontWeight: '700',
+                    whiteSpace: 'nowrap',
+                    ...getStatusStyle(computedStatus)
+                  }}>
+                    {computedStatus}
                   </span>
                 </div>
-                {c.savedApproval && (
-                  <div style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '0.4rem', marginTop: '0.2rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>QA Status:</span>
-                      <strong style={{ color: c.savedApproval.status === 'approved' ? 'var(--success)' : 'var(--warning)' }}>
-                        {c.savedApproval.status === 'approved' ? 'Approved' : 'Pending Review'}
-                      </strong>
-                    </div>
-                    {c.savedApproval.reviewer && (
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        Reviewer: {c.savedApproval.reviewer} {c.savedApproval.approvedAt && `on ${new Date(c.savedApproval.approvedAt).toLocaleDateString()}`}
+    
+                <div style={{ display: 'flex', gap: '1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)', padding: '0.5rem 0', margin: '0.5rem 0', flexWrap: 'wrap' }}>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Version</span>
+                    <strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{c.version}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Last Synced</span>
+                    <strong style={{ color: 'var(--text-primary)' }}>{c.lastSynced}</strong>
+                  </div>
+                  <div style={{ flex: 1, minWidth: '140px' }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem', display: 'block', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Braze Campaign ID</span>
+                    {editingIdField === c.id ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.15rem' }}>
+                        <input 
+                          type="text" 
+                          className="form-input" 
+                          value={tempCampaignId}
+                          onChange={(e) => setTempCampaignId(e.target.value)}
+                          placeholder="e.g. 65a2d8f9b1c0e3a4..."
+                          style={{ 
+                            fontSize: '0.75rem', 
+                            padding: '0.1rem 0.3rem', 
+                            width: '120px',
+                            height: '24px',
+                            background: 'var(--bg-primary)',
+                            border: '1px solid var(--accent-cyan)'
+                          }}
+                          autoFocus
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => handleSaveCampaignId(c.id)}
+                          className="btn btn-primary"
+                          style={{ padding: '0.1rem 0.4rem', fontSize: '0.65rem', height: '24px', lineHeight: 1 }}
+                        >
+                          Save
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => setEditingIdField(null)}
+                          className="btn btn-secondary"
+                          style={{ padding: '0.1rem 0.4rem', fontSize: '0.65rem', height: '24px', lineHeight: 1 }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.15rem' }}>
+                        <strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
+                          {c.brazeCampaignId || 'None'}
+                        </strong>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingIdField(c.id);
+                            setTempCampaignId(c.brazeCampaignId || '');
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--accent-cyan)',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            padding: '2px',
+                            opacity: 0.7
+                          }}
+                          title="Edit Braze Campaign ID"
+                        >
+                          <FileEdit size={10} />
+                        </button>
                       </div>
                     )}
                   </div>
-                )}
-                <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem' }}>
-                  <button 
-                    type="button" 
-                    onClick={() => setReportModalCampaign(c)} 
-                    className="btn btn-secondary" 
-                    style={{ flex: 1, padding: '0.25rem', fontSize: '0.75rem', borderColor: 'var(--accent-cyan)', color: 'var(--accent-cyan)', cursor: 'pointer' }}
-                  >
-                    View QA Report
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => handleUpdateCard(c.id)} 
-                    className="btn btn-secondary" 
-                    style={{ flex: 1.2, padding: '0.25rem', fontSize: '0.75rem', borderColor: 'var(--accent-purple)', color: 'var(--accent-purple)', backgroundColor: 'rgba(139, 92, 246, 0.05)', cursor: 'pointer' }}
-                    title="Save active workspace editor content & QA status to this card"
-                  >
-                    Save QA to Card
-                  </button>
                 </div>
-              </div>
-            )}
+    
+                {c.savedAudit && (
+                  <div style={{ padding: '0.75rem', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.25rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>Saved QA Score:</span>
+                      <strong style={{ color: c.savedAudit.score >= 90 ? 'var(--success)' : c.savedAudit.score >= 70 ? 'var(--warning)' : 'var(--error)' }}>
+                        {c.savedAudit.score}/100
+                      </strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Findings:</span>
+                      <span>
+                        {c.savedAudit.counts.blocker > 0 && <span style={{ color: 'var(--error)', marginRight: '0.25rem' }}>{c.savedAudit.counts.blocker} blocker</span>}
+                        {c.savedAudit.counts.high > 0 && <span style={{ color: 'var(--error)', marginRight: '0.25rem' }}>{c.savedAudit.counts.high} high</span>}
+                        {c.savedAudit.counts.medium > 0 && <span style={{ color: 'var(--warning)', marginRight: '0.25rem' }}>{c.savedAudit.counts.medium} med</span>}
+                        {c.savedAudit.counts.low > 0 && <span style={{ color: 'var(--text-secondary)' }}>{c.savedAudit.counts.low} low</span>}
+                        {(!c.savedAudit.counts.blocker && !c.savedAudit.counts.high && !c.savedAudit.counts.medium && !c.savedAudit.counts.low) && <span style={{ color: 'var(--success)' }}>Clean Pass</span>}
+                      </span>
+                    </div>
+                    {c.savedApproval && (
+                      <div style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '0.4rem', marginTop: '0.2rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>QA Status:</span>
+                          <strong style={{ color: c.savedApproval.status === 'approved' ? 'var(--success)' : 'var(--warning)' }}>
+                            {c.savedApproval.status === 'approved' ? 'Approved' : 'Pending Review'}
+                          </strong>
+                        </div>
+                        {c.savedApproval.reviewer && (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            Reviewer: {c.savedApproval.reviewer} {c.savedApproval.approvedAt && `on ${new Date(c.savedApproval.approvedAt).toLocaleDateString()}`}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {expandedCampaignId === c.id && (
+                      <div 
+                        style={{ 
+                          marginTop: '0.5rem', 
+                          borderTop: '1px solid var(--border-color)', 
+                          paddingTop: '0.6rem',
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: '0.8rem',
+                          animation: 'slideDown 0.3s ease-out'
+                        }}
+                      >
+                        <div>
+                          <h5 style={{ margin: 0, fontWeight: '700', fontSize: '0.82rem', color: 'var(--text-primary)', marginBottom: '0.3rem', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>📝 Pre-Approval Checklist</span>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 'normal', color: 'var(--text-secondary)' }}>
+                              {c.savedPreApproval?.items?.filter(item => item.done).length || 0} / {c.savedPreApproval?.items?.length || 0} Complete
+                            </span>
+                          </h5>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '0.35rem' }}>
+                            {c.savedPreApproval?.items?.map((item) => (
+                              <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.35rem', fontSize: '0.75rem' }}>
+                                <span style={{ color: item.done ? 'var(--success)' : 'var(--error)', fontWeight: 'bold' }}>
+                                  {item.done ? '✓' : '✗'}
+                                </span>
+                                <span style={{ color: item.done ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                                  {item.text}
+                                </span>
+                                {item.note && (
+                                  <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.68rem', marginLeft: '0.25rem' }}>
+                                    ({item.note})
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                            {(!c.savedPreApproval?.items || c.savedPreApproval.items.length === 0) && (
+                              <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.72rem' }}>No pre-approval checkpoints defined.</span>
+                            )}
+                          </div>
+                        </div>
 
+                        <div style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '0.6rem' }}>
+                          <h5 style={{ margin: 0, fontWeight: '700', fontSize: '0.82rem', color: 'var(--text-primary)', marginBottom: '0.3rem' }}>
+                            🛡️ Reviewer Approval Gate
+                          </h5>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '0.35rem', fontSize: '0.75rem' }}>
+                            {Object.entries(c.savedApproval?.checks || {}).map(([key, checked]) => {
+                              const label = {
+                                audience: 'Audience & schedule verified',
+                                content: 'Copy & links reviewed',
+                                personalization: 'Liquid variables tested',
+                                evidence: 'Test-send evidence verified'
+                              }[key] || key;
+                              return (
+                                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                  <span style={{ color: checked ? 'var(--success)' : 'var(--error)', fontWeight: 'bold' }}>
+                                    {checked ? '✓' : '✗'}
+                                  </span>
+                                  <span style={{ color: checked ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                                    {label}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          
+                          <div style={{ marginTop: '0.4rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.5rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.72rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                            {c.savedApproval?.decisionNote && (
+                              <div><strong>Decision Note:</strong> <span style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>&quot;{c.savedApproval.decisionNote}&quot;</span></div>
+                            )}
+                            {c.savedPreApproval?.generalNotes && (
+                              <div><strong>General Notes:</strong> <span style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>&quot;{c.savedPreApproval.generalNotes}&quot;</span></div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem' }}>
+                      <button 
+                        type="button" 
+                        onClick={(e) => { e.stopPropagation(); setReportModalCampaign(c); }} 
+                        className="btn btn-secondary" 
+                        style={{ flex: 1, padding: '0.25rem', fontSize: '0.75rem', borderColor: 'var(--accent-cyan)', color: 'var(--accent-cyan)', cursor: 'pointer' }}
+                      >
+                        View QA Report
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={(e) => { e.stopPropagation(); handleUpdateCard(c.id); }} 
+                        className="btn btn-secondary" 
+                        style={{ flex: 1.2, padding: '0.25rem', fontSize: '0.75rem', borderColor: 'var(--accent-purple)', color: 'var(--accent-purple)', backgroundColor: 'rgba(139, 92, 246, 0.05)', cursor: 'pointer' }}
+                        title="Save active workspace editor content & QA status to this card"
+                      >
+                        Save QA to Card
+                      </button>
+                    </div>
+                  </div>
+                )}
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
               <button 
                 onClick={() => handleLoad(c)}
@@ -690,153 +856,258 @@ ${findings}
               </button>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      );
+    })}
+  </div>
 
       {/* QA REPORT MODAL */}
-      {reportModalCampaign && (
-        <div 
-          className="library-report-modal-overlay"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            background: 'rgba(5, 8, 15, 0.95)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backdropFilter: 'blur(10px)',
-            animation: 'fadeIn 0.25s ease-out'
-          }}
-        >
+      {reportModalCampaign && (() => {
+        const modalMissingPre = reportModalCampaign.savedPreApproval?.items?.filter(item => !item.done).length || 0;
+        const modalMissingChecks = Object.values(reportModalCampaign.savedApproval?.checks || {}).filter(checked => !checked).length;
+        const modalRevMissing = !reportModalCampaign.savedApproval?.reviewer?.trim();
+        const modalAppMissing = reportModalCampaign.savedApproval?.status !== 'approved';
+        const isModalReportIncomplete = modalMissingPre > 0 || modalMissingChecks > 0 || modalRevMissing || modalAppMissing;
+
+        return (
           <div 
-            className="library-report-modal-content"
+            className="library-report-modal-overlay"
             style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-color)',
-              padding: '2.5rem 2rem 2rem 2rem',
-              borderRadius: 'var(--border-radius-lg)',
-              position: 'relative',
-              width: '90%',
-              maxWidth: '600px',
-              maxHeight: '85vh',
-              overflowY: 'auto',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              background: 'rgba(5, 8, 15, 0.95)',
+              zIndex: 1000,
               display: 'flex',
-              flexDirection: 'column',
-              gap: '1.25rem',
-              boxShadow: '0 25px 60px rgba(0,0,0,0.8)'
+              alignItems: 'center',
+              justifyContent: 'center',
+              backdropFilter: 'blur(10px)',
+              animation: 'fadeIn 0.25s ease-out'
             }}
           >
-            <button 
-              onClick={() => setReportModalCampaign(null)}
-              className="print-report-only-hide"
+            <div 
+              className="library-report-modal-content"
               style={{
-                position: 'absolute',
-                top: '1rem',
-                right: '1rem',
-                background: 'var(--bg-tertiary)',
+                background: 'var(--bg-secondary)',
                 border: '1px solid var(--border-color)',
-                borderRadius: '50%',
-                width: '36px',
-                height: '36px',
+                padding: '2.5rem 2rem 2rem 2rem',
+                borderRadius: 'var(--border-radius-lg)',
+                position: 'relative',
+                width: '90%',
+                maxWidth: '600px',
+                maxHeight: '85vh',
+                overflowY: 'auto',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--text-primary)',
-                cursor: 'pointer'
+                flexDirection: 'column',
+                gap: '1.25rem',
+                boxShadow: '0 25px 60px rgba(0,0,0,0.8)'
               }}
             >
-              x
-            </button>
-
-            <div>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Saved QA Audit Report
-              </span>
-              <h3 style={{ margin: '0.25rem 0 0.5rem 0', color: 'var(--text-primary)' }}>
-                {reportModalCampaign.name}
-              </h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
-                Braze ID: <code style={{ fontFamily: 'var(--font-mono)' }}>{reportModalCampaign.brazeCampaignId || 'None'}</code> · Version: {reportModalCampaign.version}
-              </p>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1rem' }} className="settings-grid">
-              <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.4rem', justifyContent: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>QA Score</span>
-                <span style={{ fontSize: '2.5rem', fontWeight: '800', color: reportModalCampaign.savedAudit.score >= 90 ? 'var(--success)' : reportModalCampaign.savedAudit.score >= 70 ? 'var(--warning)' : 'var(--error)' }}>
-                  {reportModalCampaign.savedAudit.score}/100
+              <button 
+                onClick={() => setReportModalCampaign(null)}
+                className="print-report-only-hide"
+                style={{
+                  position: 'absolute',
+                  top: '1rem',
+                  right: '1rem',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer'
+                }}
+              >
+                x
+              </button>
+  
+              <div>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Saved QA Audit Report
                 </span>
-                <span className={`readiness-pill ${reportModalCampaign.savedApproval?.status === 'approved' ? 'approved' : reportModalCampaign.savedAudit.score >= 90 ? 'ready-for-approval' : 'needs-review'}`} style={{ fontSize: '0.65rem' }}>
-                  {reportModalCampaign.savedApproval?.status === 'approved' ? 'Approved' : 'Pending Review'}
-                </span>
+                <h3 style={{ margin: '0.25rem 0 0.5rem 0', color: 'var(--text-primary)' }}>
+                  {reportModalCampaign.name}
+                </h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
+                  Braze ID: <code style={{ fontFamily: 'var(--font-mono)' }}>{reportModalCampaign.brazeCampaignId || 'None'}</code> · Version: {reportModalCampaign.version}
+                </p>
               </div>
 
-              <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <h5 style={{ margin: 0, fontWeight: '700', fontSize: '0.85rem', color: 'var(--text-primary)' }}>Review Log</h5>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  <div><strong>Reviewer:</strong> {reportModalCampaign.savedApproval?.reviewer || 'Not assigned'}</div>
-                  <div><strong>Date:</strong> {reportModalCampaign.savedApproval?.approvedAt ? new Date(reportModalCampaign.savedApproval.approvedAt).toLocaleString() : 'Never'}</div>
-                  <div><strong>Decision note:</strong> <p style={{ margin: '0.2rem 0 0 0', fontStyle: 'italic', fontSize: '0.78rem' }}>&quot;{reportModalCampaign.savedApproval?.decisionNote || 'No notes left.'}&quot;</p></div>
+              {/* Validation Summary Banner */}
+              {isModalReportIncomplete ? (
+                <div style={{ 
+                  padding: '12px', 
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)', 
+                  border: '1px solid var(--error)', 
+                  borderRadius: 'var(--border-radius-sm)',
+                  color: 'var(--error)',
+                  fontSize: '0.8rem'
+                }}>
+                  <strong style={{ display: 'block', marginBottom: '4px' }}>⚠️ STAGE INCOMPLETE: Missing Deployment Steps</strong>
+                  <ul style={{ margin: 0, paddingLeft: '1.25rem', lineHeight: '1.4' }}>
+                    {modalMissingPre > 0 && <li>Pre-Approval Checklist is incomplete ({modalMissingPre} pending).</li>}
+                    {modalMissingChecks > 0 && <li>Final Readiness Checks are incomplete ({modalMissingChecks} pending).</li>}
+                    {modalRevMissing && <li>Reviewer Name is not assigned.</li>}
+                    {modalAppMissing && <li>Final Reviewer Sign-off is pending (Approve readiness was not clicked).</li>}
+                  </ul>
+                </div>
+              ) : (
+                <div style={{ 
+                  padding: '12px', 
+                  backgroundColor: 'rgba(34, 197, 94, 0.1)', 
+                  border: '1px solid var(--success)', 
+                  borderRadius: 'var(--border-radius-sm)',
+                  color: 'var(--success)',
+                  fontSize: '0.8rem'
+                }}>
+                  <strong>✅ QA STAGE COMPLETE: Approved & Ready for Deploy</strong>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem' }}>
+                    All automated tests, pre-approval checkpoints, and human readiness controls have been 100% verified and approved by {reportModalCampaign.savedApproval?.reviewer} on {reportModalCampaign.savedApproval?.approvedAt ? new Date(reportModalCampaign.savedApproval.approvedAt).toLocaleDateString() : 'N/A'}.
+                  </p>
+                </div>
+              )}
+  
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1rem' }} className="settings-grid">
+                <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.4rem', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>QA Score</span>
+                  <span style={{ fontSize: '2.5rem', fontWeight: '800', color: reportModalCampaign.savedAudit.score >= 90 ? 'var(--success)' : reportModalCampaign.savedAudit.score >= 70 ? 'var(--warning)' : 'var(--error)' }}>
+                    {reportModalCampaign.savedAudit.score}/100
+                  </span>
+                  <span className={`readiness-pill ${reportModalCampaign.savedApproval?.status === 'approved' ? 'approved' : reportModalCampaign.savedAudit.score >= 90 ? 'ready-for-approval' : 'needs-review'}`} style={{ fontSize: '0.65rem' }}>
+                    {reportModalCampaign.savedApproval?.status === 'approved' ? 'Approved' : 'Pending Review'}
+                  </span>
+                </div>
+  
+                <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <h5 style={{ margin: 0, fontWeight: '700', fontSize: '0.85rem', color: 'var(--text-primary)' }}>Review Log</h5>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    <div><strong>Reviewer:</strong> {reportModalCampaign.savedApproval?.reviewer || 'Not assigned'}</div>
+                    <div><strong>Date:</strong> {reportModalCampaign.savedApproval?.approvedAt ? new Date(reportModalCampaign.savedApproval.approvedAt).toLocaleString() : 'Never'}</div>
+                    {reportModalCampaign.savedApproval?.decisionNote && (
+                      <div><strong>Decision note:</strong> <p style={{ margin: '0.2rem 0 0 0', fontStyle: 'italic', fontSize: '0.78rem' }}>&quot;{reportModalCampaign.savedApproval?.decisionNote}&quot;</p></div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <div>
-              <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.35rem', color: 'var(--text-primary)' }}>
-                Saved Audit Findings ({reportModalCampaign.savedAudit.findings?.length || 0})
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', maxHeight: '250px', overflowY: 'auto', paddingRight: '0.25rem' }}>
-                {(!reportModalCampaign.savedAudit.findings || reportModalCampaign.savedAudit.findings.length === 0) && (
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic', textAlign: 'center', padding: '1.5rem 0' }}>
-                    No findings were recorded. The campaign had a clean pass.
-                  </p>
-                )}
-                {reportModalCampaign.savedAudit.findings?.map((item, index) => (
-                  <div key={index} style={{ padding: '0.75rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.8rem' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.35rem' }}>
-                      <span className={`severity-label ${item.severity}`} style={{ fontSize: '0.65rem', padding: '0.15rem 0.35rem' }}>{item.severity}</span>
-                      <strong style={{ color: 'var(--text-primary)' }}>{item.title}</strong>
+  
+              <div>
+                <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.35rem', color: 'var(--text-primary)' }}>
+                  Saved Audit Findings ({reportModalCampaign.savedAudit.findings?.length || 0})
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', maxHeight: '200px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                  {(!reportModalCampaign.savedAudit.findings || reportModalCampaign.savedAudit.findings.length === 0) && (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic', textAlign: 'center', padding: '1.5rem 0' }}>
+                      No findings were recorded. The campaign had a clean pass.
+                    </p>
+                  )}
+                  {reportModalCampaign.savedAudit.findings?.map((item, index) => (
+                    <div key={index} style={{ padding: '0.75rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.8rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.35rem' }}>
+                        <span className={`severity-label ${item.severity}`} style={{ fontSize: '0.65rem', padding: '0.15rem 0.35rem' }}>{item.severity}</span>
+                        <strong style={{ color: 'var(--text-primary)' }}>{item.title}</strong>
+                      </div>
+                      {item.evidence && <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '0.2rem' }}><strong>Evidence:</strong> {item.evidence}</div>}
+                      {item.remediation && <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}><strong>Remediation:</strong> {item.remediation}</div>}
                     </div>
-                    {item.evidence && <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginBottom: '0.2rem' }}><strong>Evidence:</strong> {item.evidence}</div>}
-                    {item.remediation && <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}><strong>Remediation:</strong> {item.remediation}</div>}
-                  </div>
-                ))}
+                  ))}
+                </div>
+              </div>
+
+              {/* Pre-Approval Checklist */}
+              <div>
+                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.35rem' }}>
+                  Pre-Approval Checklist
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem', paddingLeft: '0.5rem' }}>
+                  {reportModalCampaign.savedPreApproval?.items?.map((item) => (
+                    <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
+                      <span style={{ color: item.done ? 'var(--success)' : 'var(--error)', fontWeight: 'bold' }}>
+                        {item.done ? '✓' : '⚠️ [MISSING]'}
+                      </span>
+                      <span style={{ color: item.done ? 'var(--text-primary)' : 'var(--error)' }}>
+                        {item.text}
+                      </span>
+                      {item.note && (
+                        <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', marginLeft: '0.25rem' }}>
+                          (Note: {item.note})
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                  {(!reportModalCampaign.savedPreApproval?.items || reportModalCampaign.savedPreApproval.items.length === 0) && (
+                    <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No pre-approval checkpoints defined.</span>
+                  )}
+                  {reportModalCampaign.savedPreApproval?.generalNotes && (
+                    <div style={{ marginTop: '0.4rem', padding: '0.5rem', backgroundColor: 'var(--bg-tertiary)', borderLeft: '3px solid var(--border-color)', fontStyle: 'italic' }}>
+                      <strong>General Notes:</strong> {reportModalCampaign.savedPreApproval.generalNotes}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Final Reviewer Approval Gate checks */}
+              <div>
+                <h4 style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.35rem' }}>
+                  Readiness Checks & Approvals
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem', paddingLeft: '0.5rem' }}>
+                  {Object.entries(reportModalCampaign.savedApproval?.checks || {}).map(([key, checked]) => {
+                    const label = {
+                      audience: 'Audience & schedule verified in Braze',
+                      content: 'Every message variant, link, sender, and destination reviewed',
+                      personalization: 'Liquid variables, fallback values, and channel eligibility tested',
+                      evidence: 'Test-send evidence and stakeholder approvals documented'
+                    }[key] || key;
+                    return (
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ color: checked ? 'var(--success)' : 'var(--error)', fontWeight: 'bold' }}>
+                          {checked ? '✓' : '⚠️ [MISSING]'}
+                        </span>
+                        <span style={{ color: checked ? 'var(--text-primary)' : 'var(--error)' }}>
+                          {label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+  
+              <div style={{ display: 'flex', gap: '0.5rem', width: '100%', marginTop: '0.5rem' }} className="print-report-only-hide">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => handleCopyMarkdownReport(reportModalCampaign)}
+                  style={{ flex: 1, borderColor: 'var(--accent-cyan)', color: 'var(--accent-cyan)', cursor: 'pointer', padding: '0.45rem 0.6rem', fontSize: '0.78rem' }}
+                >
+                  Copy Markdown
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => handlePrintReport(reportModalCampaign)}
+                  style={{ flex: 1, borderColor: 'var(--success)', color: 'var(--success)', cursor: 'pointer', padding: '0.45rem 0.6rem', fontSize: '0.78rem' }}
+                >
+                  Print / Save PDF
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  onClick={() => setReportModalCampaign(null)}
+                  style={{ flex: 1, cursor: 'pointer', padding: '0.45rem 0.6rem', fontSize: '0.78rem' }}
+                >
+                  Close
+                </button>
               </div>
             </div>
-
-            <div style={{ display: 'flex', gap: '0.5rem', width: '100%', marginTop: '0.5rem' }} className="print-report-only-hide">
-              <button 
-                type="button" 
-                className="btn btn-secondary" 
-                onClick={() => handleCopyMarkdownReport(reportModalCampaign)}
-                style={{ flex: 1, borderColor: 'var(--accent-cyan)', color: 'var(--accent-cyan)', cursor: 'pointer', padding: '0.45rem 0.6rem', fontSize: '0.78rem' }}
-              >
-                Copy Markdown
-              </button>
-              <button 
-                type="button" 
-                className="btn btn-secondary" 
-                onClick={() => handlePrintReport(reportModalCampaign)}
-                style={{ flex: 1, borderColor: 'var(--success)', color: 'var(--success)', cursor: 'pointer', padding: '0.45rem 0.6rem', fontSize: '0.78rem' }}
-              >
-                Print / Save PDF
-              </button>
-              <button 
-                type="button" 
-                className="btn btn-primary" 
-                onClick={() => setReportModalCampaign(null)}
-                style={{ flex: 1, cursor: 'pointer', padding: '0.45rem 0.6rem', fontSize: '0.78rem' }}
-              >
-                Close
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

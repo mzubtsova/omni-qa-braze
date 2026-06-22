@@ -28,7 +28,7 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
   const [funnyComment, setFunnyComment] = useState('');
   const [importError, setImportError] = useState('');
   const [severityFilter, setSeverityFilter] = useState('all');
-  const [selectedMessageId, setSelectedMessageId] = useState('');
+  const [selectedMessageId, setSelectedMessageId] = useState('all');
   const [findingNotes, setFindingNotes] = useState(() => {
     try { return JSON.parse(localStorage.getItem('omniqa_finding_notes') || '{}'); } catch { return {}; }
   });
@@ -69,14 +69,16 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
   }, [journey, figmaTexts]);
 
   const selectedMessage = useMemo(() => {
-    return audit.messages.find((message) => message.id === selectedMessageId) || audit.messages[0] || null;
+    if (selectedMessageId === 'all') return null;
+    return audit.messages.find((message) => message.id === selectedMessageId) || null;
   }, [audit.messages, selectedMessageId]);
 
   useEffect(() => {
-    if (selectedMessage && selectedMessage.id !== selectedMessageId) {
-      setSelectedMessageId(selectedMessage.id);
+    if (selectedMessageId === 'all') return;
+    if (!selectedMessage && audit.messages.length > 0) {
+      setSelectedMessageId('all');
     }
-  }, [selectedMessage, selectedMessageId]);
+  }, [selectedMessage, selectedMessageId, audit.messages]);
 
   useEffect(() => {
     if (selectedMessage) {
@@ -86,7 +88,7 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
 
   const visibleFindings = useMemo(() => {
     return audit.findings.filter((item) => {
-      const matchesMessage = !selectedMessageId || item.messageId === selectedMessageId || item.scope === 'journey';
+      const matchesMessage = !selectedMessageId || selectedMessageId === 'all' || item.messageId === selectedMessageId || item.scope === 'journey';
       const matchesSeverity = severityFilter === 'all' || item.severity === severityFilter;
       return matchesMessage && matchesSeverity;
     });
@@ -103,7 +105,7 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
   const loadDemo = () => {
     setJourney(demoJourney);
     setImportError('');
-    setSelectedMessageId('');
+    setSelectedMessageId('all');
   };
 
   const importFromBraze = async (event) => {
@@ -243,7 +245,7 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
         });
       }
       setJourney(importedJourney);
-      setSelectedMessageId('');
+      setSelectedMessageId('all');
     } catch (error) {
       setImportError(error.message);
     } finally {
@@ -351,13 +353,18 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
                     onChange={(e) => {
                       const msgId = e.target.value;
                       setSelectedMessageId(msgId);
-                      const msg = audit.messages.find(m => m.id === msgId);
-                      if (msg) {
-                        selectMessage(msg);
+                      if (msgId === 'all') {
+                        onSelectMessage?.(null, false);
+                      } else {
+                        const msg = audit.messages.find(m => m.id === msgId);
+                        if (msg) {
+                          selectMessage(msg);
+                        }
                       }
                     }}
                     style={{ fontSize: '0.95rem', padding: '0.8rem', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-md)' }}
                   >
+                    <option value="all">Show All Steps / Message Variants</option>
                     {audit.messages.map((msg) => (
                       <option key={msg.id} value={msg.id}>
                         {msg.stepName ? (msg.stepName === msg.name ? msg.stepName : `${msg.stepName} (${msg.name})`) : msg.name} ({getChannelLabel(msg.channel)})
@@ -371,7 +378,47 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
                 </p>
               )}
 
-              {selectedMessage && (
+              {selectedMessageId === 'all' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
+                  {audit.messages.map((msg) => (
+                    <div key={msg.id} className="selected-message-card" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-md)', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div>
+                        <span className="eyebrow" style={{ fontSize: '0.7rem' }}>{getChannelLabel(msg.channel)} Configuration</span>
+                        <h4 style={{ fontSize: '1.1rem', fontWeight: '700', marginTop: '0.25rem', marginBottom: '0.5rem' }}>{msg.name}</h4>
+                        
+                        {msg.subject && (
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                            <strong>Subject:</strong> &quot;{msg.subject}&quot;
+                          </div>
+                        )}
+                        {msg.preheader && (
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                            <strong>Preheader:</strong> &quot;{msg.preheader}&quot;
+                          </div>
+                        )}
+                        {msg.from && (
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                            <strong>From:</strong> {msg.from}
+                          </div>
+                        )}
+                        {msg.actionUrl && (
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>
+                            <strong>CTA Link:</strong> <span style={{ color: 'var(--accent-blue)' }}>{msg.actionUrl}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', borderTop: '1px dashed var(--border-color)', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+                        <strong>Coded Body Text Preview:</strong>
+                        <p style={{ marginTop: '0.25rem', whiteSpace: 'pre-wrap', lineHeight: '1.5', color: 'var(--text-secondary)' }}>
+                          {(msg.body || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 250)}
+                          {(msg.body || '').replace(/<[^>]*>/g, ' ').length > 250 ? '...' : ''}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : selectedMessage ? (
                 <div className="selected-message-card" style={{ marginTop: '1.5rem', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-md)', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <div>
                     <span className="eyebrow" style={{ fontSize: '0.7rem' }}>{getChannelLabel(selectedMessage.channel)} Configuration</span>
@@ -407,7 +454,7 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
                     </p>
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
 
             <div className="panel findings-panel">
