@@ -234,6 +234,7 @@ export default function App() {
   const [filterSeverity, setFilterSeverity] = useState('all');
   const [automationState, setAutomationState] = useState(null);
   const [preApprovalStatus, setPreApprovalStatus] = useState({ complete: 0, total: 0, ready: false });
+  const lastJourneyId = useRef(null);
 
   // Hoisted states
   const [preApprovalState, setPreApprovalState] = useState(() => {
@@ -286,6 +287,57 @@ export default function App() {
         }
       };
     });
+  }, [automationState?.journey]);
+
+  // Synchronize active workspace variables with campaign steps/messages when a new campaign/journey is loaded
+  useEffect(() => {
+    if (!automationState?.journey) {
+      lastJourneyId.current = null;
+      return;
+    }
+
+    const journey = automationState.journey;
+    if (journey.id !== lastJourneyId.current) {
+      lastJourneyId.current = journey.id;
+      
+      const messages = journey.steps?.flatMap(step => step.messages || []) || [];
+      
+      const emailMsg = messages.find(m => m.channel === 'email');
+      if (emailMsg) {
+        setSubjectLine(emailMsg.subject || '');
+        setBrazeHtml(emailMsg.body || '');
+      } else {
+        setSubjectLine('');
+        setBrazeHtml('');
+      }
+
+      const pushMsg = messages.find(m => m.channel && m.channel.includes('push'));
+      if (pushMsg) {
+        setPushBody(pushMsg.body || pushMsg.title || '');
+      } else {
+        setPushBody('');
+      }
+
+      const smsMsg = messages.find(m => m.channel === 'sms');
+      if (smsMsg) {
+        setSmsBody(smsMsg.body || '');
+      } else {
+        setSmsBody('');
+      }
+
+      const iamMsg = messages.find(m => m.channel === 'in_app_message');
+      if (iamMsg) {
+        setIamHeader(iamMsg.title || '');
+        setIamBody(iamMsg.body || '');
+        setIamButtonText(iamMsg.buttonText || 'View Offer');
+        setIamButtonLink(iamMsg.actionUrl || '');
+      } else {
+        setIamHeader('');
+        setIamBody('');
+        setIamButtonText('View Offer');
+        setIamButtonLink('');
+      }
+    }
   }, [automationState?.journey]);
 
   const [unifiedQAMode, setUnifiedQAMode] = useState(() => {
@@ -474,6 +526,7 @@ export default function App() {
   };
 
   const handleLoadCampaign = (campaign) => {
+    lastJourneyId.current = campaign.savedJourney?.id || campaign.id;
     setLoadedCampaignId(campaign.id);
     if (campaign.subjectLine !== undefined) setSubjectLine(campaign.subjectLine);
     if (campaign.brazeHtml !== undefined) setBrazeHtml(campaign.brazeHtml);

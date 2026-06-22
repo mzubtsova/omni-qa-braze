@@ -139,7 +139,14 @@ export async function predictCampaignEngagement({
   iamBody
 }, apiKey) {
   if (!apiKey) {
-    return getMockEngagementPredictor(subjectLine);
+    return getMockEngagementPredictor({
+      subjectLine,
+      bodyText,
+      pushBody,
+      smsBody,
+      iamHeader,
+      iamBody
+    });
   }
 
   const systemInstruction = `You are a campaign optimization and engagement forecast AI.
@@ -168,31 +175,153 @@ Analyze these channel assets and output predicted performance in the JSON struct
   return callGemini(prompt, apiKey, systemInstruction);
 }
 
-function getMockEngagementPredictor(subjectLine) {
-  let score = 78;
-  const lowerSubject = subjectLine ? subjectLine.toLowerCase() : '';
-  if (lowerSubject.includes('free')) score += 8;
-  if (lowerSubject.includes('reward')) score += 5;
-  if (lowerSubject.includes('🍦') || lowerSubject.includes('reward')) score += 4;
-  if (subjectLine && subjectLine.length > 60) score -= 10;
-  
+function getMockEngagementPredictor({
+  subjectLine = '',
+  bodyText = '',
+  pushBody = '',
+  smsBody = '',
+  iamHeader = '',
+  iamBody = ''
+} = {}) {
+  let score = 75;
+  const positives = [];
+  const negatives = [];
+
+  const safeSubject = subjectLine || '';
+  const safeBody = bodyText || '';
+  const safePush = pushBody || '';
+  const safeSms = smsBody || '';
+  const safeIamHeader = iamHeader || '';
+  const safeIamBody = iamBody || '';
+
+  const allText = [safeSubject, safeBody, safePush, safeSms, safeIamHeader, safeIamBody].join(' ').toLowerCase();
+
+  // 1. Personalization Check (Liquid delimiters)
+  const hasLiquid = /\{\{[\s\S]*?\}\}/.test(allText) || /\{%[\s\S]*?%\}/.test(allText);
+  const openCurly = (allText.match(/\{\{/g) || []).length;
+  const closeCurly = (allText.match(/\}\}/g) || []).length;
+  const openPercent = (allText.match(/\{%/g) || []).length;
+  const closePercent = (allText.match(/%\}/g) || []).length;
+  const hasBrokenLiquid = openCurly !== closeCurly || openPercent !== closePercent || /\{\{[^}]*$/.test(safeSubject) || /\{\{[^}]*$/.test(safeBody);
+
+  if (hasBrokenLiquid) {
+    negatives.push("Personalization syntax is broken (unbalanced Liquid brackets), blocking template compilation.");
+    score -= 15;
+  } else if (hasLiquid) {
+    positives.push("Dynamic personalization tags (e.g. name placeholders) increase user relevance.");
+    score += 8;
+  } else {
+    negatives.push("Lacks dynamic personalization attributes. Static copy may reduce user conversion rates.");
+    score -= 6;
+  }
+
+  // 2. Subject Line Length and Quality Check
+  if (safeSubject) {
+    if (safeSubject.length > 60) {
+      negatives.push(`Subject line is long (${safeSubject.length} chars) and will likely be truncated on mobile viewports.`);
+      score -= 8;
+    } else if (safeSubject.length >= 20 && safeSubject.length <= 55) {
+      positives.push(`Subject line length (${safeSubject.length} chars) is highly optimized for maximum mobile email client visibility.`);
+      score += 5;
+    } else {
+      positives.push(`Subject line length (${safeSubject.length} chars) fits within mobile viewport constraints.`);
+      score += 2;
+    }
+
+    const hasEmoji = /[\uD800-\uDBFF][\uDC00-\uDFFF]/.test(safeSubject) || /[\u2600-\u27BF]/.test(safeSubject);
+    if (hasEmoji) {
+      positives.push("Emoji usage in subject line adds strong visual cue in crowded user inboxes.");
+      score += 3;
+    }
+  } else if (safeBody) {
+    negatives.push("Email template is configured, but the subject line is missing. This blocks campaign delivery.");
+    score -= 12;
+  }
+
+  // 3. Multi-channel Configuration Check
+  const activeChannels = [];
+  if (safeSubject || safeBody) activeChannels.push('Email');
+  if (safePush) activeChannels.push('Push');
+  if (safeSms) activeChannels.push('SMS');
+  if (safeIamHeader || safeIamBody) activeChannels.push('In-App');
+
+  if (activeChannels.length >= 3) {
+    positives.push(`Excellent multi-channel orchestration (${activeChannels.join(', ')}). Cross-channel touchpoints boost CTR.`);
+    score += 8;
+  } else if (activeChannels.length === 1) {
+    negatives.push(`Single-channel campaign (${activeChannels[0]}) limits user reach. Consider combining with Push or SMS.`);
+    score -= 5;
+  } else if (activeChannels.length === 2) {
+    positives.push(`Good multi-channel orchestration (${activeChannels.join(' + ')}) targeting diverse subscriber channels.`);
+    score += 4;
+  }
+
+  // 4. Spam words & Exclamation checks
+  const spamTriggers = [];
+  if (allText.includes('free')) spamTriggers.push('free');
+  if (allText.includes('alert')) spamTriggers.push('alert');
+  if (allText.includes('urgent')) spamTriggers.push('urgent');
+  if (allText.includes('winner')) spamTriggers.push('winner');
+  if (allText.includes('!!!')) spamTriggers.push('!!!');
+
+  if (spamTriggers.length > 0) {
+    negatives.push(`Copy contains potential spam-prone trigger terms ('${spamTriggers.join("', '")}'), posing deliverability risks.`);
+    score -= (spamTriggers.length * 3);
+  } else {
+    positives.push("Copy design is clean and maintains high deliverability by avoiding hyper-salesy spam flags.");
+    score += 4;
+  }
+
+  // 5. Call-To-Action (CTA) Verbs
+  const ctaVerbs = ['click', 'redeem', 'shop', 'get', 'discover', 'explore', 'view', 'open', 'buy', 'claim', 'complete', 'download'];
+  const hasCta = ctaVerbs.some(word => allText.includes(word)) || allText.includes('http');
+  if (hasCta) {
+    positives.push("Clear, action-oriented directives (e.g. 'Redeem', 'Explore') incentivize user click-through rate.");
+    score += 6;
+  } else {
+    negatives.push("Calls-to-action (CTAs) are weak or absent; users may be unsure about target steps.");
+    score -= 5;
+  }
+
+  // 6. Time Urgency
+  const urgencyWords = ['now', 'limited time', 'expires', 'expire', 'soon', 'hours', 'today', 'flash', 'sale', 'fast'];
+  const hasUrgency = urgencyWords.some(word => allText.includes(word));
+  if (hasUrgency) {
+    positives.push("Urgent or time-bound phrasing ('expires soon', 'flash sale') encourages immediate action.");
+    score += 4;
+  } else {
+    negatives.push("Lacks time urgency context; subscribers may delay response without a clear campaign deadline.");
+    score -= 3;
+  }
+
+  // Final Score Clamping & Rate Derivation
   score = Math.min(Math.max(score, 45), 98);
   const openRate = +(score * 0.3).toFixed(1);
   const clickRate = +(score * 0.06).toFixed(1);
+  
+  // Determine spam risk based on triggers and score
+  let spamRisk = "Low";
+  if (spamTriggers.length >= 2 || score < 60) {
+    spamRisk = "High";
+  } else if (spamTriggers.length > 0 || score < 75) {
+    spamRisk = "Medium";
+  }
+
+  // Fallback checks
+  if (positives.length === 0) {
+    positives.push("Clean campaign typography layout and legible copy structure.");
+  }
+  if (negatives.length === 0) {
+    negatives.push("Add secondary CTA link variations to target passive customer segments.");
+  }
 
   return {
     engagementScore: score,
     predictedOpenRate: openRate,
     predictedClickRate: clickRate,
-    spamRisk: score > 75 ? "Low" : score > 60 ? "Medium" : "High",
-    positives: [
-      "Dynamic personalization placeholder increases user relevance.",
-      "Clear reward language supports recognition and relevance."
-    ],
-    negatives: [
-      "Subject line contains spam-prone triggers ('Free', 'Alert').",
-      "Limited direct call-to-actions in secondary channels."
-    ]
+    spamRisk,
+    positives,
+    negatives
   };
 }
 
