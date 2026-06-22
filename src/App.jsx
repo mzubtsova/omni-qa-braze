@@ -539,7 +539,6 @@ export default function App() {
   };
 
   const handleSelectAutomatedMessage = (message, openReview = false) => {
-    setFigmaTexts([]);
     if (!message) return;
     const channel = message.channel || '';
     if (channel === 'email') {
