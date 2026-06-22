@@ -240,7 +240,7 @@ export default function App() {
   const [preApprovalState, setPreApprovalState] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('omniqa_preapproval_default') || localStorage.getItem('omniqa_preapproval_checklist') || 'null');
-      if (stored) return stored;
+      if (stored && Array.isArray(stored.items)) return stored;
     } catch {
       // console.warn("Failed to parse preapproval");
     }
@@ -283,7 +283,9 @@ export default function App() {
             { id: 'evidence', text: 'Test-send evidence and required stakeholder approvals are documented.', done: !!stored.checks.evidence }
           ];
         }
-        return { ...emptyApproval, ...stored };
+        if (Array.isArray(stored.items)) {
+          return { ...emptyApproval, ...stored };
+        }
       }
       return emptyApproval;
     } catch {
@@ -321,7 +323,7 @@ export default function App() {
       }
     }
 
-    if (nextPreApproval) {
+    if (nextPreApproval && Array.isArray(nextPreApproval.items)) {
       setPreApprovalState(nextPreApproval);
     } else {
       setPreApprovalState({
@@ -364,7 +366,19 @@ export default function App() {
           { id: 'evidence', text: 'Test-send evidence and required stakeholder approvals are documented.', done: !!sa.checks.evidence }
         ];
       }
-      setApprovalState(sa);
+      if (Array.isArray(sa.items)) {
+        setApprovalState(sa);
+      } else {
+        setApprovalState({
+          reviewer: '',
+          items: defaultApprovalItems,
+          checks: { audience: false, content: false, personalization: false, evidence: false },
+          confirmHumanReview: false,
+          decisionNote: '',
+          status: 'pending',
+          approvedAt: ''
+        });
+      }
     } else {
       setApprovalState({
         reviewer: '',
