@@ -110,10 +110,41 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
 
   const importFromBraze = async (event) => {
     event.preventDefault();
-    if (!sourceInput.trim()) {
+    const trimmedInput = sourceInput.trim();
+    if (!trimmedInput) {
       setImportError('Enter a Braze Campaign or Canvas URL/ID.');
       return;
     }
+
+    // Helper to validate Braze URL or API ID
+    const isValidBrazeInput = (input) => {
+      const trimmed = input.trim();
+      if (!trimmed) return false;
+      
+      // Check if it's a URL
+      const isUrl = trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.includes('/') || trimmed.includes('.');
+      if (isUrl) {
+        const lower = trimmed.toLowerCase();
+        return lower.includes('braze') || lower.includes('dashboard') || lower.includes('campaign') || lower.includes('canvas');
+      }
+      
+      // Check if it's an alphanumeric API ID (can contain hyphens/underscores, e.g. uuid)
+      const apiIdRegex = /^[a-zA-Z0-9\-_]{3,64}$/;
+      return apiIdRegex.test(trimmed);
+    };
+
+    if (!isValidBrazeInput(trimmedInput)) {
+      const funnyErrors = [
+        "Oops! That doesn't look like a Braze URL or API ID. Did your cat walk across the keyboard? 🐾 Double-check your clipboard!",
+        "Wait a second... that's not a Braze ID! Did you copy the link to your favorite recipe by mistake? 🍳 Check your link and try again!",
+        "Oops! That link is about as valid as a unicorn's driver's license. 🦄 Please paste a proper Braze Campaign/Canvas URL or API ID!",
+        "Uh-oh! Our detectors say this isn't a Braze URL or API ID. Are you trying to hack us with space-dust? 🌌 Double-check your input!"
+      ];
+      setImportError(funnyErrors[Math.floor(Math.random() * funnyErrors.length)]);
+      setJourney(null); // Clear the current campaign so we "dont show anything"
+      return;
+    }
+
     setIsImporting(true);
     setImportError('');
     

@@ -270,20 +270,6 @@ export default function App() {
     }
   });
 
-  useEffect(() => {
-    localStorage.setItem('omniqa_preapproval_checklist', JSON.stringify(preApprovalState));
-    const complete = preApprovalState?.items?.filter((item) => item.done).length || 0;
-    const total = preApprovalState?.items?.length || 0;
-    setPreApprovalStatus({
-      complete,
-      total,
-      ready: total > 0 && complete === total
-    });
-  }, [preApprovalState]);
-
-  useEffect(() => {
-    localStorage.setItem('omniqa_approval', JSON.stringify(approvalState));
-  }, [approvalState]);
 
   useEffect(() => {
     if (!automationState?.journey) return;
@@ -316,6 +302,59 @@ export default function App() {
   const [showQuickSaveModal, setShowQuickSaveModal] = useState(false);
   const [quickSaveName, setQuickSaveName] = useState('');
   const [quickSaveId, setQuickSaveId] = useState('');
+
+  const autoUpdateLibraryCard = useCallback((updatedPreApproval, updatedApproval) => {
+    if (!loadedCampaignId) return;
+    const saved = localStorage.getItem('omniqa_braze_catalog');
+    if (!saved) return;
+    try {
+      const campaigns = JSON.parse(saved);
+      if (campaigns.some(c => c.id === loadedCampaignId)) {
+        const updated = campaigns.map(c => {
+          if (c.id === loadedCampaignId) {
+            const tempC = {
+              savedPreApproval: updatedPreApproval,
+              savedApproval: updatedApproval
+            };
+            const computedStatus = getCampaignStatus(tempC);
+            return {
+              ...c,
+              status: computedStatus,
+              savedPreApproval: updatedPreApproval,
+              savedApproval: updatedApproval
+            };
+          }
+          return c;
+        });
+        localStorage.setItem('omniqa_braze_catalog', JSON.stringify(updated));
+      }
+    } catch (e) {
+      console.error("Failed to auto-update catalog", e);
+    }
+  }, [loadedCampaignId]);
+
+  useEffect(() => {
+    localStorage.setItem('omniqa_preapproval_checklist', JSON.stringify(preApprovalState));
+    const complete = preApprovalState?.items?.filter((item) => item.done).length || 0;
+    const total = preApprovalState?.items?.length || 0;
+    setPreApprovalStatus({
+      complete,
+      total,
+      ready: total > 0 && complete === total
+    });
+
+    if (loadedCampaignId) {
+      autoUpdateLibraryCard(preApprovalState, approvalState);
+    }
+  }, [preApprovalState, loadedCampaignId, autoUpdateLibraryCard, approvalState]);
+
+  useEffect(() => {
+    localStorage.setItem('omniqa_approval', JSON.stringify(approvalState));
+
+    if (loadedCampaignId) {
+      autoUpdateLibraryCard(preApprovalState, approvalState);
+    }
+  }, [approvalState, loadedCampaignId, autoUpdateLibraryCard, preApprovalState]);
 
   const handleAutomationAuditChange = useCallback((nextState) => {
     if (nextState?.journey && nextState.journey.source === 'braze') {
