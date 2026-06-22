@@ -92,10 +92,10 @@ This report records a QA decision. A person still controls activation and schedu
       <section className="panel preapproval-setup">
         <div className="panel-topline"><div><p className="eyebrow">Campaign setup</p><h3>Review context</h3></div></div>
         <div className="preapproval-setup-grid">
-          <div className="form-group"><label className="form-label" htmlFor="pre-name">Campaign or Canvas name</label><input id="pre-name" className="form-input" value={state.setup.campaignName} onChange={(event) => updateSetup('campaignName', event.target.value)} /></div>
-          <div className="form-group"><label className="form-label" htmlFor="pre-type">Campaign type</label><input id="pre-type" className="form-input" value={state.setup.campaignType} onChange={(event) => updateSetup('campaignType', event.target.value)} placeholder="Lifecycle, promotional, transactional..." /></div>
-          <div className="form-group"><label className="form-label" htmlFor="pre-owner">Owner</label><input id="pre-owner" className="form-input" value={state.setup.owner} onChange={(event) => updateSetup('owner', event.target.value)} /></div>
-          <div className="form-group"><label className="form-label" htmlFor="pre-date">Planned launch date</label><input id="pre-date" type="date" className="form-input" value={state.setup.launchDate} onChange={(event) => updateSetup('launchDate', event.target.value)} /></div>
+          <div className="form-group"><label className="form-label" htmlFor="pre-name">Campaign or Canvas name</label><input id="pre-name" className="form-input" value={state?.setup?.campaignName || ''} onChange={(event) => updateSetup('campaignName', event.target.value)} /></div>
+          <div className="form-group"><label className="form-label" htmlFor="pre-type">Campaign type</label><input id="pre-type" className="form-input" value={state?.setup?.campaignType || ''} onChange={(event) => updateSetup('campaignType', event.target.value)} placeholder="Lifecycle, promotional, transactional..." /></div>
+          <div className="form-group"><label className="form-label" htmlFor="pre-owner">Owner</label><input id="pre-owner" className="form-input" value={state?.setup?.owner || ''} onChange={(event) => updateSetup('owner', event.target.value)} /></div>
+          <div className="form-group"><label className="form-label" htmlFor="pre-date">Planned launch date</label><input id="pre-date" type="date" className="form-input" value={state?.setup?.launchDate || ''} onChange={(event) => updateSetup('launchDate', event.target.value)} /></div>
         </div>
       </section>
 

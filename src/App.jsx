@@ -240,7 +240,7 @@ export default function App() {
   const [preApprovalState, setPreApprovalState] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('omniqa_preapproval_default') || localStorage.getItem('omniqa_preapproval_checklist') || 'null');
-      if (stored && Array.isArray(stored.items)) return stored;
+      if (stored && Array.isArray(stored.items) && stored.setup) return stored;
     } catch {
       // console.warn("Failed to parse preapproval");
     }
@@ -323,7 +323,7 @@ export default function App() {
       }
     }
 
-    if (nextPreApproval && Array.isArray(nextPreApproval.items)) {
+    if (nextPreApproval && Array.isArray(nextPreApproval.items) && nextPreApproval.setup) {
       setPreApprovalState(nextPreApproval);
     } else {
       setPreApprovalState({
