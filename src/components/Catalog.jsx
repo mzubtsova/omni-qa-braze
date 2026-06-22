@@ -153,15 +153,17 @@ const getBrazeDashboardUrl = (campaignId, type) => {
 export function getCampaignStatus(c) {
   const preApproval = c?.savedPreApproval;
   const approval = c?.savedApproval;
+  const audit = c?.savedAudit;
 
   const totalChecks = preApproval?.items?.length || 0;
   const completedChecks = preApproval?.items?.filter(item => item.done).length || 0;
   const isPreApproved = totalChecks > 0 && completedChecks === totalChecks;
   const isApproved = approval?.status === 'approved';
+  const isScoreGood = !audit || (audit.counts?.blocker || 0) === 0;
 
-  if (isPreApproved && isApproved) {
+  if (isPreApproved && isApproved && isScoreGood) {
     return 'Ready for Deploy';
-  } else if (completedChecks > 0 || isApproved) {
+  } else if (completedChecks > 0 || isApproved || (audit && audit.score > 0)) {
     return 'In Progress';
   } else {
     return 'Not Started';

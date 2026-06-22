@@ -14,7 +14,7 @@ function formatStatus(status) {
     blocked: 'Blocked',
     'needs-review': 'Needs review',
     'ready-for-approval': 'Ready for approval',
-    approved: 'Approved by reviewer'
+    approved: 'Ready for Deploy'
   }[status] || 'Pending review';
 }
 

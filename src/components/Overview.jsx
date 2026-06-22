@@ -201,7 +201,7 @@ OmniQA Quality Assurance Engine`;
           <div>
             <strong>{automationState.audit.score}/100</strong>
             <span className={`readiness-pill ${automationState.approval?.status === 'approved' ? 'approved' : automationState.audit.status}`}>
-              {automationState.approval?.status === 'approved' ? 'Approved by reviewer' : automationState.audit.status.replace(/-/g, ' ')}
+              {automationState.approval?.status === 'approved' ? 'Ready for Deploy' : automationState.audit.status.replace(/-/g, ' ')}
             </span>
           </div>
         </section>
