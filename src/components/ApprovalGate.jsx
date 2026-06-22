@@ -91,6 +91,20 @@ export default function ApprovalGate({ automationState, preApprovalStatus, appro
     window.print();
   };
 
+  const completedChecks = Object.keys(approval?.checks || {}).filter(k => approval.checks[k]).length;
+  const totalChecks = approvalChecks.length;
+
+  let approvalPillText = 'Pending Review';
+  let approvalPillClass = 'blocked';
+
+  if (approval.status === 'approved' || completedChecks === totalChecks) {
+    approvalPillText = 'Complete';
+    approvalPillClass = 'approved';
+  } else if (completedChecks > 0) {
+    approvalPillText = 'In Progress';
+    approvalPillClass = 'needs-review';
+  }
+
   return (
     <section className="approval-panel panel">
       <div className="panel-topline">
@@ -115,7 +129,7 @@ export default function ApprovalGate({ automationState, preApprovalStatus, appro
           >
             {approvalChecks.map(([k]) => k).every(k => approval.checks[k]) ? 'Deselect All' : 'Select All Checks'}
           </button>
-          <span className={`readiness-pill ${approval.status === 'approved' ? 'approved' : audit.status}`}>{formatStatus(approval.status === 'approved' ? 'approved' : audit.status)}</span>
+          <span className={`readiness-pill ${approvalPillClass}`}>{approvalPillText}</span>
         </div>
       </div>
       <p className="approval-intro">Automated findings are evidence, not a launch decision. Confirm the remaining business and test checks, record the reviewer, and approve readiness here.</p>

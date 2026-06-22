@@ -68,8 +68,20 @@ export default function PreApprovalChecklist({ state, setState }) {
             >
               {state.items.every(item => item.done) ? 'Deselect All' : 'Select All'}
             </button>
-            <span className={complete === state.items.length ? 'readiness-pill approved' : 'readiness-pill needs-review'}>
-              {complete === state.items.length ? 'Complete' : 'In progress'}
+            <span className={
+              complete === state.items.length 
+                ? 'readiness-pill approved' 
+                : complete === 0 
+                  ? 'readiness-pill blocked' 
+                  : 'readiness-pill needs-review'
+            }>
+              {
+                complete === state.items.length 
+                  ? 'Complete' 
+                  : complete === 0 
+                    ? 'Pending Review' 
+                    : 'In progress'
+              }
             </span>
           </div>
         </div>

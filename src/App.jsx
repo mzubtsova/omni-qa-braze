@@ -315,6 +315,7 @@ export default function App() {
         const updated = campaigns.map(c => {
           if (c.id === loadedCampaignId) {
             const tempC = {
+              ...c,
               savedPreApproval: updatedPreApproval,
               savedApproval: updatedApproval
             };
@@ -397,6 +398,7 @@ export default function App() {
       const updated = campaigns.map(c => {
         if (c.id === loadedCampaignId) {
           const tempC = {
+            ...c,
             savedPreApproval: preApprovalState,
             savedApproval: approvalState
           };
@@ -490,6 +492,17 @@ export default function App() {
         audit: campaign.savedAudit,
         approval: campaign.savedApproval || null
       });
+      // Synchronize overall scores and issues counts
+      const sa = campaign.savedAudit;
+      setScores({
+        overall: sa.score ?? 100,
+        copy: sa.scores?.copy ?? sa.score ?? 100,
+        tech: sa.scores?.tech ?? sa.score ?? 100,
+        spam: sa.scores?.spam ?? sa.score ?? 100
+      });
+      if (sa.counts) {
+        setIssuesCount(sa.counts);
+      }
     } else {
       setAutomationState(null);
     }
@@ -975,6 +988,7 @@ export default function App() {
             unifiedQAMode={unifiedQAMode}
             setUnifiedQAMode={setUnifiedQAMode}
             onQuickSave={handleQuickSave}
+            automationState={automationState}
           />
         )}
 
@@ -1128,7 +1142,8 @@ export default function App() {
                 const newId = Date.now().toString();
                 const tempC = {
                   savedPreApproval: preApprovalState,
-                  savedApproval: approvalState
+                  savedApproval: approvalState,
+                  savedAudit: automationState?.audit || null
                 };
                 const computedStatus = getCampaignStatus(tempC);
 

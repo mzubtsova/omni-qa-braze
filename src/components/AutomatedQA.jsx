@@ -19,8 +19,8 @@ function formatStatus(status) {
   }[status] || 'Pending review';
 }
 
-export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMode, figmaTexts = [], unifiedQAMode, setUnifiedQAMode, onQuickSave }) {
-  const [journey, setJourney] = useState(null);
+export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMode, figmaTexts = [], unifiedQAMode, setUnifiedQAMode, onQuickSave, automationState }) {
+  const [journey, setJourney] = useState(() => automationState?.journey || null);
   const [sourceInput, setSourceInput] = useState('');
   const [assetType, setAssetType] = useState('canvas');
   const [postLaunchDraftVersion, setPostLaunchDraftVersion] = useState(true);
@@ -34,6 +34,18 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
   });
   const [isReauditing, setIsReauditing] = useState(false);
   const [reauditingComment, setReauditingComment] = useState('Auditing...');
+
+  useEffect(() => {
+    if (automationState?.journey) {
+      setJourney(automationState.journey);
+    } else {
+      setJourney(null);
+    }
+  }, [automationState?.journey]);
+
+  useEffect(() => {
+    setSelectedMessageId('all');
+  }, [journey?.id]);
 
   const handleReRun = async () => {
     setIsReauditing(true);
@@ -54,6 +66,9 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
 
   const audit = useMemo(() => {
     if (!journey) {
+      if (automationState?.audit) {
+        return automationState.audit;
+      }
       return {
         status: 'pending',
         score: 100,
@@ -65,8 +80,12 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
         counts: { blocker: 0, high: 0, medium: 0, low: 0 }
       };
     }
+    // If restoring from library and journey steps are empty, use saved audit to prevent blanking
+    if (journey.source === 'library' && automationState?.audit && (!journey.steps || journey.steps.length === 0)) {
+      return automationState.audit;
+    }
     return auditJourneyAutomatically(journey, figmaTexts);
-  }, [journey, figmaTexts]);
+  }, [journey, figmaTexts, automationState]);
 
   const currentAudit = useMemo(() => {
     if (selectedMessageId === 'all') {

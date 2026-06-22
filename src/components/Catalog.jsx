@@ -34,7 +34,7 @@ const SEED_CAMPAIGNS = [
       <h2>Welcome, {{ user.first_name | default: 'Valued Customer' }}!</h2>
       <p>We loaded a special reward into your account to say thanks for being an app member.</p>
       <p style="text-align: center; margin: 30px 0;">
-        <a href="http://example.com/redeem" style="background-color: #f43f5e; color: #ffffff;" class="btn">View Welcome Offer</a>
+        <a href="https://brand.com/redeem?utm_source=braze&utm_medium=email" style="background-color: #f43f5e; color: #ffffff;" class="btn">View Welcome Offer</a>
       </p>
     </div>
     <div class="footer">
@@ -44,14 +44,111 @@ const SEED_CAMPAIGNS = [
 </body>
 </html>`,
     pushBody: 'Your welcome reward is ready. Open the app to explore your new member benefits.',
-    smsBody: 'Northstar Rewards: Welcome {{ user.first_name | default: \'Valued Customer\' }}! View your member offer: http://example.com/redeem',
+    smsBody: 'Northstar Rewards: Welcome {{ user.first_name | default: \'Valued Customer\' }}! View your member offer: https://brand.com/redeem?utm_source=braze&utm_medium=sms',
     iamHeader: 'Your welcome reward is ready',
     iamBody: 'Explore your new member benefits and available offers. Valid for 14 days.',
     iamButtonText: 'View Offer',
-    iamButtonLink: 'http://example.com/redeem',
-    savedJourney: { id: '1', name: 'Northstar Welcome Lifecycle', steps: [], type: 'campaign', source: 'library' },
+    iamButtonLink: 'https://brand.com/redeem?utm_source=braze&utm_medium=iam',
+    savedJourney: {
+      id: '1',
+      name: 'Northstar Welcome Lifecycle',
+      type: 'campaign',
+      source: 'library',
+      steps: [
+        {
+          id: 'step-welcome-email',
+          name: 'Welcome Email',
+          type: 'email',
+          messages: [{
+            id: 'msg-welcome-email',
+            stepId: 'step-welcome-email',
+            stepName: 'Welcome Email',
+            name: 'Welcome Email Variant',
+            channel: 'email',
+            subject: 'Your welcome reward is ready',
+            preheader: 'Explore your new member benefits and available offers.',
+            body: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Northstar Rewards Welcome</title>
+  <style>
+    body { font-family: Helvetica, Arial, sans-serif; background-color: #f3f4f6; padding: 20px; }
+    .card { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; }
+    .header { background-color: #002d62; padding: 30px; text-align: center; color: #ffffff; }
+    .content { padding: 30px; color: #333333; line-height: 1.6; }
+    .btn { display: inline-block; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; }
+    .footer { background-color: #f9fafb; padding: 20px; text-align: center; font-size: 12px; color: #666666; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h1 style="margin: 0; font-size: 24px;">Northstar Rewards</h1>
+    </div>
+    <div class="content">
+      <h2>Welcome, {{ user.first_name | default: 'Valued Customer' }}!</h2>
+      <p>We loaded a special reward into your account to say thanks for being an app member.</p>
+      <p style="text-align: center; margin: 30px 0;">
+        <a href="https://brand.com/redeem?utm_source=braze&utm_medium=email" style="background-color: #f43f5e; color: #ffffff;" class="btn">View Welcome Offer</a>
+      </p>
+    </div>
+    <div class="footer">
+      <p>© 2026 Northstar Rewards. If you wish to unsubscribe, click <a href="#" style="color: #94a3b8;">here</a>.</p>
+    </div>
+  </div>
+</body>
+</html>`,
+            from: 'newsletter@brand.com'
+          }]
+        },
+        {
+          id: 'step-welcome-push',
+          name: 'Welcome Push',
+          type: 'push',
+          messages: [{
+            id: 'msg-welcome-push',
+            stepId: 'step-welcome-push',
+            stepName: 'Welcome Push',
+            name: 'Welcome Push Variant',
+            channel: 'push',
+            body: 'Your welcome reward is ready. Open the app to explore your new member benefits.',
+            actionUrl: 'app://welcome'
+          }]
+        },
+        {
+          id: 'step-welcome-sms',
+          name: 'Welcome SMS',
+          type: 'sms',
+          messages: [{
+            id: 'msg-welcome-sms',
+            stepId: 'step-welcome-sms',
+            stepName: 'Welcome SMS',
+            name: 'Welcome SMS Variant',
+            channel: 'sms',
+            body: 'Northstar Rewards: Welcome {{ user.first_name | default: \'Valued Customer\' }}! View your member offer: https://brand.com/redeem?utm_source=braze&utm_medium=sms'
+          }]
+        },
+        {
+          id: 'step-welcome-iam',
+          name: 'Welcome IAM',
+          type: 'in_app_message',
+          messages: [{
+            id: 'msg-welcome-iam',
+            stepId: 'step-welcome-iam',
+            stepName: 'Welcome IAM',
+            name: 'Welcome IAM Variant',
+            channel: 'in_app_message',
+            title: 'Your welcome reward is ready',
+            body: 'Explore your new member benefits and available offers. Valid for 14 days.',
+            actionUrl: 'https://brand.com/redeem?utm_source=braze&utm_medium=iam'
+          }]
+        }
+      ]
+    },
     savedAudit: {
       score: 100,
+      scores: { overall: 100, copy: 100, tech: 100, spam: 100 },
       counts: { blocker: 0, high: 0, medium: 0, low: 0 },
       findings: []
     },
@@ -71,21 +168,85 @@ const SEED_CAMPAIGNS = [
     status: 'Out of Sync',
     lastSynced: '1 week ago',
     subjectLine: 'Summer double points are here',
-    brazeHtml: '<h1>Summer Points Boost</h1>',
+    brazeHtml: '<h1>Summer Points Boost</h1><p>Earn double points today.</p><img src="summer_boost.png" />',
     pushBody: 'Get double points on eligible purchases today. Open the app to check your loyalty tier.',
     smsBody: 'Northstar Rewards: Earn double points on eligible purchases today. Open the app for details.',
     iamHeader: 'Double Points Today!',
     iamBody: 'Make an eligible purchase today and get double points toward your next reward.',
     iamButtonText: 'Order Now',
     iamButtonLink: 'http://example.com/order',
-    savedJourney: { id: '2', name: 'Summer Points Boost', steps: [], type: 'campaign', source: 'library' },
+    savedJourney: {
+      id: '2',
+      name: 'Summer Points Boost',
+      type: 'campaign',
+      source: 'library',
+      steps: [
+        {
+          id: 'step-boost-email',
+          name: 'Summer Boost Email',
+          type: 'email',
+          messages: [{
+            id: 'msg-boost-email',
+            stepId: 'step-boost-email',
+            stepName: 'Summer Boost Email',
+            name: 'Email Variant',
+            channel: 'email',
+            subject: 'Summer double points are here',
+            body: '<h1>Summer Points Boost</h1><p>Earn double points today.</p><img src="summer_boost.png" />',
+            from: 'offers@brand.com'
+          }]
+        },
+        {
+          id: 'step-boost-push',
+          name: 'Summer Boost Push',
+          type: 'push',
+          messages: [{
+            id: 'msg-boost-push',
+            stepId: 'step-boost-push',
+            stepName: 'Summer Boost Push',
+            name: 'Push Variant',
+            channel: 'push',
+            body: 'Get double points on eligible purchases today. Open the app to check your loyalty tier.'
+          }]
+        },
+        {
+          id: 'step-boost-sms',
+          name: 'Summer Boost SMS',
+          type: 'sms',
+          messages: [{
+            id: 'msg-boost-sms',
+            stepId: 'step-boost-sms',
+            stepName: 'Summer Boost SMS',
+            name: 'SMS Variant',
+            channel: 'sms',
+            body: 'Northstar Rewards: Earn double points on eligible purchases today. Open the app for details.'
+          }]
+        },
+        {
+          id: 'step-boost-iam',
+          name: 'Summer Boost IAM',
+          type: 'in_app_message',
+          messages: [{
+            id: 'msg-boost-iam',
+            stepId: 'step-boost-iam',
+            stepName: 'Summer Boost IAM',
+            name: 'IAM Variant',
+            channel: 'in_app_message',
+            title: 'Double Points Today!',
+            body: 'Make an eligible purchase today and get double points toward your next reward.',
+            actionUrl: 'http://example.com/order'
+          }]
+        }
+      ]
+    },
     savedAudit: {
       score: 74,
+      scores: { overall: 74, copy: 90, tech: 65, spam: 90 },
       counts: { blocker: 0, high: 1, medium: 1, low: 1 },
       findings: [
-        { id: 'f-1', severity: 'high', title: 'Action links contain placeholders', evidence: 'example.com', remediation: 'Replace placeholders.', category: 'Links', scope: 'message' },
-        { id: 'f-2', severity: 'medium', title: 'Alt attribute is missing from image', evidence: 'summer_boost.png', remediation: 'Add descriptive alt text.', category: 'Images', scope: 'message' },
-        { id: 'f-3', severity: 'low', title: 'Missing tracking parameters', evidence: 'utm_source missing', remediation: 'Add UTM tags.', category: 'Links', scope: 'message' }
+        { id: 'msg-boost-iam-action-placeholder', severity: 'high', title: 'Action links contain placeholders', evidence: 'http://example.com/order', remediation: 'Replace placeholders with live URLs.', category: 'Links', scope: 'message', messageId: 'msg-boost-iam', stepId: 'step-boost-iam' },
+        { id: 'msg-boost-email-image-0', severity: 'medium', title: 'Alt attribute is missing from image', evidence: 'summer_boost.png', remediation: 'Add descriptive alt text.', category: 'Images', scope: 'message', messageId: 'msg-boost-email', stepId: 'step-boost-email' },
+        { id: 'msg-boost-email-link-0', severity: 'low', title: 'Missing tracking parameters', evidence: 'utm_source missing', remediation: 'Add UTM tags.', category: 'Links', scope: 'message', messageId: 'msg-boost-email', stepId: 'step-boost-email' }
       ]
     },
     savedApproval: {
@@ -103,20 +264,85 @@ const SEED_CAMPAIGNS = [
     status: 'Draft',
     lastSynced: '3 days ago',
     subjectLine: 'Download the app and explore member rewards',
-    brazeHtml: '<h1>Get rewards in the Northstar App</h1>',
+    brazeHtml: '<h1 style="color: #ffffff; background: #ffffff;">Get rewards in the Northstar App</h1>',
     pushBody: 'Sign up in the app to start earning member rewards.',
     smsBody: 'Northstar Rewards: Download the app to explore member benefits: http://example.com/download',
     iamHeader: 'Get the App',
     iamBody: 'Receive rewards on your birthday, unlock point multipliers, and get quick ordering.',
     iamButtonText: 'Get App',
     iamButtonLink: 'http://example.com/download',
-    savedJourney: { id: '3', name: 'QSR App Download Campaign', steps: [], type: 'campaign', source: 'library' },
+    savedJourney: {
+      id: '3',
+      name: 'QSR App Download Campaign',
+      type: 'campaign',
+      source: 'library',
+      steps: [
+        {
+          id: 'step-download-email',
+          name: 'QSR App Download Email',
+          type: 'email',
+          messages: [{
+            id: 'msg-download-email',
+            stepId: 'step-download-email',
+            stepName: 'QSR App Download Email',
+            name: 'Email Variant',
+            channel: 'email',
+            subject: 'Download the app and explore member rewards',
+            preheader: '',
+            body: '<h1 style="color: #ffffff; background: #ffffff;">Get rewards in the Northstar App</h1>',
+            from: 'support@brand.com'
+          }]
+        },
+        {
+          id: 'step-download-push',
+          name: 'QSR App Download Push',
+          type: 'push',
+          messages: [{
+            id: 'msg-download-push',
+            stepId: 'step-download-push',
+            stepName: 'QSR App Download Push',
+            name: 'Push Variant',
+            channel: 'push',
+            body: 'Sign up in the app to start earning member rewards.'
+          }]
+        },
+        {
+          id: 'step-download-sms',
+          name: 'QSR App Download SMS',
+          type: 'sms',
+          messages: [{
+            id: 'msg-download-sms',
+            stepId: 'step-download-sms',
+            stepName: 'QSR App Download SMS',
+            name: 'SMS Variant',
+            channel: 'sms',
+            body: 'Northstar Rewards: Download the app to explore member benefits: http://example.com/download'
+          }]
+        },
+        {
+          id: 'step-download-iam',
+          name: 'QSR App Download IAM',
+          type: 'in_app_message',
+          messages: [{
+            id: 'msg-download-iam',
+            stepId: 'step-download-iam',
+            stepName: 'QSR App Download IAM',
+            name: 'IAM Variant',
+            channel: 'in_app_message',
+            title: 'Get the App',
+            body: 'Receive rewards on your birthday, unlock point multipliers, and get quick ordering.',
+            actionUrl: 'http://example.com/download'
+          }]
+        }
+      ]
+    },
     savedAudit: {
       score: 83,
+      scores: { overall: 83, copy: 90, tech: 80, spam: 95 },
       counts: { blocker: 0, high: 0, medium: 2, low: 1 },
       findings: [
-        { id: 'f-4', severity: 'medium', title: 'Contrast ratio fails accessibility check', evidence: 'Ratio 3.2:1', remediation: 'Increase contrast.', category: 'Accessibility', scope: 'message' },
-        { id: 'f-5', severity: 'medium', title: 'Preheader is missing', evidence: 'Preheader is empty', remediation: 'Add a supporting preheader.', category: 'Email', scope: 'message' }
+        { id: 'msg-download-email-contrast-0', severity: 'medium', title: 'Contrast ratio fails accessibility check', evidence: 'Ratio 3.2:1', remediation: 'Increase contrast.', category: 'Accessibility', scope: 'message', messageId: 'msg-download-email', stepId: 'step-download-email' },
+        { id: 'msg-download-email-preheader', severity: 'medium', title: 'Preheader is missing', evidence: 'Preheader is empty', remediation: 'Add a supporting preheader.', category: 'Email', scope: 'message', messageId: 'msg-download-email', stepId: 'step-download-email' }
       ]
     },
     savedApproval: {
@@ -194,7 +420,30 @@ export default function Catalog({
   useEffect(() => {
     const saved = localStorage.getItem('omniqa_braze_catalog');
     if (saved) {
-      setCampaigns(JSON.parse(saved));
+      try {
+        let loaded = JSON.parse(saved);
+        let needsUpdate = false;
+        loaded = loaded.map(c => {
+          const seed = SEED_CAMPAIGNS.find(s => s.id === c.id);
+          if (seed && (!c.savedJourney?.steps || c.savedJourney.steps.length === 0)) {
+            needsUpdate = true;
+            return {
+              ...c,
+              savedJourney: seed.savedJourney,
+              savedAudit: c.savedAudit && (c.savedAudit.findings?.length > 0 || c.savedAudit.score !== 100) ? c.savedAudit : seed.savedAudit
+            };
+          }
+          return c;
+        });
+        if (needsUpdate) {
+          localStorage.setItem('omniqa_braze_catalog', JSON.stringify(loaded));
+        }
+        setCampaigns(loaded);
+      } catch (e) {
+        console.error("Migration failed", e);
+        setCampaigns(SEED_CAMPAIGNS);
+        localStorage.setItem('omniqa_braze_catalog', JSON.stringify(SEED_CAMPAIGNS));
+      }
     } else {
       setCampaigns(SEED_CAMPAIGNS);
       localStorage.setItem('omniqa_braze_catalog', JSON.stringify(SEED_CAMPAIGNS));
@@ -241,7 +490,8 @@ export default function Catalog({
           const tempC = {
             ...c,
             savedPreApproval: nextSavedPreApproval,
-            savedApproval: nextSavedApproval
+            savedApproval: nextSavedApproval,
+            savedAudit: nextAudit
           };
           const computedStatus = getCampaignStatus(tempC);
 
@@ -290,7 +540,8 @@ export default function Catalog({
 
     const tempC = {
       savedPreApproval: preApprovalState || null,
-      savedApproval: approvalState || null
+      savedApproval: approvalState || null,
+      savedAudit: automationState?.audit || null
     };
     const computedStatus = getCampaignStatus(tempC);
 
@@ -329,7 +580,8 @@ export default function Catalog({
           const tempC = {
             ...c,
             savedPreApproval: preApprovalState || null,
-            savedApproval: approvalState || null
+            savedApproval: approvalState || null,
+            savedAudit: automationState?.audit || null
           };
           const computedStatus = getCampaignStatus(tempC);
 
