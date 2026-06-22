@@ -13,18 +13,19 @@ export default function PreApprovalChecklist({ state, setState, automationState,
   const [newCheckpoint, setNewCheckpoint] = useState('');
   const [openNotes, setOpenNotes] = useState([]);
 
-  const updateSetup = (key, value) => setState((current) => ({ ...current, setup: { ...current.setup, [key]: value } }));
-  const updateItem = (id, updates) => setState((current) => ({ ...current, items: current.items.map((item) => item.id === id ? { ...item, ...updates } : item) }));
-  const removeItem = (id) => setState((current) => ({ ...current, items: current.items.filter((item) => item.id !== id) }));
+  const updateSetup = (key, value) => setState((current) => ({ ...current, setup: { ...(current?.setup || {}), [key]: value } }));
+  const updateItem = (id, updates) => setState((current) => ({ ...current, items: (current?.items || []).map((item) => item.id === id ? { ...item, ...updates } : item) }));
+  const removeItem = (id) => setState((current) => ({ ...current, items: (current?.items || []).filter((item) => item.id !== id) }));
 
   const addItem = () => {
     const text = newCheckpoint.trim();
     if (!text) return;
-    setState((current) => ({ ...current, items: [...current.items, makeItem(text)] }));
+    setState((current) => ({ ...current, items: [...(current?.items || []), makeItem(text)] }));
     setNewCheckpoint('');
   };
 
-  const complete = state.items.filter((item) => item.done).length;
+  const complete = (state?.items || []).filter((item) => item && item.done).length;
+  const totalItemsCount = (state?.items || []).length;
 
   const journey = automationState?.journey;
   const audit = automationState?.audit;
@@ -86,7 +87,7 @@ This report records a QA decision. A person still controls activation and schedu
           <h3>Pre-Approval Checklist</h3>
           <p>Automated QA catches technical signals. Use this checklist for the business, audience, test-send, and stakeholder checks that require a person.</p>
         </div>
-        <div className="preapproval-progress"><strong>{complete}/{state.items.length}</strong><span>complete</span></div>
+        <div className="preapproval-progress"><strong>{complete}/{totalItemsCount}</strong><span>complete</span></div>
       </section>
 
       <section className="panel preapproval-setup">
@@ -111,24 +112,24 @@ This report records a QA decision. A person still controls activation and schedu
               className="btn btn-secondary" 
               style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem', cursor: 'pointer' }}
               onClick={() => {
-                const allDone = state.items.every(item => item.done);
+                const allDone = (state?.items || []).every(item => item && item.done);
                 setState(current => ({
                   ...current,
-                  items: current.items.map(item => ({ ...item, done: !allDone }))
+                  items: (current?.items || []).map(item => item ? ({ ...item, done: !allDone }) : item)
                 }));
               }}
             >
-              {state.items.every(item => item.done) ? 'Deselect All' : 'Select All'}
+              {(state?.items || []).every(item => item && item.done) ? 'Deselect All' : 'Select All'}
             </button>
             <span className={
-              complete === state.items.length 
+              complete === totalItemsCount 
                 ? 'readiness-pill approved' 
                 : complete === 0 
                   ? 'readiness-pill blocked' 
                   : 'readiness-pill needs-review'
             }>
               {
-                complete === state.items.length 
+                complete === totalItemsCount 
                   ? 'Complete' 
                   : complete === 0 
                     ? 'Pending Review' 
@@ -138,7 +139,7 @@ This report records a QA decision. A person still controls activation and schedu
           </div>
         </div>
         <div className="preapproval-items">
-          {state.items.map((item, index) => (
+          {(state?.items || []).filter(Boolean).map((item, index) => (
             <article className={`preapproval-item ${item.done ? 'done' : ''}`} key={item.id}>
               <div className="preapproval-item-row">
                 <input type="checkbox" checked={item.done} onChange={(event) => updateItem(item.id, { done: event.target.checked })} aria-label={`Mark checkpoint ${index + 1} complete`} />
@@ -154,7 +155,7 @@ This report records a QA decision. A person still controls activation and schedu
           <input className="form-input" value={newCheckpoint} onChange={(event) => setNewCheckpoint(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addItem(); } }} placeholder="Add another checkpoint" />
           <button className="btn btn-secondary" type="button" onClick={addItem}><Plus size={15} /> Add</button>
         </div>
-        <div className="form-group preapproval-general-notes"><label className="form-label" htmlFor="pre-notes">General reviewer notes</label><textarea id="pre-notes" className="form-textarea" value={state.generalNotes} onChange={(event) => setState((current) => ({ ...current, generalNotes: event.target.value }))} placeholder="Document open questions, owners, decisions, or accepted risks..." /></div>
+        <div className="form-group preapproval-general-notes"><label className="form-label" htmlFor="pre-notes">General reviewer notes</label><textarea id="pre-notes" className="form-textarea" value={state?.generalNotes || ''} onChange={(event) => setState((current) => ({ ...current, generalNotes: event.target.value }))} placeholder="Document open questions, owners, decisions, or accepted risks..." /></div>
         
         {/* Verification action buttons */}
         <div className="approval-actions" style={{ marginTop: '1.5rem', paddingTop: '1.25rem' }}>

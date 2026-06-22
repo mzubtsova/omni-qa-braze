@@ -196,12 +196,12 @@ OmniQA Quality Assurance Engine`;
           <div>
             <p className="eyebrow">Latest journey audit</p>
             <strong>{automationState.journey.name}</strong>
-            <span>{automationState.audit.stepCount} steps · {automationState.audit.messageCount} messages · {automationState.audit.findings.length} findings</span>
+            <span>{(automationState.audit.stepCount || 0)} steps · {(automationState.audit.messageCount || 0)} messages · {(automationState.audit.findings || []).length} findings</span>
           </div>
           <div>
-            <strong>{automationState.audit.score}/100</strong>
-            <span className={`readiness-pill ${automationState.approval?.status === 'approved' ? 'approved' : automationState.audit.status}`}>
-              {automationState.approval?.status === 'approved' ? 'Ready for Deploy' : automationState.audit.status.replace(/-/g, ' ')}
+            <strong>{(automationState.audit.score ?? 100)}/100</strong>
+            <span className={`readiness-pill ${automationState.approval?.status === 'approved' ? 'approved' : (automationState.audit.status || 'needs-review')}`}>
+              {automationState.approval?.status === 'approved' ? 'Ready for Deploy' : (automationState.audit.status || 'needs-review').replace(/-/g, ' ')}
             </span>
           </div>
         </section>

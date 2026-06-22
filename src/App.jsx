@@ -978,7 +978,7 @@ export default function App() {
   const printLinkIssues = auditHtmlLinks(brazeHtml);
   const printContrastIssues = checkWcagContrast(brazeHtml);
   const printImageIssues = auditImages(brazeHtml);
-  const missingPreApprovalCount = preApprovalState?.items?.filter(item => !item.done).length || 0;
+  const missingPreApprovalCount = (preApprovalState?.items || []).filter(item => item && !item.done).length;
   const missingApprovalChecksCount = Object.values(approvalState?.checks || {}).filter(checked => !checked).length;
   const reviewerMissing = !approvalState?.reviewer?.trim();
   const approvalMissing = approvalState?.status !== 'approved';

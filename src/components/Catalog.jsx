@@ -1231,10 +1231,10 @@ ${findings}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1rem' }} className="settings-grid">
                 <div style={{ padding: '1.25rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.4rem', justifyContent: 'center' }}>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>QA Score</span>
-                  <span style={{ fontSize: '2.5rem', fontWeight: '800', color: reportModalCampaign.savedAudit.score >= 90 ? 'var(--success)' : reportModalCampaign.savedAudit.score >= 70 ? 'var(--warning)' : 'var(--error)' }}>
-                    {reportModalCampaign.savedAudit.score}/100
+                  <span style={{ fontSize: '2.5rem', fontWeight: '800', color: (reportModalCampaign.savedAudit?.score ?? 100) >= 90 ? 'var(--success)' : (reportModalCampaign.savedAudit?.score ?? 100) >= 70 ? 'var(--warning)' : 'var(--error)' }}>
+                    {reportModalCampaign.savedAudit ? `${reportModalCampaign.savedAudit.score}/100` : 'N/A'}
                   </span>
-                  <span className={`readiness-pill ${reportModalCampaign.savedApproval?.status === 'approved' ? 'approved' : reportModalCampaign.savedAudit.score >= 90 ? 'ready-for-approval' : 'needs-review'}`} style={{ fontSize: '0.65rem' }}>
+                  <span className={`readiness-pill ${reportModalCampaign.savedApproval?.status === 'approved' ? 'approved' : (reportModalCampaign.savedAudit?.score ?? 100) >= 90 ? 'ready-for-approval' : 'needs-review'}`} style={{ fontSize: '0.65rem' }}>
                     {reportModalCampaign.savedApproval?.status === 'approved' ? 'Approved' : 'Pending Review'}
                   </span>
                 </div>
@@ -1253,15 +1253,15 @@ ${findings}
   
               <div>
                 <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.35rem', color: 'var(--text-primary)' }}>
-                  Saved Audit Findings ({reportModalCampaign.savedAudit.findings?.length || 0})
+                  Saved Audit Findings ({reportModalCampaign.savedAudit?.findings?.length || 0})
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', maxHeight: '200px', overflowY: 'auto', paddingRight: '0.25rem' }}>
-                  {(!reportModalCampaign.savedAudit.findings || reportModalCampaign.savedAudit.findings.length === 0) && (
+                  {(!reportModalCampaign.savedAudit?.findings || reportModalCampaign.savedAudit.findings?.length === 0) && (
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic', textAlign: 'center', padding: '1.5rem 0' }}>
                       No findings were recorded. The campaign had a clean pass.
                     </p>
                   )}
-                  {reportModalCampaign.savedAudit.findings?.map((item, index) => (
+                  {reportModalCampaign.savedAudit?.findings?.map((item, index) => (
                     <div key={index} style={{ padding: '0.75rem', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)', fontSize: '0.8rem' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.35rem' }}>
                         <span className={`severity-label ${item.severity}`} style={{ fontSize: '0.65rem', padding: '0.15rem 0.35rem' }}>{item.severity}</span>
