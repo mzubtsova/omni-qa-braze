@@ -286,11 +286,19 @@ export function auditImages(html) {
  */
 export function extractBrazeId(val) {
   if (!val) return '';
-  const trimmed = String(val).trim();
   
-  // Try to match standard Braze URLs:
-  // /campaigns/editor/ID or /canvas/editor/ID
-  // /campaigns/ID or /canvas/ID
+  // 1. Decode URL encoding (very common in mobile sharing sheets and messaging clients)
+  let trimmed = String(val).trim();
+  try {
+    trimmed = decodeURIComponent(trimmed);
+  } catch {
+    // Ignore decode error and proceed with original
+  }
+  
+  // 2. Remove invisible control characters / zero-width spaces (common on mobile clipboards)
+  trimmed = trimmed.replace(/[\u200B-\u200D\uFEFF]/g, '');
+  
+  // 3. Match standard Braze URL path patterns first
   const urlMatch = trimmed.match(/\/(?:campaigns|canvas)(?:\/editor|\/details)?\/([a-fA-F0-9]{24}|[0-9a-fA-F-]{36})/i) ||
                    trimmed.match(/\/([a-fA-F0-9]{24}|[0-9a-fA-F-]{36})(?:\/|$|\?)/i);
   
@@ -298,11 +306,19 @@ export function extractBrazeId(val) {
     return urlMatch[1].toLowerCase();
   }
   
-  // If it's a raw 24-character hexadecimal campaign ID or 36-character UUID canvas ID
-  if (/^[a-fA-F0-9]{24}$/i.test(trimmed) || /^[0-9a-fA-F-]{36}$/i.test(trimmed)) {
-    return trimmed.toLowerCase();
+  // 4. Fallback: Scan the entire string for any 36-character UUID or 24-character hexadecimal string.
+  // This handles deep links, shortened links, or cases where extra text surrounds the URL (like share sheet prefixes)
+  const uuidMatch = trimmed.match(/[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}/);
+  if (uuidMatch) {
+    return uuidMatch[0].toLowerCase();
   }
   
+  const hexMatch = trimmed.match(/\b[a-fA-F0-9]{24}\b/);
+  if (hexMatch) {
+    return hexMatch[0].toLowerCase();
+  }
+  
+  // 5. Final fallback: return cleaned, lowercase string
   return trimmed.toLowerCase();
 }
 
