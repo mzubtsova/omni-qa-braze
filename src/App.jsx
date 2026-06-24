@@ -1,3 +1,4 @@
+import './utils/sanitize';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   BarChart2,
