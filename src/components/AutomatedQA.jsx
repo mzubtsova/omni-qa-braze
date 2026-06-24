@@ -143,8 +143,15 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
     localStorage.setItem('omniqa_finding_notes', JSON.stringify(findingNotes));
   }, [findingNotes]);
 
+  useEffect(() => {
+    if (journey && (journey.source === 'sandbox' || journey.id?.startsWith('demo-'))) {
+      setSourceInput('');
+    }
+  }, [journey]);
+
   const loadSelectedDemo = (demo) => {
     setJourney(demo);
+    setSourceInput('');
     setImportError('');
     setSelectedMessageId('all');
     setShowDemoSelector(false);
@@ -170,9 +177,10 @@ export default function AutomatedQA({ onSelectMessage, onAuditChange, useMockMod
         return lower.includes('braze') || lower.includes('dashboard') || lower.includes('campaign') || lower.includes('canvas');
       }
       
-      // Check if it's an alphanumeric API ID (can contain hyphens/underscores, e.g. uuid)
-      const apiIdRegex = /^[a-zA-Z0-9\-_]{3,64}$/;
-      return apiIdRegex.test(trimmed);
+      // Check if it's a 24-char hex Campaign ID or a 36-char UUID Canvas ID
+      const campaignIdRegex = /^[a-fA-F0-9]{24}$/;
+      const canvasIdRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+      return campaignIdRegex.test(trimmed) || canvasIdRegex.test(trimmed);
     };
 
     if (!isValidBrazeInput(trimmedInput)) {

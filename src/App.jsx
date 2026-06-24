@@ -241,11 +241,12 @@ export default function App() {
   const [preApprovalState, setPreApprovalState] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('omniqa_preapproval_default') || localStorage.getItem('omniqa_preapproval_checklist') || 'null');
-      if (stored && Array.isArray(stored.items) && stored.setup) return stored;
+      if (stored && Array.isArray(stored.items) && stored.setup) return { ...stored, campaignId: 'default' };
     } catch {
       // console.warn("Failed to parse preapproval");
     }
     return {
+      campaignId: 'default',
       setup: { campaignName: '', campaignType: '', owner: '', launchDate: '' },
       items: defaultPreApprovalItems.map((text, idx) => ({
         id: `pre-${Date.now()}-${idx}-${Math.random().toString(16).slice(2, 6)}`,
@@ -265,6 +266,7 @@ export default function App() {
       { id: 'evidence', text: 'Test-send evidence and required stakeholder approvals are documented.', done: false }
     ];
     const emptyApproval = {
+      campaignId: 'default',
       reviewer: '',
       items: defaultApprovalItems,
       checks: { audience: false, content: false, personalization: false, evidence: false },
@@ -285,7 +287,7 @@ export default function App() {
           ];
         }
         if (Array.isArray(stored.items)) {
-          return { ...emptyApproval, ...stored };
+          return { ...emptyApproval, ...stored, campaignId: 'default' };
         }
       }
       return emptyApproval;
@@ -338,9 +340,10 @@ export default function App() {
     }
 
     if (nextPreApproval && Array.isArray(nextPreApproval.items) && nextPreApproval.setup) {
-      setPreApprovalState(nextPreApproval);
+      setPreApprovalState({ ...nextPreApproval, campaignId: activeCampaignId });
     } else {
       setPreApprovalState({
+        campaignId: activeCampaignId,
         setup: { campaignName: automationState?.journey?.name || savedCampaign?.name || '', campaignType: '', owner: '', launchDate: '' },
         items: defaultPreApprovalItems.map((text, idx) => ({
           id: `pre-${Date.now()}-${idx}-${Math.random().toString(16).slice(2, 6)}`,
@@ -371,7 +374,7 @@ export default function App() {
     ];
 
     if (nextApproval) {
-      const sa = { ...nextApproval };
+      const sa = { ...nextApproval, campaignId: activeCampaignId };
       if (sa.checks && !sa.items) {
         sa.items = [
           { id: 'audience', text: 'Audience, exclusions, entry criteria, and schedule were verified in Braze.', done: !!sa.checks.audience },
@@ -384,6 +387,7 @@ export default function App() {
         setApprovalState(sa);
       } else {
         setApprovalState({
+          campaignId: activeCampaignId,
           reviewer: '',
           items: defaultApprovalItems,
           checks: { audience: false, content: false, personalization: false, evidence: false },
@@ -395,6 +399,7 @@ export default function App() {
       }
     } else {
       setApprovalState({
+        campaignId: activeCampaignId,
         reviewer: '',
         items: defaultApprovalItems,
         checks: { audience: false, content: false, personalization: false, evidence: false },
@@ -521,6 +526,9 @@ export default function App() {
 
   useEffect(() => {
     const currentId = automationState?.journey?.id || loadedCampaignId || 'default';
+    if (!preApprovalState || preApprovalState.campaignId !== currentId) {
+      return;
+    }
     localStorage.setItem(`omniqa_preapproval_${currentId}`, JSON.stringify(preApprovalState));
     if (currentId === 'default') {
       localStorage.setItem('omniqa_preapproval_checklist', JSON.stringify(preApprovalState));
@@ -540,6 +548,9 @@ export default function App() {
 
   useEffect(() => {
     const currentId = automationState?.journey?.id || loadedCampaignId || 'default';
+    if (!approvalState || approvalState.campaignId !== currentId) {
+      return;
+    }
     localStorage.setItem(`omniqa_approval_${currentId}`, JSON.stringify(approvalState));
     if (currentId === 'default') {
       localStorage.setItem('omniqa_approval', JSON.stringify(approvalState));
@@ -567,6 +578,13 @@ export default function App() {
     setAutomationState((current) => current ? { ...current, approval } : current);
   }, []);
   const handlePreApprovalChange = useCallback((status) => setPreApprovalStatus(status), []);
+
+  const bumpVersion = (versionStr) => {
+    if (!versionStr) return 'v1.1';
+    const num = parseFloat(versionStr.replace('v', ''));
+    if (isNaN(num)) return 'v1.1';
+    return `v${(num + 0.1).toFixed(1)}`;
+  };
 
   const handleQuickSave = () => {
     if (!automationState?.journey) {
@@ -597,7 +615,10 @@ export default function App() {
       if (loadedCampaignId && c.id === loadedCampaignId) return true;
       if (activeJourneyId && c.id === activeJourneyId) return true;
       
-      // 2. Match by extracted Braze Campaign/Canvas ID or Link
+      // 2. Match by exact Braze ID / Link string matching
+      if (activeBrazeId && c.brazeCampaignId && activeBrazeId.trim().toLowerCase() === c.brazeCampaignId.trim().toLowerCase()) return true;
+      
+      // 3. Match by extracted Braze Campaign/Canvas ID
       const cleanCatalogBrazeId = extractBrazeId(c.brazeCampaignId);
       const catalogHasValBraze = cleanCatalogBrazeId && isVal(cleanCatalogBrazeId);
       
@@ -605,7 +626,7 @@ export default function App() {
         return true;
       }
       
-      // 3. Fallback to matching by name ONLY if neither has a valid Braze ID
+      // 4. Fallback to matching by name ONLY if neither has a valid Braze ID
       if (!activeHasValBraze && !catalogHasValBraze) {
         if (automationState.journey.name && c.name && automationState.journey.name.trim().toLowerCase() === c.name.trim().toLowerCase()) {
           return true;
@@ -630,6 +651,7 @@ export default function App() {
             ...c,
             lastSynced: 'Just now (Updated)',
             status: computedStatus,
+            version: bumpVersion(c.version),
             subjectLine,
             brazeHtml,
             pushBody,

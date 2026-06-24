@@ -1731,3 +1731,25 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 0.7rem;
   }
 }
+
+/* Touch and mobile scrollability enhancements */
+.finding-list,
+.sidebar-menu,
+.review-tabs,
+.phone-wrapper,
+.catalog-grid,
+.preapproval-items,
+.approval-checks,
+[style*="overflow-y: auto"],
+[style*="overflow-x: auto"],
+[style*="overflow: auto"] {
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .finding-list {
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+}
+
